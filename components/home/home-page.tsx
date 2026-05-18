@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { BrandIcon, BrandWordmark } from "@/components/ui/brand-logo";
-import { featuredProducts } from "@/lib/data/products";
-import { ProductCard } from "@/components/ui/product-card";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { copy, withLocalePath, type Locale } from "@/lib/i18n";
 
@@ -45,13 +43,13 @@ export function HomePage({ locale = "pl" }: { locale?: Locale }) {
         `rotateX(${rotateX}deg)`,
         `rotateY(${rotateY}deg)`,
         "scale3d(1.02, 1.02, 1.02)",
-      ].join(" " );
+      ].join(" ");
 
       aura.style.transform = [
         "translate3d(0, 0, 0)",
         `translate3d(${currentX * 42}px, ${currentY * 34}px, 0)`,
         `scale(${1 + Math.abs(currentX) * 0.05 + Math.abs(currentY) * 0.05})`,
-      ].join(" " );
+      ].join(" ");
 
       if (
         isPointerInside ||
@@ -141,7 +139,7 @@ export function HomePage({ locale = "pl" }: { locale?: Locale }) {
             </p>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Link
-                href={withLocalePath("/shop", locale)}
+                href={withLocalePath("/about", locale)}
                 className="inline-flex items-center justify-center bg-white px-7 py-4 text-xs tracking-[0.28em] uppercase text-black hover:opacity-85"
               >
                 {t.primaryCta}
@@ -160,16 +158,6 @@ export function HomePage({ locale = "pl" }: { locale?: Locale }) {
             title={t.featuredTitle}
             description={t.featuredDescription}
           />
-        </div>
-      </section>
-
-      <section className="border-b border-white/10 py-24 md:py-32">
-        <div className="site-shell space-y-14 px-4 md:px-6">
-          <div className="grid gap-12 md:grid-cols-2 xl:grid-cols-4">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} locale={locale} />
-            ))}
-          </div>
         </div>
       </section>
     </div>

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { CartPage } from "@/components/pages/cart-page";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Koszyk",
-  description: "Przejrzyj wybrane produkty Garçonmaires i przejdź do płatności.",
+  title: "Garçonmaires",
+  description: "Koszyk zostanie udostępniony po premierze pierwszego dropu.",
 };
 
 export default function Page() {
-  return <CartPage locale="pl" />;
+  redirect("/");
 }

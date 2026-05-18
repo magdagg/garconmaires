@@ -154,16 +154,16 @@ export const copy = {
       close: "Zamknij",
     },
     home: {
-      eyebrow: "Garçonmaires / Aktualna kolekcja",
+      eyebrow: "Garçonmaires / Świat marki",
       title: "Monochromatyczne formy o sile prywatnego uniformu.",
       description:
         "Garçonmaires kształtuje streetwear przez elegancję, precyzję i powściągliwość. Ciężkie essentials oparte na czystej proporcji, zwartej dzianinie i zdyscyplinowanej monochromatycznej sylwetce.",
-      primaryCta: "Wejdź do kolekcji",
+      primaryCta: "Poznaj markę",
       secondaryCta: "Poznaj markę",
-      featuredEyebrow: "Wybrane produkty",
-      featuredTitle: "Pierwszy drop zbudowany na klarowności i ciężarze.",
+      featuredEyebrow: "Informacja",
+      featuredTitle: "Pierwsza kolekcja zostanie udostępniona wkrótce.",
       featuredDescription:
-        "Zwięzły pierwszy drop oparty na czterech modelach: t-shircie, longsleevie, bluzie bez kaptura i kangurce.",
+        "Garçonmaires jest obecnie prezentowane jako świat marki. Produkty pojawią się publicznie po finalizacji pierwszego dropu.",
       viewAll: "Zobacz wszystko",
       statementEyebrow: "Manifest marki",
       statementTitle:
@@ -353,16 +353,16 @@ export const copy = {
       close: "Close",
     },
     home: {
-      eyebrow: "Garçonmaires / Current Collection",
+      eyebrow: "Garçonmaires / Brand World",
       title: "Monochrome pieces with the severity of a private uniform.",
       description:
-      "Garçonmaires shapes streetwear through elegance, precision, and restraint. Heavy essentials built around clean proportion, dense jersey, and a disciplined monochrome silhouette.",
-      primaryCta: "Enter the collection",
+        "Garçonmaires shapes streetwear through elegance, precision, and restraint. Heavy essentials built around clean proportion, dense jersey, and a disciplined monochrome silhouette.",
+      primaryCta: "Discover the brand",
       secondaryCta: "About the brand",
-      featuredEyebrow: "Featured Collection",
-      featuredTitle: "An opening drop built with clarity and weight.",
+      featuredEyebrow: "Update",
+      featuredTitle: "The first collection will open soon.",
       featuredDescription:
-        "A concise first drop built around four core pieces: a t-shirt, a longsleeve, a crew sweatshirt, and a kangaroo hoodie.",
+        "Garçonmaires is currently presented as a brand world. Products will be released publicly once the first drop is finalized.",
       viewAll: "View all products",
       statementEyebrow: "Brand Statement",
       statementTitle:

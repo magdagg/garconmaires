@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { CartPage } from "@/components/pages/cart-page";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Cart",
-  description: "Review your selected Garçonmaires pieces and continue to checkout.",
+  title: "Garçonmaires",
+  description: "The cart will be available once the first drop is released.",
 };
 
 export default function Page() {
-  return <CartPage locale="en" />;
+  redirect("/en");
 }

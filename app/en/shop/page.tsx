@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import { ShopPage } from "@/components/shop/shop-page";
-import { copy } from "@/lib/i18n";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: copy.en.shop.eyebrow,
-  description: copy.en.shop.description,
+  title: "Garçonmaires",
+  description: "The collection page will open once the first drop is ready.",
 };
 
 export default function Page() {
-  return <ShopPage locale="en" />;
+  redirect("/en");
 }

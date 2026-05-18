@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CartDrawer } from "@/components/layout/cart-drawer";
 import { MobileMenu } from "@/components/layout/mobile-menu";
-import { useCart } from "@/components/providers/cart-provider";
 import { BrandHeaderLogo } from "@/components/ui/brand-logo";
 import {
   copy,
@@ -20,11 +18,7 @@ export function SiteHeader() {
   const locale = getLocaleFromPathname(pathname);
   const t = copy[locale].nav;
   const [menuOpen, setMenuOpen] = useState(false);
-  const { itemCount, openCart } = useCart();
-  const links = [
-    { href: withLocalePath("/shop", locale), label: t.shop },
-    { href: withLocalePath("/about", locale), label: t.about },
-  ];
+  const links = [{ href: withLocalePath("/about", locale), label: t.about }];
 
   return (
     <>
@@ -73,13 +67,6 @@ export function SiteHeader() {
             </div>
             <button
               type="button"
-              onClick={openCart}
-              className="border border-white/10 px-3 py-2 text-[10px] tracking-[0.24em] uppercase text-white/72 hover:border-white hover:bg-white hover:text-black"
-            >
-              {t.cart} {itemCount > 0 ? `(${itemCount})` : ""}
-            </button>
-            <button
-              type="button"
               onClick={() => setMenuOpen((open) => !open)}
               className="border border-white/10 px-3 py-2 text-[11px] tracking-[0.24em] uppercase text-white/80 hover:border-white hover:bg-white hover:text-black md:hidden"
             >
@@ -94,7 +81,6 @@ export function SiteHeader() {
           closeLabel={t.close}
         />
       </header>
-      <CartDrawer />
     </>
   );
 }
