@@ -269,3 +269,44 @@ select {
     opacity: 1;
   }
 }
+
+@keyframes solitaireBurst {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      scale(0.78)
+      rotate(0deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform:
+      translate(calc(-50% + var(--spread-x)), calc(-50% + var(--spread-y)))
+      scale(1)
+      rotate(var(--rotate));
+  }
+}
+
+@keyframes solitaireBounce {
+  0%,
+  100% {
+    transform:
+      translate(calc(-50% + var(--spread-x)), calc(-50% + var(--spread-y)))
+      rotate(var(--rotate));
+  }
+
+  50% {
+    transform:
+      translate(calc(-50% + var(--spread-x)), calc(-58% + var(--spread-y)))
+      rotate(calc(var(--rotate) + 2deg));
+  }
+}
+
+.solitaire-victory-card {
+  animation:
+    solitaireBurst 850ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    solitaireBounce 2.4s ease-in-out var(--delay) infinite;
+  animation-delay: var(--delay), calc(var(--delay) + 850ms);
+  pointer-events: none;
+}

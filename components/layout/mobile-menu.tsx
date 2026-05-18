@@ -7,7 +7,13 @@ import { cn } from "@/lib/utils";
 type MobileMenuProps = {
   open: boolean;
   onClose: () => void;
-  links: Array<{ href: string; label: string }>;
+  links: Array<{
+    href: string;
+    label: string;
+    mobileLabel?: string;
+    ariaLabel?: string;
+    isSymbol?: boolean;
+  }>;
   closeLabel: string;
 };
 
@@ -37,17 +43,19 @@ export function MobileMenu({
           {links.map((link) => (
             <Link
               key={link.href}
-            href={link.href}
-            onClick={onClose}
-            className={cn(
-              "border-b border-white/8 py-4 text-lg tracking-[0.18em] uppercase text-white/72",
-              pathname === link.href && "text-white",
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
+              href={link.href}
+              onClick={onClose}
+              aria-label={link.ariaLabel}
+              className={cn(
+                "border-b border-white/8 py-4 text-lg tracking-[0.18em] uppercase text-white/72",
+                pathname === link.href && "text-white",
+                link.isSymbol && "text-2xl tracking-normal",
+              )}
+            >
+              {link.mobileLabel ?? link.label}
+            </Link>
+          ))}
+        </div>
     </div>
   );
 }

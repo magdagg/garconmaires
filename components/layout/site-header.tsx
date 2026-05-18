@@ -18,7 +18,16 @@ export function SiteHeader() {
   const locale = getLocaleFromPathname(pathname);
   const t = copy[locale].nav;
   const [menuOpen, setMenuOpen] = useState(false);
-  const links = [{ href: withLocalePath("/about", locale), label: t.about }];
+  const links = [
+    {
+      href: withLocalePath("/play", locale),
+      label: "♠",
+      mobileLabel: t.play,
+      ariaLabel: t.play,
+      isSymbol: true,
+    },
+    { href: withLocalePath("/about", locale), label: t.about },
+  ];
 
   return (
     <>
@@ -29,9 +38,11 @@ export function SiteHeader() {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-label={link.ariaLabel}
                 className={cn(
                   "text-[11px] tracking-[0.24em] uppercase text-white/52 hover:text-white",
                   pathname === link.href && "text-white",
+                  link.isSymbol && "text-base tracking-normal",
                 )}
               >
                 {link.label}
