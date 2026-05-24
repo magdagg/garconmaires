@@ -15,9 +15,9 @@ export function RootShell({ children, locale, className }: RootShellProps) {
       <body className="min-h-full bg-black text-white">
         <CartProvider>
           <div className="relative flex min-h-screen flex-col bg-black text-white">
-            <SiteHeader />
+            <SiteHeader locale={locale} />
             <main className="flex-1">{children}</main>
-            <SiteFooter />
+            <SiteFooter locale={locale} />
           </div>
         </CartProvider>
       </body>

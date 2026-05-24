@@ -17,7 +17,8 @@
   --color-panel: var(--panel);
   --color-panel-soft: var(--panel-soft);
   --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-display);
+  --font-display: var(--font-geist-sans);
+  --font-label: var(--font-label);
 }
 
 * {
@@ -60,7 +61,14 @@ select {
 }
 
 .font-display {
-  font-family: var(--font-display), serif;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.font-label {
+  font-family: var(--font-label), monospace;
 }
 
 .site-shell {

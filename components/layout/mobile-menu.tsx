@@ -36,7 +36,7 @@ export function MobileMenu({
           <button
             type="button"
             onClick={onClose}
-            className="mb-2 w-fit text-xs tracking-[0.24em] uppercase text-white/52"
+            className="font-label mb-2 w-fit text-[11px] tracking-[0.22em] uppercase text-white/52"
           >
             {closeLabel}
           </button>
@@ -47,9 +47,9 @@ export function MobileMenu({
               onClick={onClose}
               aria-label={link.ariaLabel}
               className={cn(
-                "border-b border-white/8 py-4 text-lg tracking-[0.18em] uppercase text-white/72",
+                "border-b border-white/8 py-4 text-lg text-white/72",
                 pathname === link.href && "text-white",
-                link.isSymbol && "text-2xl tracking-normal",
+                link.isSymbol ? "text-2xl tracking-normal" : "font-label tracking-[0.16em] uppercase",
               )}
             >
               {link.mobileLabel ?? link.label}

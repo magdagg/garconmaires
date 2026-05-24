@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bodoni_Moda, Inter } from "next/font/google";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
 import { RootShell } from "@/components/layout/root-shell";
 import { copy } from "@/lib/i18n";
 import "../globals.css";
@@ -9,9 +9,10 @@ const sans = Inter({
   subsets: ["latin"],
 });
 
-const display = Bodoni_Moda({
-  variable: "--font-display",
+const label = IBM_Plex_Mono({
+  variable: "--font-label",
   subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -47,7 +48,7 @@ export default function Layout({
   return (
     <RootShell
       locale="pl"
-      className={`${sans.variable} ${display.variable} h-full scroll-smooth antialiased`}
+      className={`${sans.variable} ${label.variable} h-full scroll-smooth antialiased`}
     >
       {children}
     </RootShell>

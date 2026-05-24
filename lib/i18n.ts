@@ -155,16 +155,16 @@ export const copy = {
       close: "Zamknij",
     },
     home: {
-      eyebrow: "Garçonmaires / Świat marki",
-      title: "Monochromatyczne formy o sile prywatnego uniformu.",
+      eyebrow: "GARÇONMAIRES / POLSKI STREETWEAR",
+      title: "POLSKA ELEGANCJA\nW FORMIE STREETWEARU.",
       description:
-        "Garçonmaires kształtuje streetwear przez elegancję, precyzję i powściągliwość. Ciężkie essentials oparte na czystej proporcji, zwartej dzianinie i zdyscyplinowanej monochromatycznej sylwetce.",
-      primaryCta: "Poznaj markę",
-      secondaryCta: "Poznaj markę",
-      featuredEyebrow: "Informacja",
-      featuredTitle: "Pierwsza kolekcja zostanie udostępniona wkrótce.",
+        "Garçonmaires to polska marka odzieżowa budowana wokół jakości, prostoty i wyrazistego znaku.\n\nWspółczesny streetwear. Powściągliwa elegancja. Lokalny kontekst.",
+      primaryCta: "POZNAJ MARKĘ",
+      secondaryCta: "DROP 01 WKRÓTCE",
+      featuredEyebrow: "DROP 01",
+      featuredTitle: "Pierwsza forma\nGarçonmaires jest w przygotowaniu.",
       featuredDescription:
-        "Garçonmaires jest obecnie prezentowane jako świat marki. Produkty pojawią się publicznie po finalizacji pierwszego dropu.",
+        "Pierwszy drop będzie oparty na czerni, prostocie i graficznym symbolu marki.\n\nProdukty pojawią się po zakończeniu prac nad próbkami i finalną formą kolekcji.",
       viewAll: "Zobacz wszystko",
       statementEyebrow: "Manifest marki",
       statementTitle:
@@ -269,27 +269,27 @@ export const copy = {
     about: {
       title: "O marce",
       description:
-        "Poznaj wizję i tożsamość Garçonmaires, monochromatycznej marki mody zakorzenionej w nowoczesnej ulicznej elegancji.",
+        "Garçonmaires to polska marka odzieżowa budowana wokół elegancji, prostoty i kontrastu.",
       eyebrow: "O Garçonmaires",
-      heroTitle: "Elegancja przecięta napięciem ulicy.",
+      heroTitle: "Urodzone w Warszawie. Ubrane w noir.",
       heroBody:
-        "Garçonmaires to monochromatyczna marka modowa zbudowana na powściągliwości, wyrazistej proporcji i spokojnej pewności siebie. Marka bada granicę między miejskim uniformem a projektowym gestem.",
-      vision: "Wizja",
+        "Garçonmaires to polska marka odzieżowa budowana wokół elegancji, prostoty i kontrastu.\n\nWychodzi z lokalnego kontekstu, ale mówi współczesnym językiem mody.",
+      vision: "WIZJA",
       visionBody:
-        "Tworzyć codzienny luksus, który jest ostrzejszy, ciemniejszy i bardziej pewny siebie.",
-      identity: "Tożsamość",
+        "Nowoczesna polska marka, która nie udaje zagranicznej i nie powiela oczywistości.\n\nElegancja nie musi być klasyczna w oczywisty sposób. Streetwear nie musi być krzykliwy.",
+      identity: "TOŻSAMOŚĆ",
       identityBody:
-        "Język marki jest edytorialny, nowoczesny i skrajnie zredukowany. Wszystko sprowadza się do sylwetki, faktury i kontroli.",
-      mood: "Nastrój",
+        "Czyste formy. Mocny symbol. Powściągliwa elegancja.\n\nGarçonmaires stawia na ubrania, które mają charakter bez nadmiaru.",
+      mood: "NASTRÓJ",
       moodBody:
-        "Luksusowy, monochromatyczny, lekko gotycki i wystarczająco współczesny, by funkcjonować między galerią, nocnym miastem i prywatnym spotkaniem.",
-      storyEyebrow: "Historia marki",
+        "Czerń, szkło, metal, stare wnętrza i polski krajobraz.\n\nMiędzy ulicą a elegancją.\nMiędzy codziennością a szykiem.",
+      storyEyebrow: "HISTORIA MARKI",
       storyTitle:
-        "Garderoba zaczyna się od czerni, a potem bada przestrzeń wokół niej.",
+        "Nowa interpretacja polskiej elegancji.",
       story: [
-        "Garçonmaires powstało jako dom mody dla osób, które potrzebują klarowności, a nie nadmiaru. Kolekcja czerpie z krawiectwa projektowego, miejskich uniformów i surowej prywatnej elegancji, ale odrzuca nostalgię.",
-        "Paleta jest celowo ograniczona, aby uwaga pozostała przy kroju, gęstości tkaniny i sposobie, w jaki sylwetka porusza się z ciałem. Czerń prowadzi. Biel przerywa. Wszystko inne jest cieniem.",
-        "Rezultatem jest marka z energią streetwearu i postawą luksusowego ready-to-wear, stworzona dla garderoby, która potrzebuje obecności bez hałasu.",
+        "Garçonmaires powstało z potrzeby stworzenia marki, która łączy jakość, współczesny streetwear i lokalną wrażliwość.",
+        "Nie interesuje nas dosłowna nostalgia. Bardziej atmosfera: Warszawa, powściągliwość, kontrast, surowość i elegancja, która nie potrzebuje krzyku.",
+        "To marka dla osób, które wybierają mniej — ale mocniej.",
       ],
     },
     contact: {
@@ -355,16 +355,16 @@ export const copy = {
       close: "Close",
     },
     home: {
-      eyebrow: "Garçonmaires / Brand World",
-      title: "Monochrome pieces with the severity of a private uniform.",
+      eyebrow: "GARÇONMAIRES / POLISH STREETWEAR",
+      title: "Polish elegance\nin streetwear form.",
       description:
-        "Garçonmaires shapes streetwear through elegance, precision, and restraint. Heavy essentials built around clean proportion, dense jersey, and a disciplined monochrome silhouette.",
-      primaryCta: "Discover the brand",
-      secondaryCta: "About the brand",
-      featuredEyebrow: "Update",
-      featuredTitle: "The first collection will open soon.",
+        "Garçonmaires is a clothing brand built around quality, simplicity and a strong graphic symbol.\n\nIt connects contemporary streetwear with elegance that does not need excess.",
+      primaryCta: "DISCOVER THE BRAND",
+      secondaryCta: "DROP 01 COMING SOON",
+      featuredEyebrow: "DROP 01",
+      featuredTitle: "The first form\nof Garçonmaires is taking shape.",
       featuredDescription:
-        "Garçonmaires is currently presented as a brand world. Products will be released publicly once the first drop is finalized.",
+        "The first drop will be built around black, simplicity and the graphic symbol of the brand.\n\nProducts will be released once samples and the final collection form are completed.",
       viewAll: "View all products",
       statementEyebrow: "Brand Statement",
       statementTitle:
@@ -467,27 +467,27 @@ export const copy = {
     about: {
       title: "About",
       description:
-        "Discover the vision and identity behind Garçonmaires, a monochrome fashion label rooted in modern street elegance.",
+        "Garçonmaires is a Polish clothing brand built around elegance, simplicity and contrast.",
       eyebrow: "About Garçonmaires",
-      heroTitle: "Elegance cut with street tension.",
+      heroTitle: "Born in Warsaw. Dressed in noir.",
       heroBody:
-        "Garçonmaires is a monochrome fashion brand built around restraint, sharp proportion, and quiet confidence. The label explores the line between city uniform and designer statement.",
-      vision: "Vision",
+        "Garçonmaires is a Polish clothing brand built around elegance, simplicity and contrast.\n\nRooted in its local context, it speaks through a contemporary language of fashion.",
+      vision: "VISION",
       visionBody:
-        "To make everyday luxury feel sharper, darker, and more self-assured.",
-      identity: "Identity",
+        "A modern Polish brand that does not imitate foreign codes or repeat the obvious.\n\nElegance does not have to be predictable. Streetwear does not have to be loud.",
+      identity: "IDENTITY",
       identityBody:
-        "The brand language is editorial, modern, and highly reduced. Everything is stripped back to silhouette, texture, and control.",
-      mood: "Mood",
+        "Clean forms. A strong symbol. Restrained elegance.\n\nGarçonmaires is built around garments with presence, not excess.",
+      mood: "MOOD",
       moodBody:
-        "Luxurious, monochrome, slightly gothic, and contemporary enough to live between gallery spaces, after-dark streets, and private appointments.",
-      storyEyebrow: "Brand Story",
+        "Black, glass, metal, old interiors and the Polish landscape.\n\nBetween the street and elegance.\nBetween everyday reality and refinement.",
+      storyEyebrow: "BRAND STORY",
       storyTitle:
-        "The wardrobe begins with black, then studies the space around it.",
+        "A new interpretation of Polish elegance.",
       story: [
-        "Garçonmaires was conceived as a fashion house for people who want clarity, not excess. The collection draws from designer tailoring, street uniforms, and private-club severity, but refuses nostalgia.",
-        "Pieces are intentionally limited in palette so the focus remains on cut, fabric density, and the way each silhouette moves with the body. Black leads. White interrupts. Everything else is shade.",
-        "The result is a label with the energy of streetwear and the poise of luxury ready-to-wear, created for wardrobes that need presence without noise.",
+        "Garçonmaires was created from the need to build a brand that connects quality, contemporary streetwear and local sensitivity.",
+        "We are not interested in literal nostalgia. We are interested in atmosphere: Warsaw, restraint, contrast, rawness and elegance that does not need to be loud.",
+        "A brand for those who choose less — but stronger.",
       ],
     },
     contact: {
