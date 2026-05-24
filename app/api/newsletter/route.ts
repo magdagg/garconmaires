@@ -1,3 +1,4 @@
+import { list, put } from "@vercel/blob";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -17,6 +18,11 @@ const newsletterFilePath = path.join(
   "data",
   "newsletter-subscribers.json",
 );
+const newsletterBlobPrefix = "newsletter/subscribers/";
+
+function getSubscriberBlobPath(email: string) {
+  return `${newsletterBlobPrefix}${Buffer.from(email).toString("base64url")}.json`;
+}
 
 async function readSubscribers() {
   try {
@@ -38,6 +44,37 @@ async function readSubscribers() {
 async function writeSubscribers(subscribers: NewsletterSubscriber[]) {
   await mkdir(path.dirname(newsletterFilePath), { recursive: true });
   await writeFile(newsletterFilePath, JSON.stringify(subscribers, null, 2));
+}
+
+async function persistSubscriber(subscriber: NewsletterSubscriber) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+
+  if (token) {
+    const pathname = getSubscriberBlobPath(subscriber.email);
+    const existing = await list({
+      prefix: pathname,
+      token,
+    });
+
+    if (existing.blobs.length === 0) {
+      await put(pathname, JSON.stringify(subscriber, null, 2), {
+        access: "private",
+        addRandomSuffix: false,
+        contentType: "application/json",
+        token,
+      });
+    }
+
+    return;
+  }
+
+  const subscribers = await readSubscribers();
+  const exists = subscribers.some((entry) => entry.email === subscriber.email);
+
+  if (!exists) {
+    subscribers.push(subscriber);
+    await writeSubscribers(subscribers);
+  }
 }
 
 export async function POST(request: Request) {
@@ -79,22 +116,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const subscribers = await readSubscribers();
-  const exists = subscribers.some((subscriber) => subscriber.email === email);
-
-  if (!exists) {
-    subscribers.push({
-      email,
-      createdAt: new Date().toISOString(),
-      locale,
-      source,
-      consent: true,
-    });
-
-    // TODO: Replace local JSON storage with durable production storage.
-    await writeSubscribers(subscribers);
-  }
+  await persistSubscriber({
+    email,
+    createdAt: new Date().toISOString(),
+    locale,
+    source,
+    consent: true,
+  });
 
   return Response.json({ ok: true });
 }
-
