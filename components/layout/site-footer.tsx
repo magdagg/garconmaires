@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FooterNewsletter } from "@/components/layout/footer-newsletter";
 import { BrandIcon, BrandWordmark } from "@/components/ui/brand-logo";
 import {
   defaultLocale,
@@ -21,13 +22,16 @@ export function SiteFooter({ locale }: SiteFooterProps) {
   const pathname = usePathname();
   const resolvedLocale = locale ?? getLocaleFromPathname(pathname) ?? defaultLocale;
   const footer = footerGroups[resolvedLocale];
+  const cookieSettingsLabel =
+    resolvedLocale === "pl" ? "Ustawienia cookie" : "Cookie settings";
 
   return (
     <footer className="border-t border-white/10 bg-black">
+      <FooterNewsletter locale={resolvedLocale} />
       <div className="site-shell grid gap-12 px-4 py-12 md:grid-cols-[0.9fr_1.1fr] md:px-6">
         <div className="space-y-5">
-          <BrandIcon className="opacity-90" />
-          <BrandWordmark className="h-8 w-[16rem] sm:h-10 sm:w-[22rem]" />
+          <BrandIcon className="h-20 w-16 opacity-90 sm:h-24 sm:w-20" />
+          <BrandWordmark className="h-12 w-[24rem] sm:h-16 sm:w-[34rem]" />
         </div>
         <div className="grid gap-8 sm:grid-cols-3">
           <div className="space-y-3">
@@ -87,6 +91,13 @@ export function SiteFooter({ locale }: SiteFooterProps) {
             <div className="space-y-2 text-sm leading-7 text-white/72">
               <p>studio@garconmaires.com</p>
               <p>Warsaw</p>
+              <button
+                type="button"
+                data-cookie-settings-trigger="true"
+                className="block text-left text-sm leading-7 text-white/72 hover:text-white"
+              >
+                {cookieSettingsLabel}
+              </button>
               <div className="flex items-center gap-2 pt-2 text-[11px] tracking-[0.22em] uppercase text-white/44">
                 <Link
                   href={switchLocalePath(pathname || "/", "pl")}

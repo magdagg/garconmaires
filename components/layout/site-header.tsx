@@ -47,7 +47,7 @@ export function SiteHeader({ locale }: SiteHeaderProps) {
                 aria-label={link.ariaLabel}
                 className={cn(
                   link.isSymbol
-                    ? "inline-flex min-w-7 items-center justify-center text-[2.6rem] leading-none text-white/60 hover:text-white"
+                    ? "inline-flex min-w-7 items-center justify-center text-[2.35rem] leading-none text-white/60 hover:text-white"
                     : "font-label text-[11px] tracking-[0.22em] uppercase text-white/52 hover:text-white",
                   pathname === link.href && "text-white",
                   !link.isSymbol && "tracking-[0.22em] uppercase",

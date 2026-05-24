@@ -1,0 +1,9 @@
+[
+  {
+    "email": "test@example.com",
+    "createdAt": "2026-05-24T12:32:30.566Z",
+    "locale": "pl",
+    "source": "footer",
+    "consent": true
+  }
+]
