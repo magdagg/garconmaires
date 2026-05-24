@@ -1,8 +1,13 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
 import type { Locale } from "@/lib/i18n";
 
 type FooterNewsletterProps = {
   locale: Locale;
 };
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const copyByLocale = {
   pl: {
@@ -44,106 +49,69 @@ const copyByLocale = {
   }
 >;
 
-function getNewsletterScript(locale: Locale) {
+export function FooterNewsletter({ locale }: FooterNewsletterProps) {
   const t = copyByLocale[locale];
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [tone, setTone] = useState<"idle" | "error" | "success">("idle");
 
-  return `
-(() => {
-  const root = document.querySelector('[data-newsletter-root="${locale}"]');
-
-  if (!root) {
-    return;
-  }
-
-  const form = root.querySelector('[data-newsletter-form]');
-  const input = root.querySelector('[data-newsletter-input]');
-  const button = root.querySelector('[data-newsletter-button]');
-  const message = root.querySelector('[data-newsletter-message]');
-
-  if (!form || !input || !button || !message) {
-    return;
-  }
-
-  const emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-  let isSubmitting = false;
-
-  const setMessage = (value, tone) => {
-    message.textContent = value || '.';
-    message.dataset.tone = tone || 'idle';
-    message.className = tone === 'error'
-      ? 'text-sm leading-6 text-white/78'
-      : tone === 'success'
-        ? 'text-sm leading-6 text-white/86'
-        : 'text-sm leading-6 text-transparent';
-  };
-
-  const setSubmitting = (nextValue) => {
-    isSubmitting = nextValue;
-    button.disabled = nextValue;
-    button.textContent = nextValue ? ${JSON.stringify(t.submitting)} : ${JSON.stringify(t.button)};
-  };
-
-  input.addEventListener('input', () => {
-    if (message.dataset.tone !== 'idle') {
-      setMessage('', 'idle');
-    }
-  });
-
-  form.addEventListener('submit', async (event) => {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (isSubmitting) {
       return;
     }
 
-    const email = String(input.value || '').trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!emailPattern.test(email)) {
-      setMessage(${JSON.stringify(t.error)}, 'error');
+    if (!emailPattern.test(normalizedEmail)) {
+      setTone("error");
+      setMessage(t.error);
       return;
     }
 
-    setSubmitting(true);
-    setMessage('', 'idle');
+    setIsSubmitting(true);
+    setTone("idle");
+    setMessage("");
 
     try {
-      const response = await fetch('/api/newsletter', {
-        method: 'POST',
+      const response = await fetch("/api/newsletter", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
-          locale: ${JSON.stringify(locale)},
-          source: 'footer',
+          email: normalizedEmail,
+          locale,
+          source: "footer",
           consent: true,
         }),
       });
 
-      const payload = await response.json().catch(() => null);
+      const payload = (await response.json().catch(() => null)) as
+        | { ok?: boolean; message?: string }
+        | null;
 
-      if (!response.ok || !payload || payload.ok !== true) {
-        setMessage(payload && payload.message ? payload.message : ${JSON.stringify(t.genericError)}, 'error');
+      if (!response.ok || !payload?.ok) {
+        setTone("error");
+        setMessage(payload?.message ?? t.genericError);
         return;
       }
 
-      input.value = '';
-      setMessage(${JSON.stringify(t.success)}, 'success');
+      setEmail("");
+      setTone("success");
+      setMessage(t.success);
     } catch {
-      setMessage(${JSON.stringify(t.genericError)}, 'error');
+      setTone("error");
+      setMessage(t.genericError);
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
-  });
-})();
-`;
-}
-
-export function FooterNewsletter({ locale }: FooterNewsletterProps) {
-  const t = copyByLocale[locale];
+  }
 
   return (
-    <section className="border-b border-white/10" data-newsletter-root={locale}>
+    <section className="border-b border-white/10">
       <div className="site-shell px-4 py-12 md:px-6 md:py-16">
         <div className="mx-auto max-w-3xl space-y-6 text-center">
           <div className="space-y-3">
@@ -155,7 +123,7 @@ export function FooterNewsletter({ locale }: FooterNewsletterProps) {
             </p>
           </div>
 
-          <form className="mx-auto max-w-2xl space-y-4" data-newsletter-form noValidate>
+          <form className="mx-auto max-w-2xl space-y-4" onSubmit={handleSubmit} noValidate>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
               <input
                 type="email"
@@ -163,33 +131,44 @@ export function FooterNewsletter({ locale }: FooterNewsletterProps) {
                 autoComplete="email"
                 placeholder={t.placeholder}
                 aria-label={t.placeholder}
-                data-newsletter-input
+                aria-invalid={tone === "error" ? "true" : "false"}
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (tone !== "idle") {
+                    setTone("idle");
+                    setMessage("");
+                  }
+                }}
                 className="min-h-12 w-full border border-white/14 bg-transparent px-4 text-[14px] text-white outline-none placeholder:text-white/28 focus:border-white/36"
               />
               <button
                 type="submit"
-                data-newsletter-button
+                disabled={isSubmitting}
                 className="min-h-12 border border-white/18 bg-white px-5 text-[11px] tracking-[0.18em] text-black uppercase hover:bg-white/92 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {t.button}
+                {isSubmitting ? t.submitting : t.button}
               </button>
             </div>
 
             <div className="space-y-2 text-center">
               <p className="text-xs leading-6 text-white/42">{t.consent}</p>
-              <p aria-live="polite" data-newsletter-message className="text-sm leading-6 text-transparent">
-                .
+              <p
+                aria-live="polite"
+                className={
+                  tone === "error"
+                    ? "text-sm leading-6 text-white/78"
+                    : tone === "success"
+                      ? "text-sm leading-6 text-white/86"
+                      : "text-sm leading-6 text-transparent"
+                }
+              >
+                {message || "."}
               </p>
             </div>
           </form>
         </div>
       </div>
-
-      <script
-        dangerouslySetInnerHTML={{
-          __html: getNewsletterScript(locale),
-        }}
-      />
     </section>
   );
 }
