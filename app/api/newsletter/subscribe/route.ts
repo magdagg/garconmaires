@@ -5,16 +5,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const payload = (await request.json().catch(() => null)) as NewsletterPayload | null;
-  const normalizedPayload: NewsletterPayload | null = payload
-    ? {
-        ...payload,
-        language: payload.language === "en" ? "en" : "pl",
-        source: payload.source === "footer" ? "footer" : payload.source,
-      }
-    : null;
-
   const result = await subscribeToNewsletter({
-    payload: normalizedPayload,
+    payload,
     headers: request.headers,
   });
 

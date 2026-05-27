@@ -6,13 +6,20 @@
     "dev": "next dev --port 3003",
     "build": "next build",
     "start": "next start --port 3003",
-    "lint": "eslint"
+    "lint": "eslint",
+    "newsletter:setup": "node scripts/newsletter-setup-wizard.mjs",
+    "newsletter:sheet": "node scripts/setup-newsletter-sheet.mjs",
+    "newsletter:vercel-env": "node scripts/sync-newsletter-env-to-vercel.mjs",
+    "newsletter:test-email": "node scripts/test-resend-newsletter-email.mjs",
+    "newsletter:test-subscribe": "node scripts/test-newsletter-subscribe.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.4.0",
+    "googleapis": "^172.0.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "resend": "^6.12.4",
     "stripe": "^22.1.1"
   },
   "devDependencies": {
@@ -23,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vercel": "^54.4.1"
   }
 }

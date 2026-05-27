@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Garçonmaires
 
-## Getting Started
+Garçonmaires is a Next.js 16 storefront deployed on Vercel.
 
-First, run the development server:
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The local app runs on [http://localhost:3003](http://localhost:3003).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` and configure:
 
-## Learn More
+```env
+NEXT_PUBLIC_SITE_URL=http://localhost:3003
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+RESEND_API_KEY=
+GOOGLE_SHEETS_NEWSLETTER_ID=
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Newsletter
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The newsletter flow:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- validates email, consent, and source server-side
+- saves subscribers to Google Sheets
+- avoids duplicate rows
+- sends confirmation emails with Resend
 
-## Deploy on Vercel
+Full setup instructions are in [docs/newsletter-setup.md](/Users/magdalenagrabowska/garconmaires/docs/newsletter-setup.md).
+Resend domain-specific notes are in [docs/resend-domain-setup.md](/Users/magdalenagrabowska/garconmaires/docs/resend-domain-setup.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Available setup commands:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run newsletter:setup
+npm run newsletter:sheet
+npm run newsletter:test-email
+npm run newsletter:test-subscribe
+npm run newsletter:vercel-env
+```
