@@ -32,6 +32,19 @@ type ReadinessCheck = {
   detail: string;
 };
 
+type AdminWebhookEvent = {
+  id: string;
+  provider: string | null;
+  type: string;
+  orderId: string | null;
+  providerTransactionId: string | null;
+  providerPaymentId: string | null;
+  status: string | null;
+  amount: number | null;
+  currency: string | null;
+  createdAt: Date | string | null;
+};
+
 function ensureAdmin(request: NextRequest) {
   if (!isAuthorizedStoreAdmin(request)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -375,13 +388,13 @@ export async function GET(request: NextRequest) {
     database = createDefaultStoreDatabase();
   }
 
-  const webhookEvents =
+  const webhookEvents: AdminWebhookEvent[] =
     getConfiguredStoreStorageDriver() === "postgres" && !readError
-      ? await getPrisma().paymentWebhookEvent.findMany({
+      ? (await getPrisma().paymentWebhookEvent.findMany({
           orderBy: { createdAt: "desc" },
           take: 100,
-        })
-      : database.processedWebhookEvents.slice(-100).reverse().map((id) => ({
+        }))
+      : database.processedWebhookEvents.slice(-100).reverse().map((id): AdminWebhookEvent => ({
           id,
           provider: null,
           type: "payment_notification",
