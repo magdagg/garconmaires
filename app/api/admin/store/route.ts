@@ -127,11 +127,16 @@ async function getDatabaseReadinessChecks(input: {
       checks.push(
         readinessCheck(
           "migrations appear applied",
-          migrations.some((item) => item.migration_name === "0001_init")
+          migrations.some(
+            (item: { migration_name: string }) =>
+              item.migration_name === "0001_init",
+          )
             ? "pass"
             : "fail",
           migrations.length
-            ? migrations.map((item) => item.migration_name).join(", ")
+            ? migrations
+                .map((item: { migration_name: string }) => item.migration_name)
+                .join(", ")
             : "no finished migrations found",
         ),
       );
