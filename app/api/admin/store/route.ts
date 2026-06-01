@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { isAuthorizedStoreAdmin } from "@/lib/store/admin";
 import { createId, nowIso } from "@/lib/store/ids";
@@ -497,7 +498,7 @@ async function resetTpaySandboxProduct() {
   if (getConfiguredStoreStorageDriver() === "postgres") {
     const prisma = getPrisma();
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const product = await tx.product.findUnique({
         where: { id: tpaySandboxProductId },
       });
