@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { isAuthorizedStoreAdmin } from "@/lib/store/admin";
 import { createId, nowIso } from "@/lib/store/ids";
@@ -45,6 +44,10 @@ type AdminWebhookEvent = {
   currency: string | null;
   createdAt: Date | string | null;
 };
+
+type StoreTransactionClient = Parameters<
+  Parameters<ReturnType<typeof getPrisma>["$transaction"]>[0]
+>[0];
 
 function ensureAdmin(request: NextRequest) {
   if (!isAuthorizedStoreAdmin(request)) {
@@ -498,7 +501,7 @@ async function resetTpaySandboxProduct() {
   if (getConfiguredStoreStorageDriver() === "postgres") {
     const prisma = getPrisma();
 
-    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    return prisma.$transaction(async (tx: StoreTransactionClient) => {
       const product = await tx.product.findUnique({
         where: { id: tpaySandboxProductId },
       });
