@@ -5,7 +5,9 @@ import { useId, useState, type FormEvent } from "react";
 type NewsletterFormProps = {
   source: string;
   language?: "pl" | "en";
-  variant?: "footer" | "section" | "minimal";
+  variant?: "footer" | "section" | "minimal" | "hero";
+  submitLabel?: string;
+  successMessage?: string;
 };
 
 type SubmissionTone = "idle" | "error" | "success";
@@ -66,6 +68,16 @@ const copyByLanguage = {
 
 function getVariantClasses(variant: NonNullable<NewsletterFormProps["variant"]>) {
   switch (variant) {
+    case "hero":
+      return {
+        form: "space-y-3",
+        grid: "grid gap-2.5 md:grid-cols-[minmax(0,1fr)_auto]",
+        input:
+          "min-h-11 w-full border border-white/12 bg-black/32 px-3.5 text-[13px] text-white outline-none placeholder:text-white/32 focus:border-white/36",
+        button:
+          "min-h-11 border border-white/12 bg-white px-4 text-[9px] tracking-[0.2em] text-black uppercase hover:bg-white/92 disabled:cursor-not-allowed disabled:opacity-60",
+        consent: "max-w-[24rem] text-[10px] leading-[1.1rem] text-white/42",
+      };
     case "minimal":
       return {
         form: "space-y-4",
@@ -119,6 +131,8 @@ export function NewsletterForm({
   source,
   language = "pl",
   variant = "section",
+  submitLabel,
+  successMessage,
 }: NewsletterFormProps) {
   const t = copyByLanguage[language];
   const [email, setEmail] = useState("");
@@ -185,7 +199,7 @@ export function NewsletterForm({
       setEmail("");
       setWebsite("");
       setTone("success");
-      setMessage(t.success);
+      setMessage(successMessage ?? t.success);
     } catch {
       setTone("error");
       setMessage(t.genericError);
@@ -231,7 +245,7 @@ export function NewsletterForm({
           className={styles.input}
         />
         <button type="submit" disabled={isSubmitting} className={styles.button}>
-          {isSubmitting ? t.buttonLoading : t.button}
+          {isSubmitting ? t.buttonLoading : submitLabel ?? t.button}
         </button>
       </div>
 

@@ -9,6 +9,12 @@ import {
   type NewsletterPayload,
   type ValidatedNewsletterPayload,
 } from "@/lib/newsletter/validation";
+import { sendStoreEmail } from "@/lib/store/email";
+import {
+  trackAnalyticsEvent,
+  upsertNewsletterSubscriber,
+} from "@/lib/store/operations";
+import { updateStoreDatabase } from "@/lib/store/storage";
 
 type NewsletterRequestContext = {
   headers: Headers;
@@ -154,11 +160,35 @@ export async function subscribeToNewsletter({
       };
     }
 
+    const subscriber = await updateStoreDatabase((database) => {
+      const saved = upsertNewsletterSubscriber(database, {
+        email: validation.value.email,
+        consent: true,
+        source: validation.value.source,
+        earlyAccess: validation.value.source === "early-access",
+        tags:
+          validation.value.source === "early-access"
+            ? ["early_access"]
+            : ["newsletter"],
+      });
+      trackAnalyticsEvent(database, {
+        name: "newsletter_signup",
+        customerEmail: validation.value.email,
+        data: {
+          source: validation.value.source,
+          language: validation.value.language,
+        },
+      });
+
+      return saved;
+    });
+
     try {
       await sendNewsletterConfirmationEmail({
         email: validation.value.email,
         language: validation.value.language,
       });
+      await sendStoreEmail("newsletter_confirmation", { subscriber });
     } catch (error) {
       console.error("Failed to send newsletter confirmation email", error);
     }

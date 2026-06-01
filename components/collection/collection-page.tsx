@@ -1,9 +1,6 @@
-import Image from "next/image";
 import { Space_Grotesk } from "next/font/google";
-import Link from "next/link";
 import { NewsletterForm } from "@/components/newsletter/newsletter-form";
-import { products } from "@/lib/data/products";
-import { copy, getProductCopy, withLocalePath, type Locale } from "@/lib/i18n";
+import { copy, type Locale } from "@/lib/i18n";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -11,87 +8,62 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
-function getRequiredProduct(productId: string) {
-  const product = products.find((entry) => entry.id === productId);
-
-  if (!product) {
-    throw new Error(`Missing required collection preview product: ${productId}`);
-  }
-
-  return product;
-}
-
-const teeProduct = getRequiredProduct("gm-002");
-const hoodieProduct = getRequiredProduct("gm-001");
-
 function HeroVisual() {
   return (
     <div className="relative min-h-[32rem] overflow-hidden bg-black md:min-h-[calc(100svh-72px)]">
-      <Image
-        src="/collection/spades-sunglasses-hero-02.jpg"
-        alt="Spades Sunglasses editorial preview"
-        fill
-        className="object-cover object-[68%_center] md:object-[72%_center]"
-        sizes="100vw"
-        priority
-      />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_22%,rgba(255,255,255,0.09),transparent_24%),radial-gradient(circle_at_24%_68%,rgba(255,255,255,0.045),transparent_22%),linear-gradient(135deg,#101010_0%,#020202_58%,#080808_100%)]" />
+      <div className="absolute inset-x-[10%] top-[18%] h-px bg-white/12" />
+      <div className="absolute inset-y-[18%] right-[18%] w-px bg-white/10" />
+      <div className="absolute right-[12%] bottom-[18%] max-w-[18rem] text-right">
+        <p className="mt-4 text-5xl leading-none font-medium text-white/70 md:text-7xl">
+          DROP 01
+        </p>
+      </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.76)_34%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.58)_100%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_76%_18%,rgba(255,255,255,0.04),transparent_18%)]" />
     </div>
   );
 }
 
-function TeeVisual() {
+function EditorialPlaceholder({ label }: { label: string }) {
   return (
     <div className="relative aspect-[4/5] overflow-hidden bg-black">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.08),transparent_22%),linear-gradient(180deg,#020202_0%,#000000_100%)]" />
-      <Image
-        src="/collection/drop-tee-01.png"
-        alt="Spades T-Shirt editorial preview"
-        fill
-        className="object-cover object-center"
-        sizes="(min-width: 1024px) 52vw, 100vw"
-      />
+      <div className="absolute inset-x-8 top-8 h-px bg-white/12" />
+      <div className="absolute inset-y-8 left-8 w-px bg-white/10" />
+      <div className="absolute right-8 bottom-8 left-8">
+        <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
+          {label}
+        </p>
+        <p className="mt-4 text-4xl leading-none font-medium text-white/70">
+          Garçonmaires
+        </p>
+      </div>
     </div>
   );
 }
 
-function HoodieVisual() {
-  return (
-    <div className="relative aspect-[4/5] overflow-hidden bg-black">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.08),transparent_22%),linear-gradient(180deg,#020202_0%,#000000_100%)]" />
-      <Image
-        src="/collection/drop-hoodie-01.png"
-        alt="Spades Hoodie editorial preview"
-        fill
-        className="object-cover object-center"
-        sizes="(min-width: 1024px) 48vw, 100vw"
-      />
-    </div>
-  );
-}
-
-function ProductCopyBlock({
-  productName,
-  category,
-  tagline,
+function DirectionCopyBlock({
+  label,
+  title,
+  body,
 }: {
-  productName: string;
-  category: string;
-  tagline: string;
+  label: string;
+  title: string;
+  body: string;
 }) {
   return (
     <div className="flex h-full flex-col justify-end gap-5 border-t border-white/10 pt-5 md:border-t-0 md:pt-0">
       <div className="space-y-3">
         <p className="font-label text-[10px] tracking-[0.3em] text-white/38 uppercase">
-          {category}
+          {label}
         </p>
         <div className="flex flex-wrap items-end gap-4">
           <h2 className="font-display text-3xl leading-none text-white sm:text-4xl">
-            {productName}
+            {title}
           </h2>
         </div>
-        <p className="max-w-md text-sm leading-7 text-white/56">{tagline}</p>
+        <p className="max-w-md text-sm leading-7 text-white/56">{body}</p>
       </div>
     </div>
   );
@@ -100,8 +72,6 @@ function ProductCopyBlock({
 export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
   const t = copy[locale].collectionPage;
   const newsletter = copy[locale].home;
-  const teeCopy = getProductCopy(teeProduct, locale);
-  const hoodieCopy = getProductCopy(hoodieProduct, locale);
 
   return (
     <div className="bg-black text-white">
@@ -133,13 +103,13 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
       <section className="site-shell px-4 py-10 md:px-6 md:py-16">
         <div className="grid gap-px bg-white/8 md:grid-cols-[1.15fr_0.85fr]">
           <div className="bg-black px-0 py-0">
-            <TeeVisual />
+            <EditorialPlaceholder label="01 / black base" />
           </div>
           <div className="bg-black px-6 py-6 md:px-8 md:py-8">
-            <ProductCopyBlock
-              productName={teeProduct.name}
-              category={teeCopy.category}
-              tagline={teeCopy.tagline}
+            <DirectionCopyBlock
+              label={t.conceptLabel}
+              title={t.leadName}
+              body={t.leadDescription}
             />
           </div>
         </div>
@@ -147,7 +117,7 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
         <div className="mt-10 border-t border-white/10 pt-10">
           <div className="mb-8 space-y-4">
             <p className="font-label text-[10px] tracking-[0.3em] text-white/38 uppercase">
-              02 / Layer
+              02 / Atmosphere
             </p>
             <h2 className="font-display max-w-lg text-3xl leading-tight text-white sm:text-4xl">
               {t.moodTitle}
@@ -157,10 +127,10 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
 
           <div className="grid gap-px bg-white/8 md:grid-cols-[0.85fr_1.15fr]">
             <div className="bg-black px-6 py-6 md:px-8 md:py-8">
-              <ProductCopyBlock
-                productName={hoodieProduct.name}
-                category={hoodieCopy.category}
-                tagline={hoodieCopy.tagline}
+              <DirectionCopyBlock
+                label={t.availability}
+                title="Garçonmaires"
+                body={t.description}
               />
               {t.footerNote ? (
                 <p className="mt-10 font-label text-[10px] tracking-[0.28em] text-white/34 uppercase">
@@ -168,14 +138,11 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
                 </p>
               ) : null}
             </div>
-            <Link
-              href={withLocalePath(`/product/${hoodieProduct.slug}`, locale)}
-              className="group block bg-black"
-            >
+            <div className="bg-black">
               <div className="overflow-hidden">
-                <HoodieVisual />
+                <EditorialPlaceholder label="02 / graphic mark" />
               </div>
-            </Link>
+            </div>
           </div>
         </div>
       </section>

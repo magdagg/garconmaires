@@ -32,7 +32,6 @@ export function SiteHeader({ locale }: SiteHeaderProps) {
       ariaLabel: t.play,
       isSymbol: true,
     },
-    { href: withLocalePath("/about", resolvedLocale), label: t.about },
   ];
 
   return (
@@ -60,7 +59,8 @@ export function SiteHeader({ locale }: SiteHeaderProps) {
 
           <Link
             href={withLocalePath("/", resolvedLocale)}
-            className="justify-self-start md:justify-self-center"
+            aria-label="Garçonmaires home"
+            className="inline-flex items-center justify-self-start md:justify-self-center"
           >
             <BrandHeaderLogo
               className="header-logo-presence h-7 w-[12.75rem] sm:h-8 sm:w-[16rem]"

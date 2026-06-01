@@ -72,11 +72,12 @@ export function BrandHeaderLogo({
   return (
     <div className={cn("relative h-8 w-[15rem] sm:h-9 sm:w-[19rem]", className)}>
       <Image
-        src="/brand/garconmaires-top-wordmark.png"
+        src="/brand/garconmaires-header-wordmark.png"
         alt="Garçonmaires"
         fill
         priority={priority}
-        className="object-contain"
+        draggable={false}
+        className="pointer-events-none select-none object-contain"
         sizes="(max-width: 640px) 240px, 304px"
       />
     </div>

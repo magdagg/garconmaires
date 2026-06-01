@@ -7,6 +7,13 @@
     "build": "next build",
     "start": "next start --port 3003",
     "lint": "eslint",
+    "test": "vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx scripts/seed-store.ts",
+    "db:seed:tpay-sandbox": "tsx scripts/seed-tpay-sandbox.ts",
+    "tpay:webhook:dev": "node scripts/tpay-webhook-dev.mjs",
     "newsletter:setup": "node scripts/newsletter-setup-wizard.mjs",
     "newsletter:sheet": "node scripts/setup-newsletter-sheet.mjs",
     "newsletter:vercel-env": "node scripts/sync-newsletter-env-to-vercel.mjs",
@@ -14,23 +21,29 @@
     "newsletter:test-subscribe": "node scripts/test-newsletter-subscribe.mjs"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "@vercel/blob": "^2.4.0",
     "googleapis": "^172.0.0",
     "next": "16.2.1",
+    "pg": "^8.21.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.12.4",
-    "stripe": "^22.1.1"
+    "resend": "^6.12.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "5.9.3",
-    "vercel": "^54.4.1"
+    "vercel": "^54.4.1",
+    "vitest": "^4.1.7"
   }
 }

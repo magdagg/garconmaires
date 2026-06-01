@@ -32,28 +32,28 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Informacje o czasie realizacji, kosztach dostawy i wysyłce zamówień Garçonmaires.",
       eyebrow: "Dostawa",
       intro:
-        "Zamówienia Garçonmaires są przygotowywane z naciskiem na staranne pakowanie, czytelną komunikację i spokojny, premium proces zakupowy.",
+        "Każde zamówienie pakujemy starannie i wysyłamy z jasną informacją o statusie. Poniżej znajdziesz najważniejsze zasady dostawy.",
       sections: [
         {
           title: "Czas realizacji",
           bullets: [
             "Zamówienia opłacone w dni robocze są zwykle przygotowywane w ciągu 1-3 dni roboczych.",
-            "W okresach premiery kolekcji czas realizacji może wydłużyć się do 5 dni roboczych.",
-            "Po nadaniu zamówienia klient otrzymuje wiadomość e-mail z potwierdzeniem wysyłki.",
+            "W czasie premiery kolekcji przygotowanie paczki może potrwać do 5 dni roboczych.",
+            "Po nadaniu przesyłki wyślemy e-mail z potwierdzeniem wysyłki.",
           ],
         },
         {
           title: "Dostawa na terenie Polski",
           bullets: [
-            "Dostawa krajowa realizowana jest przez wybranego partnera kurierskiego.",
+            "Zamówienia w Polsce wysyłamy za pośrednictwem wybranego partnera kurierskiego.",
             "Koszt dostawy jest widoczny w koszyku i podczas płatności.",
-            "Szacowany czas doręczenia po nadaniu wynosi zazwyczaj 1-2 dni robocze.",
+            "Po nadaniu przesyłka zwykle dociera w ciągu 1-2 dni roboczych.",
           ],
         },
         {
           title: "Wysyłka międzynarodowa",
           paragraphs: [
-            "Na obecnym etapie sklep jest przygotowany przede wszystkim pod rynek polski. Rozszerzenie wysyłki międzynarodowej może zostać uruchomione wraz z kolejnymi etapami rozwoju sklepu.",
+            "Na start obsługujemy przede wszystkim zamówienia z Polski. Wysyłkę międzynarodową planujemy uruchomić w kolejnych etapach rozwoju sklepu.",
           ],
         },
       ],
@@ -64,28 +64,28 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Warunki i procedura zwrotów dla zamówień złożonych w sklepie Garçonmaires.",
       eyebrow: "Zwroty",
       intro:
-        "Jeśli produkt nie spełnia oczekiwań, klient może skorzystać z prawa odstąpienia od umowy zgodnie z obowiązującymi przepisami.",
+        "Jeśli produkt nie spełnia oczekiwań, możesz zgłosić zwrot zgodnie z obowiązującymi przepisami konsumenckimi.",
       sections: [
         {
           title: "Termin zwrotu",
           bullets: [
-            "Klient ma 14 dni od momentu otrzymania zamówienia na zgłoszenie zwrotu.",
-            "Zwracany produkt powinien być odesłany bez zbędnej zwłoki, nie później niż w ciągu 14 dni od zgłoszenia zwrotu.",
+            "Masz 14 dni od otrzymania zamówienia na zgłoszenie zwrotu.",
+            "Po zgłoszeniu zwrotu odeślij produkt bez zbędnej zwłoki, najpóźniej w ciągu kolejnych 14 dni.",
           ],
         },
         {
           title: "Stan produktu",
           bullets: [
-            "Produkt powinien zostać zwrócony w stanie niewykraczającym poza konieczny do stwierdzenia charakteru, cech i funkcjonowania rzeczy.",
-            "Zalecane jest odesłanie produktu z oryginalnym opakowaniem i kompletem elementów dołączonych do przesyłki.",
+            "Produkt powinien wrócić w stanie pozwalającym na ponowną ocenę i sprzedaż, bez śladów używania wykraczających poza przymierzenie.",
+            "Najlepiej odesłać go w oryginalnym opakowaniu, razem ze wszystkimi elementami dołączonymi do przesyłki.",
           ],
         },
         {
           title: "Proces zwrotu",
           bullets: [
-            "Aby rozpocząć zwrot, należy skontaktować się pod adresem studio@garconmaires.com.",
-            "W wiadomości warto podać numer zamówienia i zwracane produkty.",
-            "Szczegóły adresu zwrotnego i dalsze kroki są przekazywane mailowo.",
+            "Aby rozpocząć zwrot, napisz na studio@garconmaires.com.",
+            "W wiadomości podaj numer zamówienia i produkt, który chcesz zwrócić.",
+            "Adres zwrotu i dalsze kroki wyślemy mailowo.",
           ],
         },
       ],
@@ -96,7 +96,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Dostępne metody płatności i sposób rozliczania zamówień Garçonmaires.",
       eyebrow: "Płatności",
       intro:
-        "Sklep Garçonmaires rozlicza zamówienia w polskich złotych i korzysta ze Stripe Checkout, aby proces płatności był szybki i bezpieczny.",
+        "Zamówienia rozliczamy w polskich złotych przez operatora przygotowanego pod polski rynek: BLIK, szybkie przelewy i karty.",
       sections: [
         {
           title: "Dostępne metody",
@@ -109,14 +109,14 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         {
           title: "Waluta",
           bullets: [
-            "Wszystkie ceny w sklepie prezentowane są w PLN.",
-            "Końcowa kwota zamówienia wraz z dostawą widoczna jest przed finalizacją płatności.",
+            "Wszystkie ceny w sklepie są podane w PLN.",
+            "Pełną kwotę zamówienia, razem z dostawą, zobaczysz przed opłaceniem koszyka.",
           ],
         },
         {
           title: "Bezpieczeństwo",
           paragraphs: [
-            "Dane płatnicze są obsługiwane przez zewnętrznego operatora płatności. Garçonmaires nie przechowuje pełnych danych kart płatniczych klientów.",
+            "Dane płatnicze obsługuje zewnętrzny operator płatności. Garçonmaires nie przechowuje pełnych danych kart płatniczych.",
           ],
         },
       ],
@@ -127,30 +127,30 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Najczęstsze pytania dotyczące rozmiarów, dostawy, płatności i zamówień Garçonmaires.",
       eyebrow: "FAQ",
       intro:
-        "Najważniejsze informacje zebrane w jednym miejscu, aby proces zakupu był prosty i przejrzysty.",
+        "Najczęstsze pytania o rozmiary, dostawę, płatności i zwroty zebraliśmy w jednym miejscu.",
       sections: [
         {
           title: "Jak dobrać rozmiar?",
           paragraphs: [
-            "Warto skorzystać z tabeli rozmiarów dostępnej w sklepie. Jeśli nadal pojawiają się wątpliwości, najlepiej napisać na studio@garconmaires.com przed złożeniem zamówienia.",
+            "Sprawdź tabelę rozmiarów przy produkcie. Jeśli wahasz się między rozmiarami, napisz na studio@garconmaires.com przed złożeniem zamówienia.",
           ],
         },
         {
           title: "Czy produkty są limitowane?",
           paragraphs: [
-            "Tak. Pierwsze dropy Garçonmaires są przygotowywane w ograniczonych ilościach, dlatego dostępność wybranych rozmiarów może szybko się zmieniać.",
+            "Tak. Pierwsze dropy Garçonmaires powstają w ograniczonych ilościach, więc dostępność rozmiarów może szybko się zmieniać.",
           ],
         },
         {
           title: "Kiedy otrzymam zamówienie?",
           paragraphs: [
-            "Większość zamówień krajowych jest przygotowywana w ciągu 1-3 dni roboczych, a następnie doręczana w ciągu kolejnych 1-2 dni roboczych.",
+            "Większość zamówień z Polski przygotowujemy w ciągu 1-3 dni roboczych. Po nadaniu przesyłka zwykle dociera w kolejne 1-2 dni robocze.",
           ],
         },
         {
           title: "Jak zgłosić zwrot?",
           paragraphs: [
-            "Aby rozpocząć procedurę zwrotu, należy napisać na studio@garconmaires.com z numerem zamówienia i informacją o zwracanym produkcie.",
+            "Napisz na studio@garconmaires.com, podaj numer zamówienia i nazwę produktu, który chcesz zwrócić.",
           ],
         },
       ],
@@ -161,21 +161,21 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Przewodnik po rozmiarach Garçonmaires dla t-shirtów, longsleeve'ów i bluz.",
       eyebrow: "Tabela rozmiarów",
       intro:
-        "Pierwsza kolekcja Garçonmaires opiera się na czterech podstawowych fasonach. Poniższe wskazówki pomagają wybrać właściwy rozmiar przed zakupem.",
+        "Pierwsza kolekcja Garçonmaires opiera się na luźniejszych fasonach. Poniższe wskazówki pomogą wybrać właściwy rozmiar przed zakupem.",
       sections: [
         {
           title: "Ogólne dopasowanie",
           bullets: [
             "T-shirt ma pudełkowy krój i lekko opuszczone ramię.",
-            "Longsleeve ma spokojnie luźny korpus i wydłużoną linię rękawa.",
-            "Bluza bez kaptura i kangurka mają cięższą objętość i bardziej streetwearowy charakter.",
+            "Longsleeve ma luźniejszy korpus i lekko wydłużony rękaw.",
+            "Bluza bez kaptura i kangurka są cięższe, bardziej obszerne i mają wyraźnie streetwearowy charakter.",
           ],
         },
         {
           title: "Rekomendacja",
           bullets: [
-            "Jeśli zależy Ci na bardziej standardowym dopasowaniu, wybierz swój zwykły rozmiar.",
-            "Jeśli chcesz zachować bardziej oversize'owy efekt, pozostań przy fasonie przewidzianym przez projekt.",
+            "Jeśli chcesz zachować zamierzony krój, wybierz swój zwykły rozmiar.",
+            "Jeśli wolisz bardziej dopasowany efekt, rozważ rozmiar mniejszy przy bluzach i longsleeve'ach.",
             "Przy wątpliwościach skontaktuj się mailowo przed zakupem.",
           ],
         },
@@ -191,26 +191,26 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Podstawowe warunki korzystania ze sklepu internetowego Garçonmaires.",
       eyebrow: "Regulamin",
       intro:
-        "Niniejsza strona stanowi roboczą strukturę regulaminu sklepu i przed uruchomieniem sprzedaży powinna zostać uzupełniona o pełne dane sprzedawcy oraz zweryfikowana prawnie.",
+        "To robocza struktura regulaminu sklepu. Przed uruchomieniem sprzedaży uzupełnimy ją o pełne dane sprzedawcy i weryfikację prawną.",
       sections: [
         {
           title: "Postanowienia ogólne",
           bullets: [
             "Sklep internetowy Garçonmaires służy do sprzedaży produktów odzieżowych marki Garçonmaires.",
-            "Klient zobowiązany jest do korzystania ze sklepu zgodnie z prawem i dobrymi obyczajami.",
+            "Korzystając ze sklepu, klient powinien działać zgodnie z prawem i dobrymi obyczajami.",
           ],
         },
         {
           title: "Zamówienia",
           bullets: [
-            "Złożenie zamówienia następuje poprzez wybór produktu, dodanie go do koszyka i opłacenie zamówienia.",
-            "Potwierdzenie przyjęcia zamówienia przesyłane jest drogą elektroniczną.",
+            "Zamówienie składasz przez wybór produktu, dodanie go do koszyka i opłacenie zamówienia.",
+            "Potwierdzenie przyjęcia zamówienia wysyłamy mailowo.",
           ],
         },
         {
           title: "Zwroty i reklamacje",
           paragraphs: [
-            "Szczegółowe informacje o zwrotach i reklamacjach powinny być spójne z osobnymi stronami informacyjnymi sklepu oraz aktualnymi przepisami prawa konsumenckiego.",
+            "Szczegółowe zasady zwrotów i reklamacji powinny być spójne z osobnymi stronami informacyjnymi sklepu oraz aktualnymi przepisami prawa konsumenckiego.",
           ],
         },
       ],
@@ -221,22 +221,22 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Zasady przetwarzania danych osobowych w sklepie internetowym Garçonmaires.",
       eyebrow: "Polityka prywatności",
       intro:
-        "Niniejsza strona opisuje roboczy zakres polityki prywatności. Przed publikacją sklepu należy uzupełnić ją o pełne dane administratora oraz dokładne podstawy prawne przetwarzania.",
+        "To roboczy zakres polityki prywatności. Przed publikacją sklepu uzupełnimy go o pełne dane administratora i podstawy prawne przetwarzania.",
       sections: [
         {
           title: "Jakie dane są zbierane",
           bullets: [
             "Dane kontaktowe podawane przy składaniu zamówienia.",
-            "Dane adresowe potrzebne do realizacji wysyłki.",
-            "Informacje techniczne związane z korzystaniem ze strony, jeśli sklep używa narzędzi analitycznych.",
+            "Dane adresowe potrzebne do wysyłki.",
+            "Informacje techniczne związane z korzystaniem ze strony, jeśli sklep korzysta z analityki.",
           ],
         },
         {
           title: "Cel przetwarzania",
           bullets: [
-            "Realizacja zamówień.",
-            "Obsługa płatności i wysyłki.",
-            "Kontakt z klientem w sprawie zamówienia lub zwrotu.",
+            "Realizacja zamówienia.",
+            "Obsługa płatności, wysyłki i zwrotów.",
+            "Kontakt z klientem w sprawie zamówienia.",
           ],
         },
         {
@@ -255,13 +255,13 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Informacje o plikach cookies używanych przez sklep internetowy Garçonmaires.",
       eyebrow: "Polityka cookies",
       intro:
-        "Sklep może używać plików cookies niezbędnych do działania strony oraz dodatkowych narzędzi analitycznych lub funkcjonalnych.",
+        "Sklep może używać plików cookies potrzebnych do działania strony oraz dodatkowych narzędzi analitycznych lub funkcjonalnych.",
       sections: [
         {
           title: "Niezbędne cookies",
           bullets: [
             "Utrzymanie koszyka zakupowego.",
-            "Prawidłowe działanie sesji i przejść między stronami.",
+            "Prawidłowe działanie sesji i przechodzenia między stronami.",
           ],
         },
         {
@@ -344,7 +344,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Available payment methods and payment handling for Garçonmaires orders.",
       eyebrow: "Payments",
       intro:
-        "Garçonmaires processes orders in Polish zloty and uses Stripe Checkout to keep payments fast and secure.",
+        "Garçonmaires processes orders in Polish zloty through a Polish-market payment provider with BLIK, fast transfers and cards.",
       sections: [
         {
           title: "Available methods",
@@ -531,7 +531,6 @@ export const footerGroups: Record<
   pl: {
     navigation: [
       { href: "/shop", label: "Sklep" },
-      { href: "/about", label: "O marce" },
       { href: "/contact", label: "Kontakt" },
     ],
     help: [
@@ -551,7 +550,6 @@ export const footerGroups: Record<
   en: {
     navigation: [
       { href: "/shop", label: "Shop" },
-      { href: "/about", label: "About" },
       { href: "/contact", label: "Contact" },
     ],
     help: [

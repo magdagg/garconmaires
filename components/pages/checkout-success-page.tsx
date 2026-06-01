@@ -1,35 +1,13 @@
 import Link from "next/link";
-import { formatPrice } from "@/lib/utils";
-import { getStripeServer } from "@/lib/stripe";
 import { copy, withLocalePath, type Locale } from "@/lib/i18n";
 
 export async function CheckoutSuccessPage({
   locale,
-  searchParams,
 }: {
   locale: Locale;
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ order_id?: string }>;
 }) {
   const t = copy[locale].success;
-  const { session_id: sessionId } = await searchParams;
-
-  let amountTotal: number | null = null;
-  let customerEmail: string | null = null;
-
-  if (sessionId && process.env.STRIPE_SECRET_KEY) {
-    try {
-      const stripe = getStripeServer();
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      amountTotal =
-        typeof session.amount_total === "number"
-          ? session.amount_total / 100
-          : null;
-      customerEmail = session.customer_details?.email ?? null;
-    } catch {
-      amountTotal = null;
-      customerEmail = null;
-    }
-  }
 
   return (
     <div className="site-shell px-4 py-20 md:px-6 md:py-28">
@@ -56,16 +34,10 @@ export async function CheckoutSuccessPage({
               {t.total}
             </p>
             <p className="mt-3 text-sm text-white/76">
-              {amountTotal ? formatPrice(amountTotal, locale) : t.confirmed}
+              {t.confirmed}
             </p>
           </div>
         </div>
-
-        {customerEmail ? (
-          <p className="mt-6 text-sm leading-7 text-white/50">
-            {t.confirmationEmail}: {customerEmail}
-          </p>
-        ) : null}
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
+import { SiteHeaderShell } from "@/components/layout/site-header-shell";
 import { CartProvider } from "@/components/providers/cart-provider";
 
 type RootShellProps = {
@@ -16,7 +16,7 @@ export function RootShell({ children, locale, className }: RootShellProps) {
       <body className="min-h-full bg-black text-white">
         <CartProvider>
           <div className="relative flex min-h-screen flex-col bg-black text-white">
-            <SiteHeader locale={locale} />
+            <SiteHeaderShell locale={locale} />
             <main className="flex-1">{children}</main>
             <SiteFooter locale={locale} />
             <CookieConsent locale={locale} />

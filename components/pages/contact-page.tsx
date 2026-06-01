@@ -6,7 +6,7 @@ export function ContactPage({ locale }: { locale: Locale }) {
   return (
     <div className="site-shell px-4 py-14 md:px-6 md:py-20">
       <div className="grid gap-10 md:grid-cols-[0.9fr_1.1fr]">
-        <div className="space-y-6">
+        <div className="space-y-7">
           <p className="text-xs tracking-[0.34em] text-white/38 uppercase">
             {t.eyebrow}
           </p>
@@ -22,7 +22,7 @@ export function ContactPage({ locale }: { locale: Locale }) {
               <p className="text-xs tracking-[0.28em] text-white/36 uppercase">
                 {t.email}
               </p>
-              <p className="mt-4 text-sm text-white/76">
+              <p className="mt-4 text-sm text-white/84">
                 studio@garconmaires.com
               </p>
             </div>
@@ -30,37 +30,37 @@ export function ContactPage({ locale }: { locale: Locale }) {
               <p className="text-xs tracking-[0.28em] text-white/36 uppercase">
                 {t.base}
               </p>
-              <p className="mt-4 text-sm text-white/76">Warsaw</p>
+              <p className="mt-4 text-sm text-white/84">Warsaw</p>
             </div>
           </div>
         </div>
 
-        <form className="space-y-4 border border-white/10 bg-white/[0.03] p-6 md:p-8">
+        <form className="space-y-4 border border-white/12 bg-white/[0.035] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] md:p-8">
           <div className="grid gap-4 sm:grid-cols-2">
             <input
               type="text"
               placeholder={t.name}
-              className="border border-white/12 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-white/28 focus:border-white"
+              className="border border-white/18 bg-black/30 px-4 py-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/60"
             />
             <input
               type="email"
               placeholder={t.email}
-              className="border border-white/12 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-white/28 focus:border-white"
+              className="border border-white/18 bg-black/30 px-4 py-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/60"
             />
           </div>
           <input
             type="text"
             placeholder={t.subject}
-            className="w-full border border-white/12 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-white/28 focus:border-white"
+            className="w-full border border-white/18 bg-black/30 px-4 py-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/60"
           />
           <textarea
             placeholder={t.message}
             rows={8}
-            className="w-full border border-white/12 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-white/28 focus:border-white"
+            className="w-full border border-white/18 bg-black/30 px-4 py-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/60"
           />
           <button
             type="submit"
-            className="bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black hover:opacity-85"
+            className="w-full bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black hover:opacity-85 sm:w-auto"
           >
             {t.send}
           </button>

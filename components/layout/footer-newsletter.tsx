@@ -9,14 +9,14 @@ type FooterNewsletterProps = {
 
 const copyByLocale = {
   pl: {
-    eyebrow: "DOŁĄCZ DO LISTY",
-    title: "Bądź pierwszy.",
-    body: "Otrzymuj informacje o DROP 01, nowych kolekcjach i wcześniejszym dostępie.",
+    eyebrow: "EARLY ACCESS",
+    title: "Dołącz przed pierwszym dropem.",
+    body: "Zapisz się, żeby dostać informację o premierze, próbkach i dostępności DROP 01.",
   },
   en: {
-    eyebrow: "JOIN THE LIST",
-    title: "Be first.",
-    body: "Receive updates about DROP 01, new releases and private previews.",
+    eyebrow: "EARLY ACCESS",
+    title: "Join before the first drop.",
+    body: "Sign up for launch notes, sample previews, and DROP 01 availability.",
   },
 } satisfies Record<
   Locale,
@@ -47,7 +47,12 @@ export function FooterNewsletter({ locale }: FooterNewsletterProps) {
           </div>
 
           <div className="mx-auto max-w-2xl">
-            <NewsletterForm source="footer" language={locale} variant="footer" />
+            <NewsletterForm
+              source="homepage-early-access"
+              language={locale}
+              variant="footer"
+              submitLabel={locale === "pl" ? "Zapisz się" : "Sign up"}
+            />
           </div>
         </div>
       </div>

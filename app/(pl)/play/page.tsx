@@ -15,10 +15,15 @@ export default function Page() {
       initialGame={game}
       copy={{
         eyebrow: "Garçonmaires / Pasjans",
-        title: "Pierwsza talia Garçonmaires jest już na stole.",
+        title: "Pierwsza talia Garçonmaires.",
         description:
-          "To pierwszy etap naszej własnej gry inspirowanej pasjansem. Silnik rozdaje klasyczny układ Klondike, a oprawę będziemy dalej rozwijać w kierunku monochromatycznego rytuału marki.",
+          "To nasza wersja klasycznego Klondike, z zasadami bliższymi Pasjansowi z Windows XP: rozdanie 1 lub 3, cofanie ruchów, wynik i licznik czasu.",
         newDeal: "Nowe rozdanie",
+        drawOne: "Rozdanie (1)",
+        drawThree: "Rozdanie (3)",
+        undo: "Cofnij",
+        score: "Wynik",
+        time: "Czas",
         stock: "Talia",
         waste: "Stos",
         foundations: "Fundamenty",
@@ -28,13 +33,12 @@ export default function Page() {
         selected: "Wybrane",
         clearSelection: "Wyczyść wybór",
         instructions:
-          "Kliknij talię, aby dobrać kartę. Kliknij kartę ze stosu lub odkrytą kartę w układzie, a następnie kliknij miejsce docelowe.",
+          "Kliknij talię, aby dobrać kartę lub trzy karty, zależnie od wybranego trybu. Możesz przeciągać stosy w układzie, przenosić karty z fundamentu z powrotem na stół i cofać ostatni ruch.",
         victoryTitle: "Wszystkie karty wróciły do fundamentów.",
         victoryBody:
           "Partia została ukończona. Talia Garçonmaires otwiera się teraz w pełnej celebracji i możesz rozpocząć nowe rozdanie, gdy zechcesz.",
         playAgain: "Zagraj ponownie",
-        note:
-          "Ten etap daje już realną, grywalną pętlę: dobieranie kart, ruchy do fundamentów i przenoszenie stosów między kolumnami. Następnie możemy dołożyć drag and drop, zapis stanu gry i pełną talię Garçonmaires.",
+        note: "",
       }}
     />
   );

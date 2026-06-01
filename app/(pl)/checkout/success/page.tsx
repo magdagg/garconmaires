@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ session_id?: string }>;
+  searchParams: Promise<{ order_id?: string }>;
 }) {
   return <CheckoutSuccessPage locale="pl" searchParams={searchParams} />;
 }

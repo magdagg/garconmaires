@@ -46,12 +46,14 @@ export type SolitaireGameState = {
 
 export type SolitaireSelection =
   | { source: "waste" }
+  | { source: "foundation"; pileId: Suit }
   | { source: "tableau"; pileId: string; cardIndex: number };
 
 export type SolitaireMoveAction =
-  | { type: "draw-stock" }
+  | { type: "draw-stock"; count?: 1 | 3 }
   | { type: "move-waste-to-foundation"; foundationId: Suit }
   | { type: "move-waste-to-tableau"; tableauId: string }
+  | { type: "move-foundation-to-tableau"; foundationId: Suit; tableauId: string }
   | { type: "move-tableau-to-foundation"; sourceTableauId: string; foundationId: Suit }
   | {
       type: "move-tableau-to-tableau";
@@ -189,6 +191,24 @@ function moveWasteToTableau(game: SolitaireGameState, tableauId: string) {
   return game;
 }
 
+function moveFoundationToTableau(
+  game: SolitaireGameState,
+  foundationId: Suit,
+  tableauId: string,
+) {
+  const foundation = game.foundations.find((pile) => pile.id === foundationId);
+  const pile = game.tableau.find((item) => item.id === tableauId);
+  const card = foundation?.cards.at(-1);
+
+  if (!card || !pile || !canPlaceOnTableau(card, pile)) {
+    return game;
+  }
+
+  pile.cards.push({ ...card, faceUp: true });
+  foundation?.cards.pop();
+  return game;
+}
+
 function moveTableauToFoundation(
   game: SolitaireGameState,
   sourceTableauId: string,
@@ -238,7 +258,7 @@ function moveTableauToTableau(
   return game;
 }
 
-function drawStock(game: SolitaireGameState) {
+function drawStock(game: SolitaireGameState, count: 1 | 3) {
   if (game.stock.length === 0) {
     if (game.waste.length === 0) {
       return game;
@@ -252,10 +272,14 @@ function drawStock(game: SolitaireGameState) {
     return game;
   }
 
-  const nextCard = game.stock.pop();
+  const cardsToDraw = Math.min(count, game.stock.length);
 
-  if (nextCard) {
-    game.waste.push({ ...nextCard, faceUp: true });
+  for (let drawIndex = 0; drawIndex < cardsToDraw; drawIndex += 1) {
+    const nextCard = game.stock.pop();
+
+    if (nextCard) {
+      game.waste.push({ ...nextCard, faceUp: true });
+    }
   }
 
   return game;
@@ -309,11 +333,13 @@ export function applySolitaireMove(
 
   switch (action.type) {
     case "draw-stock":
-      return drawStock(nextGame);
+      return drawStock(nextGame, action.count ?? 3);
     case "move-waste-to-foundation":
       return moveWasteToFoundation(nextGame, action.foundationId);
     case "move-waste-to-tableau":
       return moveWasteToTableau(nextGame, action.tableauId);
+    case "move-foundation-to-tableau":
+      return moveFoundationToTableau(nextGame, action.foundationId, action.tableauId);
     case "move-tableau-to-foundation":
       return moveTableauToFoundation(nextGame, action.sourceTableauId, action.foundationId);
     case "move-tableau-to-tableau":

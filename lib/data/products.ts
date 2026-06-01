@@ -34,9 +34,9 @@ export const products: Product[] = [
   {
     id: "gm-001",
     slug: "noir-kangaroo-hoodie",
-    name: "Noir Kangaroo Hoodie",
+    name: "Spades Hoodie",
     category: "Hoodies",
-    price: 420,
+    price: 500,
     tagline: "Heavy cotton fleece cut with a restrained street silhouette.",
     description:
       "A heavyweight kangaroo hoodie with a structured shoulder, clean hem, and tonal Garçonmaires detailing kept deliberately quiet.",
@@ -59,9 +59,9 @@ export const products: Product[] = [
   {
     id: "gm-002",
     slug: "atelier-signature-tee",
-    name: "Atelier Signature Tee",
+    name: "Spades T-Shirt",
     category: "T-Shirts",
-    price: 180,
+    price: 300,
     tagline: "Crisp jersey, dropped shoulder, clean line branding.",
     description:
       "A premium everyday base layer with a boxy proportion, precise collar, and minimalist front insignia.",

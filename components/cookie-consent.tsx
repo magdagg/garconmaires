@@ -1,3 +1,4 @@
+import Script from "next/script";
 import type { Locale } from "@/lib/i18n";
 
 const COOKIE_CONSENT_KEY = "garconmaires_cookie_consent";
@@ -378,7 +379,9 @@ export function CookieConsent({ locale }: CookieConsentProps) {
         </div>
       </div>
 
-      <script
+      <Script
+        id="garconmaires-cookie-consent"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: getCookieConsentScript(),
         }}

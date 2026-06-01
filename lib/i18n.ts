@@ -5,6 +5,23 @@ export type Locale = "pl" | "en";
 export const defaultLocale: Locale = "pl";
 export const locales: Locale[] = ["pl", "en"];
 
+const localizedPathnames: Record<string, Record<Locale, string>> = {
+  "/collection": {
+    pl: "/kolekcja",
+    en: "/collection",
+  },
+};
+
+function normalizePathname(pathname: string) {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+
+  const localizedEntry = Object.entries(localizedPathnames).find(([, localized]) =>
+    Object.values(localized).includes(normalized),
+  );
+
+  return localizedEntry?.[0] ?? normalized;
+}
+
 export function getLocaleFromPathname(pathname?: string | null): Locale {
   return pathname?.startsWith("/en") ? "en" : "pl";
 }
@@ -22,17 +39,18 @@ export function stripLocalePrefix(pathname: string) {
 }
 
 export function withLocalePath(pathname: string, locale: Locale) {
-  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const normalized = normalizePathname(pathname);
+  const localized = localizedPathnames[normalized]?.[locale] ?? normalized;
 
   if (locale === "en") {
-    return normalized === "/" ? "/en" : `/en${normalized}`;
+    return localized === "/" ? "/en" : `/en${localized}`;
   }
 
-  return normalized;
+  return localized;
 }
 
 export function switchLocalePath(pathname: string, locale: Locale) {
-  return withLocalePath(stripLocalePrefix(pathname), locale);
+  return withLocalePath(normalizePathname(stripLocalePrefix(pathname)), locale);
 }
 
 export function getCategoryLabel(category: ProductCategory, locale: Locale) {
@@ -67,51 +85,51 @@ type LocalizedProductContent = {
 
 const polishProductContent: Record<string, LocalizedProductContent> = {
   "gm-001": {
-    tagline: "Ciężka bawełna fleece i powściągliwa streetwearowa sylwetka.",
+    tagline: "Ciężka bluza z kapturem o prostej, mocnej linii.",
     description:
-      "Ciężka kangurka z uporządkowaną linią ramion, czystym dołem i tonalnym detalem Garçonmaires utrzymanym w pełnej dyscyplinie.",
+      "Bluza typu kangurka z grubej, miękkiej bawełny. Ma luźny krój, dwuwarstwowy kaptur i dyskretny znak Garçonmaires na piersi.",
     details: [
       "530 gsm, czesana bawełna fleece",
-      "Luźny prosty krój",
+      "Luźny, prosty krój",
       "Przednia kieszeń kangurka",
       "Dwuwarstwowy kaptur",
-      "Tonalny znak Garçonmaires na piersi",
+      "Tonalne oznaczenie Garçonmaires na piersi",
     ],
     material: "100% bawełna",
   },
   "gm-002": {
-    tagline: "Zwarta dzianina, opuszczone ramię i czyste oznaczenie marki.",
+    tagline: "T-shirt z grubszej dzianiny, z luźniejszym ramieniem.",
     description:
-      "Podstawowy t-shirt premium o pudełkowym kroju, precyzyjnym kołnierzu i minimalistycznym znaku z przodu.",
+      "Codzienna baza pierwszej kolekcji: pudełkowy krój, stabilny kołnierz i mały znak marki z przodu.",
     details: [
-      "Zwarta dzianina bawełniana",
+      "Grubsza dzianina bawełniana",
       "Pudełkowy krój z opuszczonym ramieniem",
-      "Wykończony dekolt",
+      "Wzmocnione wykończenie dekoltu",
       "Miękkie pranie wykańczające",
     ],
     material: "100% bawełna organiczna",
   },
   "gm-003": {
-    tagline: "Zwarta dzianina, wydłużona linia i spokojny charakter.",
+    tagline: "Longsleeve o spokojnym kroju i wydłużonej linii rękawa.",
     description:
-      "Longsleeve premium zaprojektowany z lekko wydłużonym rękawem, zbalansowaną szerokością korpusu i czystym monochromatycznym wykończeniem.",
+      "Longsleeve z cięższej bawełny, zaprojektowany jako warstwa pod bluzę albo samodzielny element prostego zestawu.",
     details: [
-      "Zwarta ciężka dzianina bawełniana",
-      "Prosty luźny krój",
-      "Wydłużona proporcja rękawa",
+      "Cięższa dzianina bawełniana",
+      "Prosty, luźny krój",
+      "Lekko wydłużony rękaw",
       "Tonalny nadruk na piersi i karku",
     ],
-    material: "100% zwarta bawełna",
+    material: "100% bawełna",
   },
   "gm-004": {
-    tagline: "Gęsta bawełna loopback i czysta sylwetka bez kaptura.",
+    tagline: "Ciężka bluza bez kaptura, z czystą linią ramion.",
     description:
-      "Ciężka bluza crewneck skrojona bez nadmiaru, z naciskiem na objętość, układ na sylwetce i precyzyjne monochromatyczne wykończenie.",
+      "Bluza crewneck z grubej bawełny loopback. Prosty krój, opuszczone ramię i minimalne oznaczenie marki.",
     details: [
       "480 gsm, bawełna loopback",
       "Luźny korpus i opuszczone ramię",
       "Ściągacz przy szyi, mankietach i dole",
-      "Minimalny tonalny podpis Garçonmaires",
+      "Minimalne tonalne oznaczenie Garçonmaires",
     ],
     material: "100% bawełna",
   },
@@ -142,7 +160,7 @@ export function getProductCopy(product: Product, locale: Locale) {
 export const copy = {
   pl: {
     metaDescription:
-      "Garçonmaires to monochromatyczna marka modowa łącząca nowoczesny streetwear z eleganckim, edytorialnym minimalizmem.",
+      "Garçonmaires to polska marka odzieżowa tworzona wokół czerni, prostego kroju i mocnego znaku.",
     nav: {
       home: "Start",
       shop: "Kolekcja",
@@ -155,58 +173,84 @@ export const copy = {
       close: "Zamknij",
     },
     home: {
-      eyebrow: "GARÇONMAIRES / POLSKI STREETWEAR",
-      title: "POLSKA ELEGANCJA\nW FORMIE STREETWEARU.",
+      eyebrow: "DROP 01",
+      title: "Garçonmaires zaczyna się od czerni.",
       description:
-        "Garçonmaires to polska marka odzieżowa budowana wokół jakości, prostoty i wyrazistego znaku.\n\nWspółczesny streetwear. Powściągliwa elegancja. Lokalny kontekst.",
-      primaryCta: "POZNAJ MARKĘ",
-      secondaryCta: "DROP 01 WKRÓTCE",
+        "Pierwsza seria powstaje jako krótka garderoba: proste formy, cięższe tkaniny i wyrazisty znak.",
+      primaryCta: "Dołącz przed premierą",
+      secondaryCta: "Poznaj markę",
       featuredEyebrow: "DROP 01",
-      featuredTitle: "Pierwsza forma\nGarçonmaires jest w przygotowaniu.",
+      featuredTitle: "Garçonmaires zaczyna się od czerni.",
       featuredDescription:
-        "Pierwszy drop będzie oparty na czerni, prostocie i graficznym symbolu marki.\n\nProdukty pojawią się po zakończeniu prac nad próbkami i finalną formą kolekcji.",
+        "Pierwsza seria powstaje jako krótka garderoba: proste formy, cięższe tkaniny i wyrazisty znak.",
+      featuredNotes: [
+        "01 / heavy cotton",
+        "02 / black base",
+        "03 / limited run",
+      ],
+      visualLabel: "Studium znaku",
+      visualMeta: "Garçonmaires / 01",
+      visualCaption: "Czerń, kontrast, cichy znak.",
       viewAll: "Zobacz wszystko",
       statementEyebrow: "Manifest marki",
       statementTitle:
-        "Luksus sprowadzony do sylwetki, kontrastu i atmosfery.",
+        "Mniej elementów. Więcej charakteru.",
       statementBodyOne:
-        "Garçonmaires powstaje na napięciu między streetwearem a elegancją. Pierwsza kolekcja odrzuca nadmiar i pozwala, by nastrój tworzyły proporcja, ciężar dzianiny i wykończenie.",
+        "Garçonmaires wychodzi z codziennego streetwearu, ale trzyma go bliżej elegancji: przez proporcje, materiał i ograniczoną paletę.",
       statementBodyTwo:
-        "Czerń prowadzi garderobę. Biel przecina ją z precyzją. Wszystko inne staje się tonem, cieniem i przestrzenią wokół ciała.",
+        "Czerń jest bazą. Biel i metaliczne detale budują kontrast. Reszta ma zostać spokojna, żeby ubranie robiło swoje.",
       statementCta: "Przeczytaj historię",
       notesEyebrow: "Notatki do kolekcji",
       notesTitle:
-        "Cicha struktura podporządkowana jednemu wyrazistemu nastrojowi.",
+        "Pierwszy drop skupia się na kroju, ciężarze i znaku.",
       newsletterEyebrow: "Prywatna lista",
       newsletterTitle:
-        "Otrzymuj premiery kolekcji i wiadomości ze studia jako pierwsza.",
+        "Zapisz się przed premierą DROP 01.",
       newsletterDescription:
-        "Dołącz do listy Garçonmaires, aby otrzymywać informacje o premierach, aktualizacjach ze studia i prywatnych ogłoszeniach.",
+        "Wyślemy informacje o dacie premiery, dostępnych modelach i wcześniejszym dostępie dla osób z listy.",
       newsletterPlaceholder: "Adres e-mail",
       newsletterButton: "Dołącz",
       featureBlocks: [
         {
           label: "Materiały",
-          title: "Zwarta bawełna, ciężar dzianiny i tonalne powierzchnie.",
-          body: "Każdy model został sprowadzony do kroju, faktury i wykończenia, aby ciężar niosła sama sylwetka.",
+          title: "Grubsza bawełna, czysta powierzchnia i oszczędny detal.",
+          body: "Ubrania mają dobrze wyglądać w ruchu i w codziennym noszeniu, bez dopowiadania ich ozdobami.",
         },
         {
           label: "Tożsamość",
-          title: "Streetwear wyostrzony przez edytorialną dyscyplinę.",
-          body: "Kolekcja łączy energię miejskiego uniformu z powściągliwością luksusowego ready-to-wear.",
+          title: "Streetwear z ciemniejszą, bardziej elegancką linią.",
+          body: "To nie jest sportowa kolekcja ani klasyczna moda formalna. To ubrania pomiędzy: proste, mocne i do noszenia na co dzień.",
         },
         {
           label: "Podejście",
-          title: "Krótsza garderoba zaprojektowana do warstw bez szumu.",
-          body: "Każdy model został zredagowany z dyscypliną, aby cała kolekcja pozostała klarowna, użytkowa i trwała.",
+          title: "Krótka garderoba zamiast przypadkowego nadmiaru.",
+          body: "DROP 01 ma tworzyć spójny zestaw: t-shirt, longsleeve, bluzy i dodatki w tym samym języku.",
         },
       ],
+    },
+    collectionPage: {
+      eyebrow: "Drop 01",
+      title: "DROP 01",
+      description:
+        "Pierwszy drop zostaje na razie w formie języka: czerń, ciężar, kontrast i prosty znak Garçonmaires.",
+      leadLabel: "Kierunek",
+      leadName: "Czerń / znak / krótka seria",
+      leadCategory: "DROP 01",
+      leadDescription:
+        "Na tym etapie pokazujemy świat marki: ciemną bazę, graficzny znak i oszczędną formę.",
+      conceptLabel: "Język marki",
+      availability: "DROP 01 WKRÓTCE",
+      productCta: "Zobacz kierunek",
+      moodTitle: "Mniej opisu. Więcej nastroju.",
+      moodBody:
+        "Garçonmaires buduje napięcie między codziennością a elegancją: czarne tło, mocny znak i dużo przestrzeni.",
+      footerNote: "",
     },
     shop: {
       eyebrow: "Sklep",
       title: "Kolekcja",
       description:
-        "Monochromatyczny pierwszy drop podniesionych essentials zaprojektowanych dla współczesnego miejskiego ubioru.",
+        "Pierwszy drop Garçonmaires: bluzy, t-shirty i warstwy bazowe w czerni, bieli i odcieniach szarości.",
       allCategories: "Wszystkie kategorie",
       featured: "Wyróżnione",
       priceLow: "Cena: od najniższej",
@@ -215,15 +259,15 @@ export const copy = {
       notes: [
         {
           label: "Język kolekcji",
-          body: "Gęste essentials, precyzyjna proporcja i matowe wykończenie.",
+          body: "Proste fasony, cięższe dzianiny i ograniczona paleta kolorów.",
         },
         {
           label: "Sygnatura",
-          body: "Monochromatyczna garderoba prowadzona przez strukturę, kontrast i powściągliwość.",
+          body: "Czerń, graficzny znak i detale, które nie próbują przejąć całego ubrania.",
         },
         {
           label: "Wykończenie",
-          body: "Ubrania zaprojektowane tak, by czytelnie pracowały na ciele.",
+          body: "Krój ma być widoczny od razu: w ramionach, długości i ciężarze materiału.",
         },
       ],
       piecesSuffix: "modeli",
@@ -237,11 +281,11 @@ export const copy = {
       buyNow: "Kup teraz",
       materials: "Materiał",
       details: "Szczegóły",
-      service: "Obsługa",
+      service: "Zakupy",
       serviceBody:
-        "Zamówienia na terenie Polski są rozliczane w PLN przez Stripe Checkout z lokalnymi metodami płatności.",
+        "Zamówienia w Polsce są rozliczane w PLN przez operatora płatności wybranego dla polskiego rynku.",
       relatedEyebrow: "Powiązane produkty",
-      relatedTitle: "Kontynuuj garderobę.",
+      relatedTitle: "Zobacz też.",
     },
     cart: {
       eyebrow: "Koszyk",
@@ -260,46 +304,45 @@ export const copy = {
       shippingAtCheckout: "Przy płatności",
       checkout: "Przejdź do płatności",
       paymentsNote:
-        "Płatności są realizowane w PLN przez Stripe Checkout dla klientów w Polsce.",
+        "Płatności są realizowane w PLN przez polskiego operatora płatności.",
       drawerTitle: "Wybrane modele",
-      drawerEmptyBody: "Dodaj produkty z kolekcji, aby rozpocząć zamówienie.",
+      drawerEmptyBody: "Dodaj produkt z kolekcji, aby rozpocząć zamówienie.",
       drawerExplore: "Przeglądaj sklep",
       viewCart: "Zobacz koszyk",
     },
     about: {
       title: "O marce",
       description:
-        "Garçonmaires to polska marka odzieżowa budowana wokół elegancji, prostoty i kontrastu.",
+        "Garçonmaires to polska marka odzieżowa z Warszawy, budowana wokół czerni, prostego kroju i mocnego znaku.",
       eyebrow: "O Garçonmaires",
-      heroTitle: "Urodzone w Warszawie. Ubrane w noir.",
+      heroTitle: "Born in Warsaw. Dressed in noir.",
       heroBody:
-        "Garçonmaires to polska marka odzieżowa budowana wokół elegancji, prostoty i kontrastu.\n\nWychodzi z lokalnego kontekstu, ale mówi współczesnym językiem mody.",
+        "Garçonmaires to polska marka odzieżowa z Warszawy. Powstaje wokół prostych form, mocnego symbolu i ciemnej, miejskiej estetyki.",
       vision: "WIZJA",
       visionBody:
-        "Nowoczesna polska marka, która nie udaje zagranicznej i nie powiela oczywistości.\n\nElegancja nie musi być klasyczna w oczywisty sposób. Streetwear nie musi być krzykliwy.",
+        "Zbudować polską markę, która ma własny znak i własny ton.\n\nElegancja nie musi oznaczać koszuli i garnituru. Może być w kroju bluzy, ciężarze bawełny i sposobie noszenia czerni.",
       identity: "TOŻSAMOŚĆ",
       identityBody:
-        "Czyste formy. Mocny symbol. Powściągliwa elegancja.\n\nGarçonmaires stawia na ubrania, które mają charakter bez nadmiaru.",
+        "Czyste formy, mocny symbol i ubrania bez niepotrzebnego hałasu.\n\nGarçonmaires stawia na rzeczy, które mają charakter, ale nie muszą go tłumaczyć dużym nadrukiem.",
       mood: "NASTRÓJ",
       moodBody:
-        "Czerń, szkło, metal, stare wnętrza i polski krajobraz.\n\nMiędzy ulicą a elegancją.\nMiędzy codziennością a szykiem.",
+        "Czerń, szkło, metal, stare wnętrza i warszawska surowość.\n\nMiędzy ulicą a elegancją.\nMiędzy codziennym ubraniem a czymś bardziej zdecydowanym.",
       storyEyebrow: "HISTORIA MARKI",
       storyTitle:
         "Nowa interpretacja polskiej elegancji.",
       story: [
-        "Garçonmaires powstało z potrzeby stworzenia marki, która łączy jakość, współczesny streetwear i lokalną wrażliwość.",
-        "Nie interesuje nas dosłowna nostalgia. Bardziej atmosfera: Warszawa, powściągliwość, kontrast, surowość i elegancja, która nie potrzebuje krzyku.",
-        "To marka dla osób, które wybierają mniej — ale mocniej.",
+        "Garçonmaires powstało z potrzeby stworzenia marki, która mówi o polskiej elegancji współczesnym językiem: przez streetwear, prostotę i znak.",
+        "Nie wracamy do nostalgii wprost. Bliżej nam do atmosfery miasta: kontrastu, surowych materiałów, ciemnych wnętrz i rzeczy, które nie muszą krzyczeć.",
       ],
     },
     contact: {
       title: "Kontakt",
       description:
-        "Skontaktuj się z Garçonmaires w sprawie studia, współpracy hurtowej i prywatnych spotkań.",
+        "Kontakt z Garçonmaires w sprawie kolekcji, prasy, współpracy i zamówień.",
       eyebrow: "Kontakt",
       heroTitle: "Kontakt ze studiem.",
       heroBody:
-        "W sprawie prasy, sprzedaży hurtowej i pytań dotyczących kolekcji skontaktuj się bezpośrednio ze studiem Garçonmaires.",
+        "Napisz do nas w sprawie kolekcji, prasy, współpracy albo zamówienia. Odpowiadamy bezpośrednio ze studia Garçonmaires.",
       email: "E-mail",
       base: "Miasto",
       name: "Imię i nazwisko",
@@ -309,7 +352,7 @@ export const copy = {
     },
     footer: {
       body:
-        "Monochromatyczne krawiectwo dla nowoczesnej ulicznej sylwetki. Projektowe essentials, wyroby skórzane i precyzyjne dodatki dla powściągliwej garderoby.",
+        "Ciemna garderoba z Warszawy: bluzy, t-shirty i dodatki budowane wokół prostego kroju, cięższych materiałów i mocnego znaku.",
       navigation: "Nawigacja",
       contact: "Kontakt",
       press: "Prasa i sprzedaż hurtowa na zapytanie",
@@ -335,8 +378,8 @@ export const copy = {
       startError: "Nie udało się rozpocząć płatności.",
       emptyError: "Twój koszyk jest pusty.",
       configError:
-        "Stripe nie jest jeszcze skonfigurowany. Dodaj STRIPE_SECRET_KEY, aby włączyć płatności.",
-      sessionError: "Nie udało się utworzyć sesji płatności.",
+        "Operator płatności nie jest jeszcze skonfigurowany.",
+      sessionError: "Nie udało się utworzyć płatności.",
     },
     languageName: "PL",
   },
@@ -355,17 +398,25 @@ export const copy = {
       close: "Close",
     },
     home: {
-      eyebrow: "GARÇONMAIRES / POLISH STREETWEAR",
-      title: "Polish elegance\nin streetwear form.",
+      eyebrow: "DROP 01",
+      title: "Garçonmaires begins with black.",
       description:
-        "Garçonmaires is a clothing brand built around quality, simplicity and a strong graphic symbol.\n\nIt connects contemporary streetwear with elegance that does not need excess.",
-      primaryCta: "DISCOVER THE BRAND",
-      secondaryCta: "DROP 01 COMING SOON",
+        "The first series takes shape as a concise wardrobe: clean forms, heavier fabrics, and a sharp graphic mark.",
+      primaryCta: "Join before launch",
+      secondaryCta: "About the brand",
       featuredEyebrow: "DROP 01",
-      featuredTitle: "The first form\nof Garçonmaires is taking shape.",
+      featuredTitle: "Garçonmaires begins with black.",
       featuredDescription:
-        "The first drop will be built around black, simplicity and the graphic symbol of the brand.\n\nProducts will be released once samples and the final collection form are completed.",
-      viewAll: "View all products",
+        "The first series takes shape as a concise wardrobe: clean forms, heavier fabrics, and a sharp graphic mark.",
+      featuredNotes: [
+        "01 / heavy cotton",
+        "02 / black base",
+        "03 / limited run",
+      ],
+      visualLabel: "Mark study",
+      visualMeta: "Garçonmaires / 01",
+      visualCaption: "Black, contrast, quiet mark.",
+      viewAll: "View the world",
       statementEyebrow: "Brand Statement",
       statementTitle:
         "Luxury reduced to silhouette, contrast, and atmosphere.",
@@ -399,6 +450,24 @@ export const copy = {
           body: "Each piece is edited with discipline so the collection remains clear, wearable, and enduring.",
         },
       ],
+    },
+    collectionPage: {
+      eyebrow: "Drop 01",
+      title: "DROP 01",
+      description:
+        "For now, the first drop stays in the language of the brand: black, weight, contrast, and the Garçonmaires mark.",
+      leadLabel: "Direction",
+      leadName: "Black / mark / short run",
+      leadCategory: "DROP 01",
+      leadDescription:
+        "At this stage, the page shows the brand world: a dark base, a graphic mark, and restrained form.",
+      conceptLabel: "Brand language",
+      availability: "DROP 01 SOON",
+      productCta: "View direction",
+      moodTitle: "Less explanation. More atmosphere.",
+      moodBody:
+        "Garçonmaires builds tension between everyday wear and elegance: black ground, a strong mark, and deliberate space.",
+      footerNote: "",
     },
     shop: {
       eyebrow: "Shop",
@@ -437,7 +506,7 @@ export const copy = {
       details: "Details",
       service: "Service",
       serviceBody:
-        "Orders for Poland are processed in PLN through Stripe Checkout with local payment methods.",
+        "Orders for Poland are processed in PLN through the configured Polish payment provider.",
       relatedEyebrow: "Related Products",
       relatedTitle: "Continue the wardrobe.",
     },
@@ -458,7 +527,7 @@ export const copy = {
       shippingAtCheckout: "At checkout",
       checkout: "Continue to checkout",
       paymentsNote:
-        "Payments are processed in PLN through Stripe Checkout for customers in Poland.",
+        "Payments are processed in PLN through the configured Polish payment provider.",
       drawerTitle: "Selected Pieces",
       drawerEmptyBody: "Add pieces from the collection to begin checkout.",
       drawerExplore: "Explore the shop",
@@ -487,7 +556,6 @@ export const copy = {
       story: [
         "Garçonmaires was created from the need to build a brand that connects quality, contemporary streetwear and local sensitivity.",
         "We are not interested in literal nostalgia. We are interested in atmosphere: Warsaw, restraint, contrast, rawness and elegance that does not need to be loud.",
-        "A brand for those who choose less — but stronger.",
       ],
     },
     contact: {
@@ -533,8 +601,8 @@ export const copy = {
       startError: "Unable to start checkout.",
       emptyError: "Your cart is empty.",
       configError:
-        "Stripe is not configured yet. Add STRIPE_SECRET_KEY to enable checkout.",
-      sessionError: "Unable to create checkout session.",
+        "The payment provider is not configured yet.",
+      sessionError: "Unable to create payment.",
     },
     languageName: "EN",
   },
