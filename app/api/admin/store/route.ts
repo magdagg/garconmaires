@@ -61,6 +61,17 @@ function envValue(name: string) {
   return process.env[name]?.trim() ?? "";
 }
 
+function getAdminAuthDiagnostics() {
+  const orderAdminToken = envValue("ORDER_ADMIN_TOKEN");
+
+  return {
+    orderAdminTokenPresent: Boolean(orderAdminToken),
+    orderAdminTokenLength: orderAdminToken.length,
+    nodeEnv: envValue("NODE_ENV") || null,
+    vercelEnv: envValue("VERCEL_ENV") || null,
+  };
+}
+
 function readinessCheck(
   label: string,
   status: ReadinessStatus,
@@ -378,7 +389,15 @@ export async function GET(request: NextRequest) {
   const unauthorized = ensureAdmin(request);
 
   if (unauthorized) {
-    return unauthorized;
+    return NextResponse.json(
+      {
+        error: "Unauthorized.",
+        diagnostics: {
+          adminAuth: getAdminAuthDiagnostics(),
+        },
+      },
+      { status: 401 },
+    );
   }
 
   let readError: string | null = null;
@@ -487,6 +506,7 @@ export async function GET(request: NextRequest) {
     discounts: database.discounts,
     settings: database.settings,
     diagnostics: {
+      adminAuth: getAdminAuthDiagnostics(),
       tpaySandbox: await getTpaySandboxDiagnostics({ database, readError }),
     },
     analyticsEvents: database.analyticsEvents.slice(0, 200),
