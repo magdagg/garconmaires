@@ -994,11 +994,10 @@ export async function createPostgresCheckout(input: {
 }) {
   const prisma = getPrisma();
 
+  await cleanupExpiredPostgresReservations(prisma as unknown as Db);
+
   return prisma.$transaction(
     async (tx) => {
-      await ensurePostgresDefaults(tx);
-      await cleanupExpiredPostgresReservations(tx);
-
       const settings = await tx.storeSettings.findUniqueOrThrow({
         where: { id: "default" },
       });
@@ -1049,6 +1048,7 @@ export async function createPostgresCheckout(input: {
       const orderId = createId("ord");
       const orderNumber = await nextOrderNumber(tx);
       const timestamp = new Date();
+      const timestampIso = timestamp.toISOString();
       const normalizedItems = normalizeCheckoutItems(input.items);
       const orderItems: OrderItemSnapshot[] = [];
       const reservationIds: string[] = [];
@@ -1213,23 +1213,59 @@ export async function createPostgresCheckout(input: {
         },
       });
 
-      await tx.analyticsEvent.create({
-        data: {
-          id: createId("ana"),
-          name: "begin_checkout",
-          sessionId: input.sessionId,
-          customerEmail: customer.email,
-          orderId,
-          data: {},
-          createdAt: timestamp,
+      const order: Order = {
+        id: orderId,
+        orderNumber,
+        customer,
+        shippingAddress: {
+          ...shippingAddress,
+          addressLine2: shippingAddress.addressLine2 ?? undefined,
         },
-      });
-
-      const order = await readOrderSnapshot(tx, orderId);
+        invoice: {
+          wantsInvoice: invoice.wantsInvoice,
+          companyName: invoice.companyName ?? undefined,
+          nip: invoice.nip ?? undefined,
+          companyAddress: invoice.companyAddress ?? undefined,
+        },
+        delivery: {
+          deliveryMethod: input.checkout.delivery?.deliveryMethod ?? "inpost_courier",
+          parcelLockerId: input.checkout.delivery?.parcelLockerId ?? null,
+          parcelLockerAddress: input.checkout.delivery?.parcelLockerAddress ?? null,
+          deliveryPrice: deliveryCost,
+          trackingNumber: null,
+          labelUrl: null,
+          deliveryStatus: "pending",
+        },
+        items: orderItems,
+        subtotal,
+        deliveryCost,
+        discount,
+        total,
+        currency: "PLN",
+        provider,
+        paymentStatus: "pending",
+        fulfillmentStatus: "unfulfilled",
+        orderStatus: "new",
+        trackingNumber: null,
+        consentLog: {
+          termsAcceptedAt: timestampIso,
+          privacyAcceptedAt: timestampIso,
+          newsletterConsentAt: input.checkout.marketingConsent ? timestampIso : null,
+          marketingConsentAt: input.checkout.marketingConsent ? timestampIso : null,
+          legalDocumentVersion: settings.legalDocumentVersion,
+        },
+        reservationIds,
+        createdAt: timestampIso,
+        updatedAt: timestampIso,
+      };
 
       return { order, reservationIds };
     },
-    { isolationLevel: "Serializable" },
+    {
+      isolationLevel: "Serializable",
+      maxWait: 10000,
+      timeout: 15000,
+    },
   );
 }
 
