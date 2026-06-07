@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type StoreSnapshot = {
   products: { id: string; name: string; status: string; isVisible: boolean; price: number }[];
@@ -39,6 +39,13 @@ type StoreSnapshot = {
       at: string;
       details: string | null;
     }[];
+    delivery: {
+      deliveryMethod: string;
+      deliveryStatus: string;
+      trackingNumber: string | null;
+      parcelLockerId: string | null;
+      parcelLockerAddress: string | null;
+    };
     stock?: {
       productName: string;
       sku: string;
@@ -77,6 +84,10 @@ type StoreSnapshot = {
     sellerAddress: string;
     nip: string;
     regon: string;
+    returnAddress: string;
+    defaultCurrency: string;
+    defaultCountry: string;
+    legalDocumentVersion: string;
   };
   diagnostics?: {
     tpaySandbox: {
@@ -150,6 +161,15 @@ function providerLabel(provider: string) {
   }
 
   return provider;
+}
+
+function readinessDetail(
+  diagnostics: TpaySandboxDiagnostics | undefined,
+  label: string,
+) {
+  return (
+    diagnostics?.envChecks.find((check) => check.label === label)?.detail ?? "-"
+  );
 }
 
 export function AdminStorePage() {
@@ -387,6 +407,9 @@ export function AdminStorePage() {
                         <DiagnosticField label="providerPaymentId" value={order.providerPaymentId ?? "-"} />
                         <DiagnosticField label="payment status" value={order.paymentStatus} />
                         <DiagnosticField label="fulfillmentStatus" value={order.fulfillmentStatus} />
+                        <DiagnosticField label="delivery method" value={order.delivery.deliveryMethod} />
+                        <DiagnosticField label="delivery status" value={order.delivery.deliveryStatus} />
+                        <DiagnosticField label="tracking number" value={order.delivery.trackingNumber ?? "-"} />
                         <DiagnosticField label="paidAt" value={order.paidAt ?? "-"} />
                         <DiagnosticField label="last webhook status" value={order.lastWebhookEvent?.status ?? "-"} />
                         <DiagnosticField label="last webhook id" value={order.lastWebhookEvent?.id ?? "-"} />
@@ -422,11 +445,23 @@ export function AdminStorePage() {
                       ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2 lg:flex-col">
+                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "new", fulfillmentStatus: "unfulfilled", deliveryStatus: "pending" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                        Pending
+                      </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "processing", fulfillmentStatus: "packing" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
                         Packing
                       </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "shipped", deliveryStatus: "shipped" })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
                         Shipped
+                      </button>
+                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "delivered", deliveryStatus: "delivered" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                        Delivered
+                      </button>
+                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "cancelled", fulfillmentStatus: "unfulfilled", deliveryStatus: "pending" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                        Cancelled
+                      </button>
+                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "returned", deliveryStatus: "returned" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                        Returned
                       </button>
                     </div>
                   </div>
@@ -440,19 +475,41 @@ export function AdminStorePage() {
             {activeTab === "discounts" ? <SimpleList rows={snapshot.discounts} /> : null}
 
             {activeTab === "settings" ? (
-              <section className="mt-8 grid gap-4 md:grid-cols-2">
-                <button type="button" onClick={() => action("settings.update", { shopEnabled: !snapshot.settings.shopEnabled })} className="border border-white/15 p-5 text-left">
-                  shopEnabled: {String(snapshot.settings.shopEnabled)}
-                </button>
-                <button type="button" onClick={() => action("settings.update", { maintenanceMode: !snapshot.settings.maintenanceMode })} className="border border-white/15 p-5 text-left">
-                  maintenanceMode: {String(snapshot.settings.maintenanceMode)}
-                </button>
-                <button type="button" onClick={() => action("settings.update", { shopMode: "PRE_LAUNCH" })} className="border border-white/15 p-5 text-left">
-                  PRE_LAUNCH
-                </button>
-                <button type="button" onClick={() => action("settings.update", { shopMode: "PUBLIC_DROP" })} className="border border-white/15 p-5 text-left">
-                  PUBLIC_DROP
-                </button>
+              <section className="mt-8 space-y-8">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <button type="button" onClick={() => action("settings.update", { shopEnabled: !snapshot.settings.shopEnabled })} className="border border-white/15 p-5 text-left">
+                    shopEnabled: {String(snapshot.settings.shopEnabled)}
+                  </button>
+                  <button type="button" onClick={() => action("settings.update", { maintenanceMode: !snapshot.settings.maintenanceMode })} className="border border-white/15 p-5 text-left">
+                    maintenanceMode: {String(snapshot.settings.maintenanceMode)}
+                  </button>
+                  <button type="button" onClick={() => action("settings.update", { shopMode: "PRE_LAUNCH" })} className="border border-white/15 p-5 text-left">
+                    PRE_LAUNCH
+                  </button>
+                  <button type="button" onClick={() => action("settings.update", { shopMode: "PUBLIC_DROP" })} className="border border-white/15 p-5 text-left">
+                    PUBLIC_DROP
+                  </button>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <SettingsField label="seller legal name" value={snapshot.settings.sellerName} onSave={(value) => action("settings.update", { sellerName: value })} />
+                  <SettingsField label="seller address" value={snapshot.settings.sellerAddress} onSave={(value) => action("settings.update", { sellerAddress: value })} />
+                  <SettingsField label="seller email" value={snapshot.settings.contactEmail} onSave={(value) => action("settings.update", { contactEmail: value })} />
+                  <SettingsField label="support email" value={snapshot.settings.supportEmail} onSave={(value) => action("settings.update", { supportEmail: value })} />
+                  <SettingsField label="return address" value={snapshot.settings.returnAddress} onSave={(value) => action("settings.update", { returnAddress: value })} />
+                  <SettingsField label="NIP" value={snapshot.settings.nip} onSave={(value) => action("settings.update", { nip: value })} />
+                  <SettingsField label="REGON" value={snapshot.settings.regon} onSave={(value) => action("settings.update", { regon: value })} />
+                  <SettingsField label="free shipping threshold PLN" value={String(snapshot.settings.freeShippingThreshold / 100)} onSave={(value) => action("settings.update", { freeShippingThreshold: Math.round(Number(value) * 100) || 0 })} />
+                  <SettingsField label="standard shipping price PLN" value={String(snapshot.settings.defaultDeliveryPrice / 100)} onSave={(value) => action("settings.update", { defaultDeliveryPrice: Math.round(Number(value) * 100) || 0 })} />
+                  <SettingsField label="legal document version" value={snapshot.settings.legalDocumentVersion} onSave={(value) => action("settings.update", { legalDocumentVersion: value })} />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <SettingsReadOnly label="default currency" value={snapshot.settings.defaultCurrency} />
+                  <SettingsReadOnly label="default country" value={snapshot.settings.defaultCountry} />
+                  <SettingsReadOnly label="payment provider" value={readinessDetail(snapshot.diagnostics?.tpaySandbox, "PAYMENT_PROVIDER")} />
+                  <SettingsReadOnly label="delivery provider placeholder" value="InPost courier, InPost parcel locker, manual tracking" />
+                </div>
               </section>
             ) : null}
           </>
@@ -468,6 +525,49 @@ function DiagnosticField({ label, value }: { label: string; value: string }) {
       <span className="block uppercase tracking-[0.18em] text-white/30">{label}</span>
       <span className="mt-1 block break-words text-white/68">{value}</span>
     </p>
+  );
+}
+
+function SettingsReadOnly({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-white/10 p-5">
+      <p className="text-xs uppercase tracking-[0.22em] text-white/35">{label}</p>
+      <p className="mt-3 break-words text-sm text-white/68">{value || "-"}</p>
+    </div>
+  );
+}
+
+function SettingsField({
+  label,
+  value,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  onSave: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  return (
+    <label className="block border border-white/10 p-5">
+      <span className="text-xs uppercase tracking-[0.22em] text-white/35">{label}</span>
+      <input
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        className="mt-3 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => onSave(draft)}
+        className="mt-3 border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/70"
+      >
+        Save
+      </button>
+    </label>
   );
 }
 

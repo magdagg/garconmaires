@@ -30,14 +30,62 @@ export default function sitemap(): MetadataRoute.Sitemap {
       },
     },
     {
-      url: `${baseUrl}/contact`,
+      url: `${baseUrl}/kontakt`,
       lastModified,
       changeFrequency: "monthly",
       priority: 0.7,
       alternates: {
         languages: {
-          "pl-PL": `${baseUrl}/contact`,
+          "pl-PL": `${baseUrl}/kontakt`,
           "en-US": `${baseUrl}/en/contact`,
+        },
+      },
+    },
+    {
+      url: `${baseUrl}/regulamin`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.5,
+      alternates: {
+        languages: {
+          "pl-PL": `${baseUrl}/regulamin`,
+          "en-US": `${baseUrl}/en/terms`,
+        },
+      },
+    },
+    {
+      url: `${baseUrl}/polityka-prywatnosci`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.5,
+      alternates: {
+        languages: {
+          "pl-PL": `${baseUrl}/polityka-prywatnosci`,
+          "en-US": `${baseUrl}/en/privacy-policy`,
+        },
+      },
+    },
+    {
+      url: `${baseUrl}/zwroty-i-reklamacje`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.5,
+      alternates: {
+        languages: {
+          "pl-PL": `${baseUrl}/zwroty-i-reklamacje`,
+          "en-US": `${baseUrl}/en/returns-complaints`,
+        },
+      },
+    },
+    {
+      url: `${baseUrl}/dostawa`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.5,
+      alternates: {
+        languages: {
+          "pl-PL": `${baseUrl}/dostawa`,
+          "en-US": `${baseUrl}/en/delivery`,
         },
       },
     },
@@ -72,7 +120,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
       alternates: {
         languages: {
-          "pl-PL": `${baseUrl}/contact`,
+          "pl-PL": `${baseUrl}/kontakt`,
           "en-US": `${baseUrl}/en/contact`,
         },
       },

@@ -59,13 +59,22 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       ],
     },
     returns: {
-      title: "Zwroty",
+      title: "Zwroty i reklamacje",
       description:
-        "Warunki i procedura zwrotów dla zamówień złożonych w sklepie Garçonmaires.",
-      eyebrow: "Zwroty",
+        "Warunki i procedura zwrotów oraz reklamacji dla zamówień złożonych w sklepie Garçonmaires.",
+      eyebrow: "Zwroty i reklamacje",
       intro:
-        "Jeśli produkt nie spełnia oczekiwań, możesz zgłosić zwrot zgodnie z obowiązującymi przepisami konsumenckimi.",
+        "To robocza strona informacyjna. Przed startem sprzedaży wymaga uzupełnienia o finalny adres zwrotu, kontakt reklamacyjny i weryfikację prawną.",
       sections: [
+        {
+          title: "Dane do uzupełnienia przed startem",
+          bullets: [
+            "Adres zwrotu: [UZUPEŁNIĆ ADRES ZWROTU].",
+            "Kontakt w sprawie zwrotów i reklamacji: [UZUPEŁNIĆ E-MAIL].",
+            "Szczegóły formularza odstąpienia od umowy: [UZUPEŁNIĆ].",
+            "Procedura reklamacyjna i termin odpowiedzi: [ZWERYFIKOWAĆ PRAWNIE].",
+          ],
+        },
         {
           title: "Termin zwrotu",
           bullets: [
@@ -78,6 +87,13 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
           bullets: [
             "Produkt powinien wrócić w stanie pozwalającym na ponowną ocenę i sprzedaż, bez śladów używania wykraczających poza przymierzenie.",
             "Najlepiej odesłać go w oryginalnym opakowaniu, razem ze wszystkimi elementami dołączonymi do przesyłki.",
+          ],
+        },
+        {
+          title: "Reklamacje",
+          bullets: [
+            "Reklamację można zgłosić mailowo, podając numer zamówienia, opis problemu i zdjęcia produktu, jeśli są potrzebne do oceny zgłoszenia.",
+            "Ta sekcja powinna zostać uzupełniona o finalne dane sprzedawcy, adres do korespondencji i aktualne zasady rozpatrywania reklamacji.",
           ],
         },
         {
@@ -194,6 +210,17 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "To robocza struktura regulaminu sklepu. Przed uruchomieniem sprzedaży uzupełnimy ją o pełne dane sprzedawcy i weryfikację prawną.",
       sections: [
         {
+          title: "Dane sprzedawcy do uzupełnienia",
+          bullets: [
+            "Nazwa prawna sprzedawcy: [UZUPEŁNIĆ].",
+            "NIP: [UZUPEŁNIĆ].",
+            "REGON, jeśli dotyczy: [UZUPEŁNIĆ].",
+            "Adres rejestrowy: [UZUPEŁNIĆ].",
+            "Adres kontaktowy e-mail: [UZUPEŁNIĆ].",
+            "Adres do zwrotów i reklamacji: [UZUPEŁNIĆ].",
+          ],
+        },
+        {
           title: "Postanowienia ogólne",
           bullets: [
             "Sklep internetowy Garçonmaires służy do sprzedaży produktów odzieżowych marki Garçonmaires.",
@@ -205,6 +232,14 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
           bullets: [
             "Zamówienie składasz przez wybór produktu, dodanie go do koszyka i opłacenie zamówienia.",
             "Potwierdzenie przyjęcia zamówienia wysyłamy mailowo.",
+          ],
+        },
+        {
+          title: "Płatności i dostawa",
+          bullets: [
+            "Operator płatności: Tpay / [ZWERYFIKOWAĆ FINALNE DANE OPERATORA].",
+            "Operator dostawy: InPost lub inny wybrany przewoźnik / [UZUPEŁNIĆ].",
+            "Koszt dostawy i przewidywany czas doręczenia powinny być widoczne przed złożeniem zamówienia.",
           ],
         },
         {
@@ -223,6 +258,15 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "To roboczy zakres polityki prywatności. Przed publikacją sklepu uzupełnimy go o pełne dane administratora i podstawy prawne przetwarzania.",
       sections: [
+        {
+          title: "Administrator danych do uzupełnienia",
+          bullets: [
+            "Nazwa administratora danych: [UZUPEŁNIĆ].",
+            "Adres administratora: [UZUPEŁNIĆ].",
+            "Kontakt w sprawie danych osobowych: [UZUPEŁNIĆ E-MAIL].",
+            "Podstawy prawne przetwarzania i okresy przechowywania danych: [ZWERYFIKOWAĆ PRAWNIE].",
+          ],
+        },
         {
           title: "Jakie dane są zbierane",
           bullets: [
@@ -307,13 +351,22 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       ],
     },
     returns: {
-      title: "Returns",
+      title: "Returns and Complaints",
       description:
-        "Return policy and return steps for orders placed through the Garçonmaires store.",
-      eyebrow: "Returns",
+        "Return and complaint handling for orders placed through the Garçonmaires store.",
+      eyebrow: "Returns and Complaints",
       intro:
-        "If a product does not meet expectations, customers may use their right to withdraw from the purchase under applicable consumer regulations.",
+        "This is draft launch content. It must be completed with final seller, return address, and complaint contact details before public sales.",
       sections: [
+        {
+          title: "Launch placeholders",
+          bullets: [
+            "Return address: [COMPLETE BEFORE LAUNCH].",
+            "Complaint contact: [COMPLETE BEFORE LAUNCH].",
+            "Withdrawal form details: [COMPLETE BEFORE LAUNCH].",
+            "Complaint response rules: [LEGAL REVIEW REQUIRED].",
+          ],
+        },
         {
           title: "Return window",
           bullets: [
@@ -326,6 +379,13 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
           bullets: [
             "Products should be returned in a condition that does not go beyond what is necessary to assess their nature, characteristics, and function.",
             "Whenever possible, products should be returned with original packaging and all items included in the shipment.",
+          ],
+        },
+        {
+          title: "Complaints",
+          bullets: [
+            "Complaint requests should include the order number, problem description, and product photos when needed.",
+            "This section must be aligned with final seller details and applicable Polish consumer rules before launch.",
           ],
         },
         {
@@ -438,6 +498,16 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "This page is a working store structure and should be completed with full seller information and reviewed legally before commercial launch.",
       sections: [
         {
+          title: "Seller details to complete",
+          bullets: [
+            "Legal seller name: [COMPLETE BEFORE LAUNCH].",
+            "Tax ID / NIP: [COMPLETE BEFORE LAUNCH].",
+            "REGON, if applicable: [COMPLETE BEFORE LAUNCH].",
+            "Registered address: [COMPLETE BEFORE LAUNCH].",
+            "Contact email and return address: [COMPLETE BEFORE LAUNCH].",
+          ],
+        },
+        {
           title: "General provisions",
           bullets: [
             "The Garçonmaires online store is used for the sale of Garçonmaires apparel products.",
@@ -449,6 +519,14 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
           bullets: [
             "An order is placed by selecting a product, adding it to the cart, and completing payment.",
             "Order confirmation is sent electronically.",
+          ],
+        },
+        {
+          title: "Payments and delivery",
+          bullets: [
+            "Payment operator: Tpay / [CONFIRM FINAL OPERATOR DETAILS].",
+            "Delivery operator: InPost or selected courier / [COMPLETE BEFORE LAUNCH].",
+            "Delivery costs and estimated delivery times must be shown before checkout completion.",
           ],
         },
         {
@@ -467,6 +545,15 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "This page outlines the working privacy structure. Before launch, it should be completed with full controller details and the exact legal bases for processing.",
       sections: [
+        {
+          title: "Controller details to complete",
+          bullets: [
+            "Data controller legal name: [COMPLETE BEFORE LAUNCH].",
+            "Controller address: [COMPLETE BEFORE LAUNCH].",
+            "Privacy contact email: [COMPLETE BEFORE LAUNCH].",
+            "Legal bases and retention periods: [LEGAL REVIEW REQUIRED].",
+          ],
+        },
         {
           title: "What data may be collected",
           bullets: [
@@ -531,18 +618,18 @@ export const footerGroups: Record<
   pl: {
     navigation: [
       { href: "/shop", label: "Sklep" },
-      { href: "/contact", label: "Kontakt" },
+      { href: "/kontakt", label: "Kontakt" },
     ],
     help: [
-      { href: "/shipping", label: "Dostawa" },
-      { href: "/returns", label: "Zwroty" },
+      { href: "/dostawa", label: "Dostawa" },
+      { href: "/zwroty-i-reklamacje", label: "Zwroty i reklamacje" },
       { href: "/payments", label: "Płatności" },
       { href: "/faq", label: "FAQ" },
       { href: "/size-guide", label: "Tabela rozmiarów" },
     ],
     legal: [
-      { href: "/terms", label: "Regulamin" },
-      { href: "/privacy", label: "Polityka prywatności" },
+      { href: "/regulamin", label: "Regulamin" },
+      { href: "/polityka-prywatnosci", label: "Polityka prywatności" },
       { href: "/cookies", label: "Polityka cookies" },
     ],
     contactHeading: "Kontakt",
@@ -553,15 +640,15 @@ export const footerGroups: Record<
       { href: "/contact", label: "Contact" },
     ],
     help: [
-      { href: "/shipping", label: "Shipping" },
-      { href: "/returns", label: "Returns" },
+      { href: "/delivery", label: "Delivery" },
+      { href: "/returns-complaints", label: "Returns and Complaints" },
       { href: "/payments", label: "Payments" },
       { href: "/faq", label: "FAQ" },
       { href: "/size-guide", label: "Size Guide" },
     ],
     legal: [
       { href: "/terms", label: "Terms" },
-      { href: "/privacy", label: "Privacy Policy" },
+      { href: "/privacy-policy", label: "Privacy Policy" },
       { href: "/cookies", label: "Cookies Policy" },
     ],
     contactHeading: "Contact",
