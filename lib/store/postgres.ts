@@ -32,6 +32,17 @@ import type { CheckoutItemInput } from "@/lib/commerce";
 
 type Db = Prisma.TransactionClient;
 
+type CheckoutReservationInput = {
+  id: string;
+  orderId: string;
+  productId: string;
+  variantId: string;
+  quantity: number;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 function iso(date: Date | string | null | undefined) {
   return date ? new Date(date).toISOString() : null;
 }
@@ -1051,7 +1062,7 @@ export async function createPostgresCheckout(input: {
       const timestampIso = timestamp.toISOString();
       const normalizedItems = normalizeCheckoutItems(input.items);
       const orderItems: OrderItemSnapshot[] = [];
-      const reservationIds: string[] = [];
+      const reservations: CheckoutReservationInput[] = [];
 
       for (const requested of normalizedItems) {
         const product = await tx.product.findUnique({
@@ -1081,20 +1092,16 @@ export async function createPostgresCheckout(input: {
           throw new Error(`${product.name} / ${variant.size} jest niedostępny w tej ilości.`);
         }
 
-        const reservationId = createId("res");
-        await tx.inventoryReservation.create({
-          data: {
-            id: reservationId,
-            orderId,
-            variantId: variant.id,
-            quantity: requested.quantity,
-            status: "active",
-            expiresAt: addMinutes(timestamp, 30),
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          },
+        reservations.push({
+          id: createId("res"),
+          orderId,
+          productId: product.id,
+          variantId: variant.id,
+          quantity: requested.quantity,
+          expiresAt: addMinutes(timestamp, 30),
+          createdAt: timestamp,
+          updatedAt: timestamp,
         });
-        reservationIds.push(reservationId);
 
         const unitPrice = variant.priceOverride ?? product.price;
         orderItems.push({
@@ -1213,6 +1220,12 @@ export async function createPostgresCheckout(input: {
         },
       });
 
+      for (const reservation of reservations) {
+        await createInventoryReservationForOrder(tx, reservation);
+      }
+
+      const reservationIds = reservations.map((reservation) => reservation.id);
+
       const order: Order = {
         id: orderId,
         orderNumber,
@@ -1267,6 +1280,48 @@ export async function createPostgresCheckout(input: {
       timeout: 15000,
     },
   );
+}
+
+async function createInventoryReservationForOrder(
+  tx: Db,
+  reservation: CheckoutReservationInput,
+) {
+  const order = await tx.order.findUnique({
+    where: { id: reservation.orderId },
+    select: { id: true },
+  });
+
+  try {
+    await tx.inventoryReservation.create({
+      data: {
+        id: reservation.id,
+        orderId: reservation.orderId,
+        variantId: reservation.variantId,
+        quantity: reservation.quantity,
+        status: "active",
+        expiresAt: reservation.expiresAt,
+        createdAt: reservation.createdAt,
+        updatedAt: reservation.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("[checkout] failed to create inventory reservation", {
+      orderId: reservation.orderId,
+      orderExistsBeforeReservationCreate: Boolean(order),
+      productId: reservation.productId,
+      variantId: reservation.variantId,
+      reservation: {
+        id: reservation.id,
+        orderId: reservation.orderId,
+        variantId: reservation.variantId,
+        quantity: reservation.quantity,
+        status: "active",
+        expiresAt: reservation.expiresAt.toISOString(),
+      },
+      error: error instanceof Error ? error.message : "Unknown reservation error",
+    });
+    throw error;
+  }
 }
 
 async function nextOrderNumber(tx: Db) {

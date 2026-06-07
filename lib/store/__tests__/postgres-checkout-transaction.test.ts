@@ -38,4 +38,26 @@ describe("Postgres checkout transaction", () => {
     expect(transactionBody).toContain("maxWait: 10000");
     expect(transactionBody).toContain("timeout: 15000");
   });
+
+  it("creates the order before creating FK-backed inventory reservations", () => {
+    const transactionBody = createCheckoutTransactionBody();
+    const orderCreateIndex = transactionBody.indexOf("await tx.order.create");
+    const reservationCreateIndex = transactionBody.indexOf(
+      "await createInventoryReservationForOrder",
+    );
+
+    expect(orderCreateIndex).toBeGreaterThan(-1);
+    expect(reservationCreateIndex).toBeGreaterThan(-1);
+    expect(orderCreateIndex).toBeLessThan(reservationCreateIndex);
+  });
+
+  it("keeps the atomic stock reservation before the order insert", () => {
+    const transactionBody = createCheckoutTransactionBody();
+    const stockReserveIndex = transactionBody.indexOf("reserveVariantAtomically");
+    const orderCreateIndex = transactionBody.indexOf("await tx.order.create");
+
+    expect(stockReserveIndex).toBeGreaterThan(-1);
+    expect(orderCreateIndex).toBeGreaterThan(-1);
+    expect(stockReserveIndex).toBeLessThan(orderCreateIndex);
+  });
 });
