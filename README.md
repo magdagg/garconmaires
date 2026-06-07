@@ -200,6 +200,24 @@ Do not use localhost as the Tpay webhook URL. Use the Vercel Preview/Staging
 domain or a secure tunnel. `NEXT_PUBLIC_SITE_URL` must match that public
 staging origin.
 
+Current staging pause note:
+
+- Stable admin URL: `https://garconmaires-tpay-staging.vercel.app/admin`
+- Stable checkout URL: `https://garconmaires-tpay-staging.vercel.app/api/checkout`
+- Stable webhook URL:
+  `https://garconmaires-tpay-staging.vercel.app/api/payments/webhook/tpay`
+- Tpay sandbox readiness is technically prepared: Postgres works, migrations are
+  applied, store settings exist, the hidden sandbox product is seeded, and
+  checkout reaches the Tpay OAuth step.
+- The live sandbox payment test is paused because Tpay OAuth currently returns
+  `401 invalid_client` with `The client credentials are invalid`.
+- Likely cause: the current Tpay Open API Client ID / Secret are not valid for
+  `openapi.sandbox.tpay.com`.
+- Next external action: obtain sandbox Open API credentials from Tpay or ask Tpay
+  support to confirm the sandbox Client ID / Secret and account/API permissions.
+- Do not switch to `TPAY_ENV=production` or the production endpoint just to test
+  sandbox checkout.
+
 Prepare the database after the preview/staging deployment has the env vars:
 
 ```bash
@@ -249,6 +267,18 @@ Staging test checklist:
 - confirm `paidAt` and `providerTransactionId` are filled
 - confirm `providerPaymentId` is filled if Tpay returns it
 - confirm duplicate webhook does not double-commit stock
+
+Resume the paused sandbox test later:
+
+- get a sandbox Open API Client ID and Secret from Tpay
+- update `TPAY_API_KEY` and `TPAY_API_SECRET` in Vercel Preview only
+- redeploy Preview and keep `TPAY_ENV=sandbox`
+- confirm the readiness panel is green
+- reset the Tpay sandbox product to stock `1` and reserved `0`
+- run the hidden-product checkout command below
+- open the returned `paymentUrl`
+- complete the Tpay sandbox payment
+- verify the signed webhook marks the order paid and commits stock exactly once
 
 Start checkout with the hidden product using the admin-only test bypass:
 
