@@ -61,6 +61,20 @@ function envValue(name: string) {
   return process.env[name]?.trim() ?? "";
 }
 
+function sanitizeSiteUrl(rawValue: string) {
+  const trimmed = rawValue.trim();
+  const prefixed = trimmed.startsWith("NEXT_PUBLIC_SITE_URL=");
+  const withoutPrefix = prefixed
+    ? trimmed.slice("NEXT_PUBLIC_SITE_URL=".length).trim()
+    : trimmed;
+
+  return {
+    originalLength: rawValue.length,
+    prefixed,
+    value: withoutPrefix.replace(/\/$/, ""),
+  };
+}
+
 function getAdminAuthDiagnostics() {
   const orderAdminToken = envValue("ORDER_ADMIN_TOKEN");
 
@@ -279,9 +293,10 @@ async function getTpaySandboxDiagnostics(input: {
     envCheck("CHECKOUT_TEST_MODE", "true"),
   ];
   const warnings: ReadinessCheck[] = [];
-  const siteUrl = envValue("NEXT_PUBLIC_SITE_URL");
-  const webhookUrl = siteUrl
-    ? `${siteUrl.replace(/\/$/, "")}/api/payments/webhook/tpay`
+  const rawSiteUrl = envValue("NEXT_PUBLIC_SITE_URL");
+  const siteUrl = sanitizeSiteUrl(rawSiteUrl);
+  const webhookUrl = siteUrl.value
+    ? `${siteUrl.value}/api/payments/webhook/tpay`
     : null;
 
   if (isProductionDeployment && envValue("CHECKOUT_TEST_MODE") === "true") {
@@ -307,9 +322,19 @@ async function getTpaySandboxDiagnostics(input: {
     );
   }
 
-  if (siteUrl) {
+  if (siteUrl.prefixed) {
+    warnings.push(
+      readinessCheck(
+        "NEXT_PUBLIC_SITE_URL format warning",
+        "warn",
+        "NEXT_PUBLIC_SITE_URL value included a key prefix; the readiness panel sanitized it for display.",
+      ),
+    );
+  }
+
+  if (siteUrl.value) {
     try {
-      const hostname = new URL(siteUrl).hostname;
+      const hostname = new URL(siteUrl.value).hostname;
 
       if (hostname === "localhost" || hostname === "127.0.0.1") {
         warnings.push(
@@ -331,7 +356,7 @@ async function getTpaySandboxDiagnostics(input: {
     }
   }
 
-  if (siteUrl && !siteUrl.startsWith("https://")) {
+  if (siteUrl.value && !siteUrl.value.startsWith("https://")) {
     warnings.push(
       readinessCheck(
         "webhook URL warning",
@@ -364,6 +389,12 @@ async function getTpaySandboxDiagnostics(input: {
       .map((check) => `${check.label}: ${check.detail}`),
     webhookPath: "/api/payments/webhook/tpay",
     webhookUrl,
+    siteUrl: {
+      present: Boolean(rawSiteUrl),
+      originalLength: siteUrl.originalLength,
+      sanitized: siteUrl.value || null,
+      strippedKeyPrefix: siteUrl.prefixed,
+    },
   };
 }
 

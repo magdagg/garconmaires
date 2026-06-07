@@ -94,6 +94,12 @@ type StoreSnapshot = {
       invalid: string[];
       webhookPath: string;
       webhookUrl: string | null;
+      siteUrl: {
+        present: boolean;
+        originalLength: number;
+        sanitized: string | null;
+        strippedKeyPrefix: boolean;
+      };
     };
   };
 };
@@ -528,6 +534,15 @@ function TpayDiagnostics({
         {diagnostics.webhookUrl ? (
           <p className="break-all">Webhook URL: {diagnostics.webhookUrl}</p>
         ) : null}
+        <p>NEXT_PUBLIC_SITE_URL present: {diagnostics.siteUrl.present ? "true" : "false"}</p>
+        <p>NEXT_PUBLIC_SITE_URL raw length: {diagnostics.siteUrl.originalLength}</p>
+        {diagnostics.siteUrl.sanitized ? (
+          <p className="break-all">Sanitized site URL: {diagnostics.siteUrl.sanitized}</p>
+        ) : null}
+        <p>
+          NEXT_PUBLIC_SITE_URL key prefix stripped:{" "}
+          {diagnostics.siteUrl.strippedKeyPrefix ? "true" : "false"}
+        </p>
       </div>
 
       <div className="mt-5 flex flex-col gap-2 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
