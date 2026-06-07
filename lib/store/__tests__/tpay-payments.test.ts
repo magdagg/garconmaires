@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPaymentWebhookMatchesPayment,
   getPaymentProviderAdapter,
+  getSafePaymentErrorDiagnostics,
   verifyTpayJwsSignature,
 } from "../payments";
 import type { Order, PaymentTransaction } from "../types";
@@ -204,6 +205,106 @@ describe("Tpay adapter", () => {
       "https://openapi.sandbox.tpay.com/transactions",
       expect.objectContaining({ method: "POST" }),
     );
+  });
+
+  it("normalizes pasted Tpay env assignment values before OAuth", async () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "TPAY_API_KEY=client");
+    vi.stubEnv("TPAY_API_SECRET", 'TPAY_API_SECRET="secret"');
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "oauth-token" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          result: "success",
+          transactionId: "01TPAYTRANSACTION",
+          title: "TR-GM-TEST",
+          status: "pending",
+          transactionPaymentUrl: "https://secure.sandbox.tpay.com/panel",
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getPaymentProviderAdapter("tpay").createPayment({
+      order: makeOrder(),
+      baseUrl: "https://garconmaires.test",
+      locale: "pl",
+    });
+
+    const oauthRequest = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const oauthBody = oauthRequest.body as URLSearchParams;
+
+    expect(oauthBody.get("client_id")).toBe("client");
+    expect(oauthBody.get("client_secret")).toBe("secret");
+  });
+
+  it("exposes safe diagnostics for Tpay OAuth failures", async () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "TPAY_API_KEY=client");
+    vi.stubEnv("TPAY_API_SECRET", "secret");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          result: "failed",
+          errors: [{ code: "invalid_client", message: "Invalid credentials" }],
+          access_token: "must-not-leak",
+          client_secret: "must-not-leak",
+        }),
+      }),
+    );
+
+    let caught: unknown;
+
+    try {
+      await getPaymentProviderAdapter("tpay").createPayment({
+        order: makeOrder(),
+        baseUrl: "https://garconmaires.test",
+        locale: "pl",
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught).toMatchObject({
+      message: "Nie udało się pobrać tokenu OAuth Tpay.",
+    });
+    expect(getSafePaymentErrorDiagnostics(caught)).toEqual({
+      provider: "tpay",
+      operation: "oauth_token",
+      endpointHost: "openapi.sandbox.tpay.com",
+      endpointPath: "/oauth/auth",
+      httpStatus: 401,
+      apiKeyPresent: true,
+      apiKeyLength: 6,
+      apiKeyHadNamePrefix: true,
+      apiSecretPresent: true,
+      apiSecretLength: 6,
+      apiSecretHadNamePrefix: false,
+      errorBody: {
+        result: "failed",
+        errors: [{ code: "invalid_client", message: "Invalid credentials" }],
+        access_token: "[redacted]",
+        client_secret: "[redacted]",
+      },
+    });
   });
 
   it("verifies a valid Tpay JWS webhook and maps paid status", async () => {

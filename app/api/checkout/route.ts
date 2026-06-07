@@ -15,7 +15,10 @@ import {
   type CheckoutCustomerInput,
 } from "@/lib/store/orders";
 import { trackAnalyticsEvent } from "@/lib/store/operations";
-import { getPaymentProviderAdapter } from "@/lib/store/payments";
+import {
+  getPaymentProviderAdapter,
+  getSafePaymentErrorDiagnostics,
+} from "@/lib/store/payments";
 import {
   createPostgresCheckout,
   markPostgresPaymentStarted,
@@ -30,6 +33,7 @@ type CheckoutRequestBody = {
 
 export async function POST(request: NextRequest) {
   let createdOrderId: string | null = null;
+  let includeSafePaymentDiagnostics = false;
 
   try {
     const body = (await request.json()) as CheckoutRequestBody;
@@ -40,6 +44,7 @@ export async function POST(request: NextRequest) {
       process.env.CHECKOUT_TEST_MODE === "true" &&
       request.headers.get("x-checkout-test-mode") === "true" &&
       isAuthorizedStoreAdmin(request);
+    includeSafePaymentDiagnostics = allowDisabledShop;
 
     if (requestedItems.length === 0) {
       return NextResponse.json(
@@ -179,7 +184,13 @@ export async function POST(request: NextRequest) {
 
     const message =
       error instanceof Error ? error.message : copy.pl.checkout.sessionError;
+    const diagnostics = includeSafePaymentDiagnostics
+      ? getSafePaymentErrorDiagnostics(error)
+      : null;
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      diagnostics ? { error: message, diagnostics } : { error: message },
+      { status: 500 },
+    );
   }
 }

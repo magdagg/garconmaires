@@ -66,6 +66,35 @@ export type PaymentProviderAdapter = {
   refundPayment?: (input: { providerTransactionId: string; amount: number }) => Promise<void>;
 };
 
+type SafePaymentProviderDiagnostics = {
+  provider: PaymentProvider;
+  operation: string;
+  endpointHost: string;
+  endpointPath: string;
+  httpStatus: number | null;
+  apiKeyPresent: boolean;
+  apiKeyLength: number;
+  apiKeyHadNamePrefix: boolean;
+  apiSecretPresent: boolean;
+  apiSecretLength: number;
+  apiSecretHadNamePrefix: boolean;
+  errorBody: unknown;
+};
+
+class PaymentProviderRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly diagnostics: SafePaymentProviderDiagnostics,
+  ) {
+    super(message);
+    this.name = "PaymentProviderRequestError";
+  }
+}
+
+export function getSafePaymentErrorDiagnostics(error: unknown) {
+  return error instanceof PaymentProviderRequestError ? error.diagnostics : null;
+}
+
 export function assertPaymentWebhookMatchesPayment(
   notification: PaymentWebhookResult,
   payment: Pick<PaymentTransaction, "amount"> & { currency: string | null },
@@ -148,6 +177,65 @@ function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function normalizeSecretEnvValue(name: string) {
+  const rawValue = process.env[name] ?? "";
+  const trimmed = rawValue.trim();
+  const prefix = `${name}=`;
+  const withoutNamePrefix = trimmed.startsWith(prefix)
+    ? trimmed.slice(prefix.length).trim()
+    : trimmed;
+  const withoutQuotes =
+    (withoutNamePrefix.startsWith('"') && withoutNamePrefix.endsWith('"')) ||
+    (withoutNamePrefix.startsWith("'") && withoutNamePrefix.endsWith("'"))
+      ? withoutNamePrefix.slice(1, -1).trim()
+      : withoutNamePrefix;
+
+  return {
+    value: withoutQuotes,
+    present: withoutQuotes.length > 0,
+    length: withoutQuotes.length,
+    hadNamePrefix: trimmed.startsWith(prefix),
+  };
+}
+
+function sanitizeTpayErrorPayload(value: unknown, depth = 0): unknown {
+  if (depth > 4) {
+    return "[truncated]";
+  }
+
+  if (typeof value === "string") {
+    return value.length > 500 ? `${value.slice(0, 500)}...` : value;
+  }
+
+  if (
+    value === null ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 20).map((item) => sanitizeTpayErrorPayload(item, depth + 1));
+  }
+
+  if (typeof value === "object") {
+    const sanitized: Record<string, unknown> = {};
+
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (/secret|token|authorization|password|credential|client_secret/i.test(key)) {
+        sanitized[key] = "[redacted]";
+      } else {
+        sanitized[key] = sanitizeTpayErrorPayload(item, depth + 1);
+      }
+    }
+
+    return sanitized;
+  }
+
+  return String(value);
+}
+
 function numberOrNull(value: unknown) {
   const numeric = typeof value === "number" ? value : Number(value);
 
@@ -221,30 +309,54 @@ function getTpaySecureBaseUrl(environment = getTpayEnvironment()) {
 }
 
 async function fetchTpayAccessToken() {
-  const clientId = process.env.TPAY_API_KEY;
-  const clientSecret = process.env.TPAY_API_SECRET;
+  const clientId = normalizeSecretEnvValue("TPAY_API_KEY");
+  const clientSecret = normalizeSecretEnvValue("TPAY_API_SECRET");
 
-  if (!clientId || !clientSecret) {
+  if (!clientId.present || !clientSecret.present) {
     throw new Error("Tpay API credentials are missing.");
   }
 
-  const response = await fetch(`${getTpayApiBaseUrl()}/oauth/auth`, {
+  const endpoint = new URL("/oauth/auth", getTpayApiBaseUrl());
+  const response = await fetch(endpoint.toString(), {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
     },
     body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: clientId.value,
+      client_secret: clientSecret.value,
     }),
   });
 
-  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const accessToken = text(payload.access_token);
+  const payload = (await response.json().catch(() => ({}))) as unknown;
+  const payloadObject =
+    typeof payload === "object" && payload !== null
+      ? (payload as Record<string, unknown>)
+      : {};
+  const accessToken = text(payloadObject.access_token);
 
   if (!response.ok || !accessToken) {
-    throw new Error("Nie udało się pobrać tokenu OAuth Tpay.");
+    const diagnostics: SafePaymentProviderDiagnostics = {
+      provider: "tpay",
+      operation: "oauth_token",
+      endpointHost: endpoint.host,
+      endpointPath: endpoint.pathname,
+      httpStatus: response.status,
+      apiKeyPresent: clientId.present,
+      apiKeyLength: clientId.length,
+      apiKeyHadNamePrefix: clientId.hadNamePrefix,
+      apiSecretPresent: clientSecret.present,
+      apiSecretLength: clientSecret.length,
+      apiSecretHadNamePrefix: clientSecret.hadNamePrefix,
+      errorBody: sanitizeTpayErrorPayload(payload),
+    };
+
+    console.error("[payments:tpay] OAuth token request failed", diagnostics);
+    throw new PaymentProviderRequestError(
+      "Nie udało się pobrać tokenu OAuth Tpay.",
+      diagnostics,
+    );
   }
 
   return accessToken;
