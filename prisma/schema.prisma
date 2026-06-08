@@ -328,11 +328,16 @@ model Delivery {
   id                  String         @id
   orderId             String         @unique
   deliveryMethod      DeliveryMethod
+  shipmentProvider    String?
   parcelLockerId      String?
+  parcelLockerName    String?
   parcelLockerAddress String?
   deliveryPrice       Int
   trackingNumber      String?
+  trackingUrl         String?
   labelUrl            String?
+  shippedAt           DateTime?
+  adminNote           String?
   deliveryStatus      DeliveryStatus @default(pending)
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -464,6 +469,7 @@ model StoreSettings {
   defaultCountry        String   @default("PL")
   freeShippingThreshold Int
   defaultDeliveryPrice  Int
+  deliveryMethods       Json     @default("[]")
   shopEnabled           Boolean  @default(false)
   maintenanceMode       Boolean  @default(false)
   shopMode              ShopMode @default(PRE_LAUNCH)

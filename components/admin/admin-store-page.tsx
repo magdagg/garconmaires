@@ -41,10 +41,16 @@ type StoreSnapshot = {
     }[];
     delivery: {
       deliveryMethod: string;
+      deliveryPrice: number;
       deliveryStatus: string;
+      shipmentProvider: string;
       trackingNumber: string | null;
+      trackingUrl: string | null;
       parcelLockerId: string | null;
+      parcelLockerName: string | null;
       parcelLockerAddress: string | null;
+      shippedAt: string | null;
+      adminNote: string | null;
     };
     stock?: {
       productName: string;
@@ -88,6 +94,17 @@ type StoreSnapshot = {
     defaultCurrency: string;
     defaultCountry: string;
     legalDocumentVersion: string;
+    deliveryMethods: {
+      id: string;
+      name: string;
+      type: "parcel_locker" | "courier" | "manual_pickup";
+      provider: "inpost" | "manual";
+      price: number;
+      currency: "PLN";
+      estimatedDeliveryTime: string;
+      enabled: boolean;
+      displayOrder: number;
+    }[];
   };
   diagnostics?: {
     tpaySandbox: {
@@ -408,8 +425,15 @@ export function AdminStorePage() {
                         <DiagnosticField label="payment status" value={order.paymentStatus} />
                         <DiagnosticField label="fulfillmentStatus" value={order.fulfillmentStatus} />
                         <DiagnosticField label="delivery method" value={order.delivery.deliveryMethod} />
+                        <DiagnosticField label="delivery price" value={money(order.delivery.deliveryPrice)} />
                         <DiagnosticField label="delivery status" value={order.delivery.deliveryStatus} />
+                        <DiagnosticField label="shipment provider" value={order.delivery.shipmentProvider} />
                         <DiagnosticField label="tracking number" value={order.delivery.trackingNumber ?? "-"} />
+                        <DiagnosticField label="tracking URL" value={order.delivery.trackingUrl ?? "-"} />
+                        <DiagnosticField label="parcel locker ID" value={order.delivery.parcelLockerId ?? "-"} />
+                        <DiagnosticField label="parcel locker name" value={order.delivery.parcelLockerName ?? "-"} />
+                        <DiagnosticField label="parcel locker address" value={order.delivery.parcelLockerAddress ?? "-"} />
+                        <DiagnosticField label="shippedAt" value={order.delivery.shippedAt ?? "-"} />
                         <DiagnosticField label="paidAt" value={order.paidAt ?? "-"} />
                         <DiagnosticField label="last webhook status" value={order.lastWebhookEvent?.status ?? "-"} />
                         <DiagnosticField label="last webhook id" value={order.lastWebhookEvent?.id ?? "-"} />
@@ -453,6 +477,9 @@ export function AdminStorePage() {
                       </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "shipped", deliveryStatus: "shipped" })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
                         Shipped
+                      </button>
+                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "shipped", deliveryStatus: "shipped", shipmentProvider: "inpost", trackingNumber: order.delivery.trackingNumber ?? "" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                        Shipped InPost
                       </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "delivered", deliveryStatus: "delivered" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
                         Delivered
@@ -509,6 +536,64 @@ export function AdminStorePage() {
                   <SettingsReadOnly label="default country" value={snapshot.settings.defaultCountry} />
                   <SettingsReadOnly label="payment provider" value={readinessDetail(snapshot.diagnostics?.tpaySandbox, "PAYMENT_PROVIDER")} />
                   <SettingsReadOnly label="delivery provider placeholder" value="InPost courier, InPost parcel locker, manual tracking" />
+                  <SettingsReadOnly label="InPost API connected" value="false" />
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-[0.24em] text-white/38">
+                    Delivery methods
+                  </p>
+                  {snapshot.settings.deliveryMethods.map((method) => (
+                    <div key={method.id} className="grid gap-4 border border-white/10 p-5 lg:grid-cols-[1fr_0.7fr_0.7fr_auto] lg:items-end">
+                      <div>
+                        <p className="text-sm text-white">{method.name}</p>
+                        <p className="mt-1 text-xs text-white/45">
+                          {method.id} / {method.type} / {method.provider} / order {method.displayOrder}
+                        </p>
+                      </div>
+                      <SettingsField
+                        label="price PLN"
+                        value={String(method.price / 100)}
+                        onSave={(value) =>
+                          action("settings.update", {
+                            deliveryMethods: snapshot.settings.deliveryMethods.map((item) =>
+                              item.id === method.id
+                                ? { ...item, price: Math.round(Number(value) * 100) || 0 }
+                                : item,
+                            ),
+                          })
+                        }
+                      />
+                      <SettingsField
+                        label="estimated time"
+                        value={method.estimatedDeliveryTime}
+                        onSave={(value) =>
+                          action("settings.update", {
+                            deliveryMethods: snapshot.settings.deliveryMethods.map((item) =>
+                              item.id === method.id
+                                ? { ...item, estimatedDeliveryTime: value }
+                                : item,
+                            ),
+                          })
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          action("settings.update", {
+                            deliveryMethods: snapshot.settings.deliveryMethods.map((item) =>
+                              item.id === method.id
+                                ? { ...item, enabled: !item.enabled }
+                                : item,
+                            ),
+                          })
+                        }
+                        className="border border-white/15 px-4 py-3 text-xs uppercase tracking-[0.2em]"
+                      >
+                        {method.enabled ? "Disable" : "Enable"}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </section>
             ) : null}

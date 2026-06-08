@@ -7,6 +7,8 @@ export type FulfillmentStatus = "unfulfilled" | "packing" | "shipped" | "deliver
 export type OrderStatus = "new" | "confirmed" | "processing" | "completed" | "cancelled";
 export type DeliveryMethod = "inpost_locker" | "inpost_courier" | "courier";
 export type DeliveryStatus = "pending" | "label_created" | "shipped" | "delivered" | "returned";
+export type DeliveryMethodType = "parcel_locker" | "courier" | "manual_pickup";
+export type DeliveryProvider = "inpost" | "manual";
 export type ReturnStatus = "requested" | "approved" | "received" | "refunded" | "rejected";
 export type ComplaintStatus = "submitted" | "under_review" | "accepted" | "rejected" | "resolved";
 export type ComplaintSolution = "repair" | "replacement" | "refund" | "price_reduction";
@@ -154,13 +156,31 @@ export type ConsentLog = {
 };
 
 export type Delivery = {
+  deliveryMethodId?: DeliveryMethod;
   deliveryMethod: DeliveryMethod;
+  shipmentProvider: DeliveryProvider;
   parcelLockerId: string | null;
+  parcelLockerName: string | null;
   parcelLockerAddress: string | null;
   deliveryPrice: number;
   trackingNumber: string | null;
+  trackingUrl: string | null;
   labelUrl: string | null;
+  shippedAt: string | null;
+  adminNote: string | null;
   deliveryStatus: DeliveryStatus;
+};
+
+export type DeliveryMethodSetting = {
+  id: DeliveryMethod;
+  name: string;
+  type: DeliveryMethodType;
+  provider: DeliveryProvider;
+  price: number;
+  currency: "PLN";
+  estimatedDeliveryTime: string;
+  enabled: boolean;
+  displayOrder: number;
 };
 
 export type OrderItemSnapshot = {
@@ -287,6 +307,7 @@ export type StoreSettings = {
   defaultCountry: "PL";
   freeShippingThreshold: number;
   defaultDeliveryPrice: number;
+  deliveryMethods: DeliveryMethodSetting[];
   shopEnabled: boolean;
   maintenanceMode: boolean;
   shopMode: ShopMode;

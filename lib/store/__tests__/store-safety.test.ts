@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { addCartItem, findOrCreateCart, validateCart } from "../cart";
 import { createDefaultStoreDatabase } from "../defaults";
+import {
+  calculateDeliveryPrice,
+  getTrackingUrl,
+  normalizeDeliveryMethods,
+} from "../delivery";
+import { sendStoreEmail } from "../email";
 import {
   releaseExpiredReservations,
   reserveVariantStock,
@@ -10,6 +16,7 @@ import {
   findOrderForCustomerRequest,
   markOrderPaidFromVerifiedProvider,
   markOrderPaymentFailedOrCancelled,
+  markOrderShipped,
 } from "../orders";
 import {
   createComplaint,
@@ -18,6 +25,11 @@ import {
   validateReturnItemsForOrder,
 } from "../operations";
 import type { StoreDatabase } from "../types";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 function makeCheckoutDatabase() {
   const database = createDefaultStoreDatabase();
@@ -85,6 +97,35 @@ function createPendingOrder(database: StoreDatabase) {
 }
 
 describe("store checkout safety", () => {
+  it("calculates delivery prices and free shipping threshold", () => {
+    const methods = normalizeDeliveryMethods([]);
+    const locker = methods.find((method) => method.id === "inpost_locker");
+    const courier = methods.find((method) => method.id === "inpost_courier");
+
+    expect(locker).toMatchObject({
+      name: "InPost Paczkomat",
+      type: "parcel_locker",
+      provider: "inpost",
+      price: 1499,
+      enabled: true,
+    });
+    expect(courier).toMatchObject({ price: 1799 });
+    expect(
+      calculateDeliveryPrice({
+        method: locker!,
+        subtotal: 10000,
+        freeShippingThreshold: 49900,
+      }),
+    ).toBe(1499);
+    expect(
+      calculateDeliveryPrice({
+        method: locker!,
+        subtotal: 49900,
+        freeShippingThreshold: 49900,
+      }),
+    ).toBe(0);
+  });
+
   it("blocks checkout when shopEnabled is false", () => {
     const { database, product, variant } = makeCheckoutDatabase();
     database.settings.shopEnabled = false;
@@ -137,6 +178,53 @@ describe("store checkout safety", () => {
     });
     expect(order.reservationIds).toHaveLength(1);
     expect(variant.reservedQuantity).toBe(1);
+  });
+
+  it("requires parcel locker id for parcel locker delivery", () => {
+    const { database, product, variant } = makeCheckoutDatabase();
+    const cart = findOrCreateCart(database, "session-locker-missing");
+
+    addCartItem(database, {
+      sessionId: cart.sessionId,
+      productId: product.id,
+      variantId: variant.id,
+      quantity: 1,
+    });
+
+    expect(() =>
+      createOrderFromCart({
+        database,
+        cartId: cart.id,
+        input: {
+          ...checkoutInput(),
+          delivery: { deliveryMethodId: "inpost_locker" },
+        },
+      }),
+    ).toThrow("Paczkomat");
+  });
+
+  it("requires phone for delivery", () => {
+    const { database, product, variant } = makeCheckoutDatabase();
+    const cart = findOrCreateCart(database, "session-phone-missing");
+
+    addCartItem(database, {
+      sessionId: cart.sessionId,
+      productId: product.id,
+      variantId: variant.id,
+      quantity: 1,
+    });
+
+    expect(() =>
+      createOrderFromCart({
+        database,
+        cartId: cart.id,
+        input: {
+          ...checkoutInput(),
+          customer: { ...checkoutInput().customer, phone: "" },
+          delivery: { deliveryMethodId: "inpost_courier" },
+        },
+      }),
+    ).toThrow("telefon");
   });
 
   it("allows a hidden active product only through admin checkout test mode", () => {
@@ -223,6 +311,59 @@ describe("store checkout safety", () => {
     expect(released).toHaveLength(1);
     expect(variant.reservedQuantity).toBe(0);
     expect(database.reservations[0].status).toBe("released");
+  });
+
+  it("marks an order shipped with tracking details", () => {
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+    const shipped = markOrderShipped({
+      database,
+      orderId: order.id,
+      trackingNumber: "1234567890",
+      shipmentProvider: "inpost",
+      adminNote: "Packed manually.",
+    });
+
+    expect(shipped).toMatchObject({
+      fulfillmentStatus: "shipped",
+      orderStatus: "completed",
+      trackingNumber: "1234567890",
+    });
+    expect(shipped?.delivery).toMatchObject({
+      deliveryStatus: "shipped",
+      shipmentProvider: "inpost",
+      trackingNumber: "1234567890",
+      adminNote: "Packed manually.",
+    });
+    expect(shipped?.delivery.shippedAt).toBeTruthy();
+    expect(shipped?.delivery.trackingUrl).toContain("inpost.pl");
+  });
+
+  it("builds tracking URL for InPost and falls back safely for manual provider", () => {
+    expect(
+      getTrackingUrl({ provider: "inpost", trackingNumber: "AB 123" }),
+    ).toBe("https://inpost.pl/sledzenie-przesylek?number=AB%20123");
+    expect(getTrackingUrl({ provider: "manual", trackingNumber: "AB 123" })).toBeNull();
+    expect(getTrackingUrl({ provider: "inpost", trackingNumber: "" })).toBeNull();
+  });
+
+  it("skips shipped email safely when Resend is not configured", async () => {
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    vi.stubEnv("RESEND_API_KEY", "");
+    markOrderShipped({
+      database,
+      orderId: order.id,
+      trackingNumber: "1234567890",
+      shipmentProvider: "inpost",
+    });
+    await expect(sendStoreEmail("order_shipped", { order })).resolves.toBeUndefined();
+    expect(info).toHaveBeenCalledWith(
+      "[store-email] skipped; RESEND_API_KEY is not configured",
+      expect.objectContaining({ template: `Zamówienie wysłane / ${order.orderNumber}` }),
+    );
   });
 
   it("does not oversell the last unit across competing reservations", () => {

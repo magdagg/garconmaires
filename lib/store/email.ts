@@ -123,11 +123,22 @@ export async function sendStoreEmail(
   }
 
   if (template === "order_shipped" && order) {
+    const trackingNumber = order.trackingNumber ?? order.delivery.trackingNumber;
+    const trackingUrl = order.delivery.trackingUrl;
     await send({
       to: order.customer.email,
       subject: `Zamówienie wysłane / ${order.orderNumber}`,
       title: "Zamówienie zostało wysłane.",
-      body: `Numer śledzenia: ${order.trackingNumber ?? order.delivery.trackingNumber ?? "-"}\nDziękujemy za zakup Garçonmaires.`,
+      body: [
+        `Numer zamówienia: ${order.orderNumber}`,
+        `Metoda dostawy: ${order.delivery.deliveryMethod}`,
+        `Numer śledzenia: ${trackingNumber ?? "-"}`,
+        trackingUrl ? `Link do śledzenia: ${trackingUrl}` : null,
+        `Kontakt: ${getSupportEmail()}`,
+        "Dziękujemy za zakup Garçonmaires.",
+      ]
+        .filter(Boolean)
+        .join("\n"),
     });
   }
 

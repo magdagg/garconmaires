@@ -4,6 +4,8 @@ import { isAuthorizedStoreAdmin } from "@/lib/store/admin";
 import { createId, nowIso } from "@/lib/store/ids";
 import { createDiscountCode } from "@/lib/store/operations";
 import { createDefaultStoreDatabase } from "@/lib/store/defaults";
+import { getTrackingUrl, normalizeDeliveryMethods } from "@/lib/store/delivery";
+import { sendStoreEmail } from "@/lib/store/email";
 import {
   getConfiguredStoreStorageDriver,
   readStoreDatabase,
@@ -784,6 +786,10 @@ export async function POST(request: NextRequest) {
         database.settings = {
           ...database.settings,
           ...(payload as Partial<StoreSettings>),
+          deliveryMethods: normalizeDeliveryMethods(
+            (payload as Partial<StoreSettings>).deliveryMethods ??
+              database.settings.deliveryMethods,
+          ),
           defaultCurrency: "PLN",
           defaultCountry: "PL",
           updatedAt: timestamp,
@@ -809,11 +815,31 @@ export async function POST(request: NextRequest) {
         if (payload.trackingNumber !== undefined) {
           order.trackingNumber = String(payload.trackingNumber || "");
           order.delivery.trackingNumber = order.trackingNumber;
+          order.delivery.trackingUrl = getTrackingUrl({
+            provider: order.delivery.shipmentProvider,
+            trackingNumber: order.trackingNumber,
+          });
+        }
+
+        if (payload.shipmentProvider) {
+          order.delivery.shipmentProvider =
+            payload.shipmentProvider === "manual" ? "manual" : "inpost";
+          order.delivery.trackingUrl = getTrackingUrl({
+            provider: order.delivery.shipmentProvider,
+            trackingNumber: order.delivery.trackingNumber,
+          });
+        }
+
+        if (payload.adminNote !== undefined) {
+          order.delivery.adminNote = String(payload.adminNote || "");
         }
 
         if (payload.deliveryStatus) {
           order.delivery.deliveryStatus =
             payload.deliveryStatus as typeof order.delivery.deliveryStatus;
+          if (order.delivery.deliveryStatus === "shipped") {
+            order.delivery.shippedAt = order.delivery.shippedAt ?? timestamp;
+          }
         }
 
         order.updatedAt = timestamp;
@@ -878,6 +904,14 @@ export async function POST(request: NextRequest) {
         throw new Error("Unknown admin action.");
     }
     });
+
+    if (
+      body.action === "order.status" &&
+      "order" in result &&
+      result.order?.delivery.deliveryStatus === "shipped"
+    ) {
+      await sendStoreEmail("order_shipped", { order: result.order });
+    }
 
     return NextResponse.json({ ok: true, result });
   } catch (error) {

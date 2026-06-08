@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { get, put } from "@vercel/blob";
 import { createDefaultStoreDatabase, defaultStoreSettings } from "./defaults";
+import { normalizeDeliveryMethods } from "./delivery";
 import { releaseExpiredReservations } from "./inventory";
 import { readPostgresStore, writePostgresStore } from "./postgres";
 import type { StoreDatabase } from "./types";
@@ -70,6 +71,7 @@ function normalizeStoreDatabase(input: Partial<StoreDatabase>): StoreDatabase {
     settings: {
       ...defaultStoreSettings,
       ...(input.settings ?? {}),
+      deliveryMethods: normalizeDeliveryMethods(input.settings?.deliveryMethods),
     },
     products: Array.isArray(input.products) ? input.products : fallback.products,
     variants: Array.isArray(input.variants) ? input.variants : fallback.variants,

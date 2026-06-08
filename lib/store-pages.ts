@@ -35,11 +35,20 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
         "Każde zamówienie pakujemy starannie i wysyłamy z jasną informacją o statusie. Poniżej znajdziesz najważniejsze zasady dostawy.",
       sections: [
         {
+          title: "Metody dostawy przygotowane do launchu",
+          bullets: [
+            "InPost Paczkomat: cena robocza 14,99 PLN, edytowalna w panelu admina.",
+            "Kurier: cena robocza 17,99 PLN, edytowalna w panelu admina.",
+            "Odbiór osobisty pozostaje placeholderem i jest domyślnie wyłączony.",
+            "Próg darmowej dostawy jest konfigurowalny w panelu admina i przed startem powinien zostać potwierdzony.",
+          ],
+        },
+        {
           title: "Czas realizacji",
           bullets: [
             "Zamówienia opłacone w dni robocze są zwykle przygotowywane w ciągu 1-3 dni roboczych.",
             "W czasie premiery kolekcji przygotowanie paczki może potrwać do 5 dni roboczych.",
-            "Po nadaniu przesyłki wyślemy e-mail z potwierdzeniem wysyłki.",
+            "Po nadaniu przesyłki wyślemy e-mail z potwierdzeniem wysyłki i numerem śledzenia, jeśli jest dostępny.",
           ],
         },
         {
@@ -48,6 +57,15 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
             "Zamówienia w Polsce wysyłamy za pośrednictwem wybranego partnera kurierskiego.",
             "Koszt dostawy jest widoczny w koszyku i podczas płatności.",
             "Po nadaniu przesyłka zwykle dociera w ciągu 1-2 dni roboczych.",
+          ],
+        },
+        {
+          title: "Dane do uzupełnienia przed startem",
+          bullets: [
+            "Finalny operator dostawy i warunki współpracy: [UZUPEŁNIĆ].",
+            "Finalne ceny dostawy brutto i próg darmowej dostawy: [UZUPEŁNIĆ].",
+            "Szacowane czasy doręczeń dla Paczkomatu i kuriera: [ZWERYFIKOWAĆ].",
+            "Kontakt do obsługi problemów z doręczeniem: [UZUPEŁNIĆ].",
           ],
         },
         {

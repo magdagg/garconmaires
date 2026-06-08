@@ -2,7 +2,12 @@ import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { createDefaultStoreDatabase } from "./defaults";
 import { addMinutes, createId } from "./ids";
-import { getDefaultDeliveryQuotes } from "./delivery";
+import {
+  getDefaultDeliveryQuotes,
+  normalizeDeliveryMethods,
+  selectDeliveryMethod,
+  validateDeliverySelection,
+} from "./delivery";
 import {
   assertPaymentWebhookMatchesPayment,
   getDefaultPaymentProvider,
@@ -78,6 +83,7 @@ function mapSettings(settings: Awaited<ReturnType<Db["storeSettings"]["findUniqu
         defaultCountry: "PL",
         freeShippingThreshold: settings.freeShippingThreshold,
         defaultDeliveryPrice: settings.defaultDeliveryPrice,
+        deliveryMethods: normalizeDeliveryMethods(settings.deliveryMethods),
         shopEnabled: settings.shopEnabled,
         maintenanceMode: settings.maintenanceMode,
         shopMode: settings.shopMode,
@@ -97,6 +103,7 @@ export async function ensurePostgresDefaults(db?: Db) {
     create: {
       id: "default",
       ...fallback.settings,
+      deliveryMethods: fallback.settings.deliveryMethods as unknown as Prisma.InputJsonValue,
       updatedAt: new Date(fallback.settings.updatedAt),
     },
   });
@@ -308,11 +315,17 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
         },
         delivery: {
           deliveryMethod: delivery?.deliveryMethod ?? "inpost_courier",
+          shipmentProvider:
+            (delivery?.shipmentProvider as "inpost" | "manual" | null) ?? "inpost",
           parcelLockerId: delivery?.parcelLockerId ?? null,
+          parcelLockerName: delivery?.parcelLockerName ?? null,
           parcelLockerAddress: delivery?.parcelLockerAddress ?? null,
           deliveryPrice: delivery?.deliveryPrice ?? order.deliveryCost,
           trackingNumber: delivery?.trackingNumber ?? null,
+          trackingUrl: delivery?.trackingUrl ?? null,
           labelUrl: delivery?.labelUrl ?? null,
+          shippedAt: iso(delivery?.shippedAt),
+          adminNote: delivery?.adminNote ?? null,
           deliveryStatus: delivery?.deliveryStatus ?? "pending",
         },
         items: orderItems
@@ -447,11 +460,13 @@ export async function writePostgresStore(database: StoreDatabase): Promise<Store
       where: { id: "default" },
       update: {
         ...database.settings,
+        deliveryMethods: database.settings.deliveryMethods as unknown as Prisma.InputJsonValue,
         updatedAt: new Date(database.settings.updatedAt),
       },
       create: {
         id: "default",
         ...database.settings,
+        deliveryMethods: database.settings.deliveryMethods as unknown as Prisma.InputJsonValue,
         updatedAt: new Date(database.settings.updatedAt),
       },
     });
@@ -911,11 +926,15 @@ async function upsertNestedOrderRows(tx: Db, order: Order) {
 
   await tx.delivery.upsert({
     where: { orderId: order.id },
-    update: order.delivery,
+    update: {
+      ...order.delivery,
+      shippedAt: asDate(order.delivery.shippedAt),
+    },
     create: {
       id: createId("del"),
       orderId: order.id,
       ...order.delivery,
+      shippedAt: asDate(order.delivery.shippedAt),
     },
   });
 
@@ -1034,6 +1053,18 @@ export async function createPostgresCheckout(input: {
         email: requireText(input.checkout.customer?.email, "e-mail"),
         phone: requireText(input.checkout.customer?.phone, "telefon"),
       };
+      const selectedDeliveryMethod = selectDeliveryMethod({
+        settings: mapSettings(settings),
+        delivery: input.checkout.delivery,
+      });
+
+      validateDeliverySelection({
+        method: selectedDeliveryMethod,
+        delivery: input.checkout.delivery,
+        customer,
+        shippingAddress: input.checkout.shippingAddress,
+      });
+      const isParcelLocker = selectedDeliveryMethod.type === "parcel_locker";
       const shippingAddress = {
         firstName: requireText(
           input.checkout.shippingAddress?.firstName ?? customer.firstName,
@@ -1043,10 +1074,22 @@ export async function createPostgresCheckout(input: {
           input.checkout.shippingAddress?.lastName ?? customer.lastName,
           "nazwisko odbiorcy",
         ),
-        addressLine1: requireText(input.checkout.shippingAddress?.addressLine1, "adres"),
+        addressLine1: requireText(
+          input.checkout.shippingAddress?.addressLine1 ??
+            (isParcelLocker
+              ? input.checkout.delivery?.parcelLockerAddress ??
+                input.checkout.delivery?.parcelLockerName ??
+                input.checkout.delivery?.parcelLockerId
+              : undefined),
+          "adres",
+        ),
         addressLine2: input.checkout.shippingAddress?.addressLine2?.trim() || null,
-        postalCode: requireText(input.checkout.shippingAddress?.postalCode, "kod pocztowy"),
-        city: requireText(input.checkout.shippingAddress?.city, "miasto"),
+        postalCode: isParcelLocker
+          ? input.checkout.shippingAddress?.postalCode?.trim() || "00-000"
+          : requireText(input.checkout.shippingAddress?.postalCode, "kod pocztowy"),
+        city: isParcelLocker
+          ? input.checkout.shippingAddress?.city?.trim() || "Paczkomat"
+          : requireText(input.checkout.shippingAddress?.city, "miasto"),
         country: "PL" as const,
       };
       const invoice = {
@@ -1124,7 +1167,9 @@ export async function createPostgresCheckout(input: {
           subtotal,
           freeShippingThreshold: settings.freeShippingThreshold,
           defaultDeliveryPrice: settings.defaultDeliveryPrice,
-        })[0]?.price ?? settings.defaultDeliveryPrice;
+          deliveryMethods: normalizeDeliveryMethods(settings.deliveryMethods),
+        }).find((quote) => quote.method === selectedDeliveryMethod.id)?.price ??
+        selectedDeliveryMethod.price;
       const discount = 0;
       const total = subtotal + deliveryCost - discount;
       const provider = getDefaultPaymentProvider();
@@ -1180,10 +1225,15 @@ export async function createPostgresCheckout(input: {
           delivery: {
             create: {
               id: createId("del"),
-              deliveryMethod: input.checkout.delivery?.deliveryMethod ?? "inpost_courier",
+              deliveryMethod: selectedDeliveryMethod.id,
+              shipmentProvider: selectedDeliveryMethod.provider,
               parcelLockerId: input.checkout.delivery?.parcelLockerId ?? null,
+              parcelLockerName: input.checkout.delivery?.parcelLockerName ?? null,
               parcelLockerAddress: input.checkout.delivery?.parcelLockerAddress ?? null,
               deliveryPrice: deliveryCost,
+              trackingUrl: null,
+              shippedAt: null,
+              adminNote: input.checkout.delivery?.adminNote ?? null,
               deliveryStatus: "pending",
               createdAt: timestamp,
               updatedAt: timestamp,
@@ -1241,12 +1291,17 @@ export async function createPostgresCheckout(input: {
           companyAddress: invoice.companyAddress ?? undefined,
         },
         delivery: {
-          deliveryMethod: input.checkout.delivery?.deliveryMethod ?? "inpost_courier",
+          deliveryMethod: selectedDeliveryMethod.id,
+          shipmentProvider: selectedDeliveryMethod.provider,
           parcelLockerId: input.checkout.delivery?.parcelLockerId ?? null,
+          parcelLockerName: input.checkout.delivery?.parcelLockerName ?? null,
           parcelLockerAddress: input.checkout.delivery?.parcelLockerAddress ?? null,
           deliveryPrice: deliveryCost,
           trackingNumber: null,
+          trackingUrl: null,
           labelUrl: null,
+          shippedAt: null,
+          adminNote: input.checkout.delivery?.adminNote ?? null,
           deliveryStatus: "pending",
         },
         items: orderItems,
@@ -1684,11 +1739,17 @@ async function readOrderSnapshot(tx: Db, orderId: string): Promise<Order> {
     },
     delivery: {
       deliveryMethod: order.delivery?.deliveryMethod ?? "inpost_courier",
+      shipmentProvider:
+        (order.delivery?.shipmentProvider as "inpost" | "manual" | null) ?? "inpost",
       parcelLockerId: order.delivery?.parcelLockerId ?? null,
+      parcelLockerName: order.delivery?.parcelLockerName ?? null,
       parcelLockerAddress: order.delivery?.parcelLockerAddress ?? null,
       deliveryPrice: order.delivery?.deliveryPrice ?? order.deliveryCost,
       trackingNumber: order.delivery?.trackingNumber ?? null,
+      trackingUrl: order.delivery?.trackingUrl ?? null,
       labelUrl: order.delivery?.labelUrl ?? null,
+      shippedAt: iso(order.delivery?.shippedAt),
+      adminNote: order.delivery?.adminNote ?? null,
       deliveryStatus: order.delivery?.deliveryStatus ?? "pending",
     },
     items: order.items.map((item) => ({

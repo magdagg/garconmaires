@@ -7,6 +7,7 @@ import type {
   StoreDatabase,
   StoreSettings,
 } from "./types";
+import { defaultDeliveryMethods } from "./delivery";
 
 const createdAt = "2026-05-31T00:00:00.000Z";
 
@@ -21,8 +22,9 @@ export const defaultStoreSettings: StoreSettings = {
   returnAddress: "",
   defaultCurrency: "PLN",
   defaultCountry: "PL",
-  freeShippingThreshold: 40000,
-  defaultDeliveryPrice: 1900,
+  freeShippingThreshold: 49900,
+  defaultDeliveryPrice: 1799,
+  deliveryMethods: defaultDeliveryMethods,
   shopEnabled: false,
   maintenanceMode: false,
   shopMode: "PRE_LAUNCH",

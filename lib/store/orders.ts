@@ -2,6 +2,7 @@ import type {
   ConsentLog,
   CustomerData,
   Delivery,
+  DeliveryProvider,
   InvoiceData,
   Order,
   OrderItemSnapshot,
@@ -10,7 +11,13 @@ import type {
   StoreDatabase,
 } from "./types";
 import { createId, nowIso } from "./ids";
-import { createPendingDelivery } from "./delivery";
+import {
+  calculateDeliveryPrice,
+  createPendingDelivery,
+  getTrackingUrl,
+  selectDeliveryMethod,
+  validateDeliverySelection,
+} from "./delivery";
 import { commitReservations, releaseReservations, reserveVariantStock } from "./inventory";
 import { getDefaultPaymentProvider } from "./payments";
 
@@ -70,6 +77,19 @@ export function createOrderFromCart({
     phone: requireText(input.customer?.phone, "telefon"),
   };
 
+  const selectedDeliveryMethod = selectDeliveryMethod({
+    settings: database.settings,
+    delivery: input.delivery,
+  });
+
+  validateDeliverySelection({
+    method: selectedDeliveryMethod,
+    delivery: input.delivery,
+    customer,
+    shippingAddress: input.shippingAddress,
+  });
+
+  const isParcelLocker = selectedDeliveryMethod.type === "parcel_locker";
   const shippingAddress: ShippingAddress = {
     firstName: requireText(
       input.shippingAddress?.firstName ?? customer.firstName,
@@ -79,10 +99,22 @@ export function createOrderFromCart({
       input.shippingAddress?.lastName ?? customer.lastName,
       "nazwisko odbiorcy",
     ),
-    addressLine1: requireText(input.shippingAddress?.addressLine1, "adres"),
+    addressLine1: requireText(
+      input.shippingAddress?.addressLine1 ??
+        (isParcelLocker
+          ? input.delivery?.parcelLockerAddress ??
+            input.delivery?.parcelLockerName ??
+            input.delivery?.parcelLockerId
+          : undefined),
+      "adres",
+    ),
     addressLine2: input.shippingAddress?.addressLine2?.trim() || undefined,
-    postalCode: requireText(input.shippingAddress?.postalCode, "kod pocztowy"),
-    city: requireText(input.shippingAddress?.city, "miasto"),
+    postalCode: isParcelLocker
+      ? input.shippingAddress?.postalCode?.trim() || "00-000"
+      : requireText(input.shippingAddress?.postalCode, "kod pocztowy"),
+    city: isParcelLocker
+      ? input.shippingAddress?.city?.trim() || "Paczkomat"
+      : requireText(input.shippingAddress?.city, "miasto"),
     country: "PL",
   };
 
@@ -92,12 +124,19 @@ export function createOrderFromCart({
     nip: input.invoice?.nip?.trim(),
     companyAddress: input.invoice?.companyAddress?.trim(),
   };
+  const deliveryPrice = calculateDeliveryPrice({
+    method: selectedDeliveryMethod,
+    subtotal: cart.subtotal,
+    freeShippingThreshold: database.settings.freeShippingThreshold,
+  });
 
   const delivery: Delivery = createPendingDelivery({
-    method: input.delivery?.deliveryMethod ?? "inpost_courier",
-    price: cart.deliveryCost,
+    method: selectedDeliveryMethod,
+    price: deliveryPrice,
     parcelLockerId: input.delivery?.parcelLockerId,
+    parcelLockerName: input.delivery?.parcelLockerName,
     parcelLockerAddress: input.delivery?.parcelLockerAddress,
+    adminNote: input.delivery?.adminNote,
   });
 
   const orderId = createId("ord");
@@ -157,9 +196,9 @@ export function createOrderFromCart({
     delivery,
     items,
     subtotal: cart.subtotal,
-    deliveryCost: cart.deliveryCost,
+    deliveryCost: deliveryPrice,
     discount: cart.discount,
-    total: cart.total,
+    total: cart.subtotal + deliveryPrice - cart.discount,
     currency: "PLN",
     provider: getDefaultPaymentProvider(),
     paymentStatus: "pending",
@@ -315,6 +354,44 @@ export function findOrderForCustomerRequest(
   if (!order || !email || order.customer.email.toLowerCase() !== email) {
     return null;
   }
+
+  return order;
+}
+
+export function markOrderShipped({
+  database,
+  orderId,
+  trackingNumber,
+  shipmentProvider = "inpost",
+  adminNote,
+}: {
+  database: StoreDatabase;
+  orderId: string;
+  trackingNumber?: string | null;
+  shipmentProvider?: DeliveryProvider;
+  adminNote?: string | null;
+}) {
+  const order = database.orders.find((item) => item.id === orderId);
+
+  if (!order) {
+    return null;
+  }
+
+  const timestamp = nowIso();
+
+  order.orderStatus = "completed";
+  order.fulfillmentStatus = "shipped";
+  order.trackingNumber = trackingNumber?.trim() || order.trackingNumber;
+  order.delivery.shipmentProvider = shipmentProvider;
+  order.delivery.trackingNumber = order.trackingNumber;
+  order.delivery.trackingUrl = getTrackingUrl({
+    provider: shipmentProvider,
+    trackingNumber: order.delivery.trackingNumber,
+  });
+  order.delivery.adminNote = adminNote ?? order.delivery.adminNote;
+  order.delivery.deliveryStatus = "shipped";
+  order.delivery.shippedAt = order.delivery.shippedAt ?? timestamp;
+  order.updatedAt = timestamp;
 
   return order;
 }
