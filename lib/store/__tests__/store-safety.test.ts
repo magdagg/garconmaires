@@ -29,6 +29,13 @@ import {
   validateComplaintProductForOrder,
   validateReturnItemsForOrder,
 } from "../operations";
+import {
+  assertVariantStockIsSafe,
+  duplicateSkuValues,
+  getProductAdminWarnings,
+  normalizeProductImageOrder,
+  setPrimaryProductImage,
+} from "../product-admin";
 import type { StoreDatabase } from "../types";
 
 afterEach(() => {
@@ -444,6 +451,150 @@ describe("draft product seed safety", () => {
     ]);
     expect(variants.every((variant) => variant.reservedQuantity === 0)).toBe(true);
     expect(variants.every((variant) => variant.isAvailable === false)).toBe(true);
+  });
+
+  it("does not overwrite edited fields, uploaded images, stock or size guides on seed rerun", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const product = database.products.find(
+      (item) => item.id === "prod-garconmaires-black-tshirt",
+    );
+    const variant = database.variants.find((item) => item.productId === product?.id);
+
+    expect(product).toBeTruthy();
+    expect(variant).toBeTruthy();
+    if (!product || !variant) {
+      throw new Error("Missing seeded draft product fixture.");
+    }
+
+    product.name = "Edited Tee";
+    product.price = 45900;
+    product.seoTitle = "Edited SEO";
+    product.specifications = { material: "Edited material" };
+    product.sizeGuide = {
+      apparel: [
+        {
+          size: "S",
+          chestWidth: "52",
+          length: "68",
+          sleeveLength: "21",
+          shoulderWidth: "48",
+        },
+      ],
+    };
+    variant.sku = "EDITED-SKU";
+    variant.stockQuantity = 7;
+    database.images.push({
+      id: "img-edited",
+      productId: product.id,
+      url: "https://example.com/product.jpg",
+      alt: "Edited image",
+      sortOrder: 0,
+      isPrimary: true,
+      createdAt: "2026-06-08T00:00:00.000Z",
+    });
+
+    seedDraftProducts(database);
+
+    expect(product.name).toBe("Edited Tee");
+    expect(product.price).toBe(45900);
+    expect(product.seoTitle).toBe("Edited SEO");
+    expect(product.specifications?.material).toBe("Edited material");
+    expect(product.sizeGuide?.apparel?.[0].chestWidth).toBe("52");
+    expect(product.status).toBe("draft");
+    expect(product.isVisible).toBe(false);
+    expect(product.isFeatured).toBe(false);
+    expect(variant.sku).toBe("EDITED-SKU");
+    expect(variant.stockQuantity).toBe(7);
+    expect(variant.reservedQuantity).toBe(0);
+    expect(database.images).toHaveLength(1);
+    expect(database.images[0].isPrimary).toBe(true);
+  });
+
+  it("keeps product image ordering and primary image deterministic", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    database.images.push(
+      {
+        id: "img-second",
+        productId: "prod-garconmaires-eyewear",
+        url: "https://example.com/2.jpg",
+        alt: "Second",
+        sortOrder: 10,
+        isPrimary: false,
+        createdAt: "2026-06-08T00:00:00.000Z",
+      },
+      {
+        id: "img-first",
+        productId: "prod-garconmaires-eyewear",
+        url: "https://example.com/1.jpg",
+        alt: "First",
+        sortOrder: 5,
+        isPrimary: false,
+        createdAt: "2026-06-08T00:00:00.000Z",
+      },
+    );
+
+    normalizeProductImageOrder(database, "prod-garconmaires-eyewear");
+    setPrimaryProductImage(database, "img-second");
+
+    expect(database.images.find((image) => image.id === "img-first")?.sortOrder).toBe(0);
+    expect(database.images.find((image) => image.id === "img-second")?.sortOrder).toBe(1);
+    expect(database.images.find((image) => image.id === "img-second")?.isPrimary).toBe(true);
+    expect(database.images.find((image) => image.id === "img-first")?.isPrimary).toBe(false);
+  });
+
+  it("validates duplicate SKUs and reserved stock safety for admin editing", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const variants = database.variants.filter((variant) =>
+      variant.productId.startsWith("prod-garconmaires-"),
+    );
+    variants[0].sku = variants[1].sku;
+
+    expect(duplicateSkuValues(variants)).toEqual([variants[0].sku]);
+    expect(() =>
+      assertVariantStockIsSafe({
+        sku: "GM-TEST",
+        stockQuantity: 0,
+        reservedQuantity: 1,
+      }),
+    ).toThrow("reservedQuantity");
+  });
+
+  it("reports admin-only preview and completion warnings without making products public", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const product = database.products.find(
+      (item) => item.id === "prod-garconmaires-eyewear",
+    );
+    const variants = database.variants.filter((variant) => variant.productId === product?.id);
+
+    expect(product?.sizeGuide?.eyewear?.lensWidth).toBe("[to confirm]");
+    expect(product).toBeTruthy();
+    if (!product) {
+      throw new Error("Missing seeded draft product fixture.");
+    }
+
+    const warnings = getProductAdminWarnings({
+      product,
+      variants,
+      images: [],
+      shopEnabled: database.settings.shopEnabled,
+      shopMode: database.settings.shopMode,
+    });
+
+    expect(warnings.map((warning) => warning.code)).toContain("missing_images");
+    expect(warnings.map((warning) => warning.code)).toContain("placeholder_specs");
+    expect(
+      database.products.filter(
+        (item) => item.id.startsWith("prod-garconmaires-") && item.isVisible,
+      ),
+    ).toHaveLength(0);
   });
 
   it("does not allow seeded real products to be purchased during pre-launch", () => {

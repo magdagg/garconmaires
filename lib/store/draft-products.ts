@@ -22,6 +22,35 @@ type DraftProductDefinition = {
   variants: Array<Omit<ProductVariant, "createdAt" | "updatedAt">>;
 };
 
+function apparelSpecs(product: "T-shirt" | "Hoodie") {
+  return {
+    material:
+      product === "T-shirt"
+        ? "100% bawełna [to confirm before launch]"
+        : "Bawełna / mieszanka bawełny [to confirm before launch]",
+    fit: "Oversize / boxy fit [to confirm before launch]",
+    color: "Black",
+    care: "Prać na lewej stronie w 30°C [to confirm before launch]",
+    countryOfManufacture: "[to confirm before launch]",
+    packageContents: `${product} [to confirm before launch]`,
+    modelSize: "[to confirm before launch]",
+    productWeight: "[to confirm before launch]",
+    packagingWeight: "[to confirm before launch]",
+  };
+}
+
+function apparelSizeGuide() {
+  return {
+    apparel: ["S", "M", "L", "XL"].map((size) => ({
+      size,
+      chestWidth: "[to confirm]",
+      length: "[to confirm]",
+      sleeveLength: "[to confirm]",
+      shoulderWidth: "[to confirm]",
+    })),
+  };
+}
+
 export const draftProductDefinitions: DraftProductDefinition[] = [
   {
     category: {
@@ -47,6 +76,13 @@ export const draftProductDefinitions: DraftProductDefinition[] = [
           "SEO title placeholder: Garçonmaires Black T-Shirt.",
           "SEO description placeholder: czarny T-shirt Garçonmaires DROP 01.",
         ].join("\n"),
+      seoTitle: "Garçonmaires Black T-Shirt | DROP 01",
+      seoDescription:
+        "Czarny T-shirt Garçonmaires DROP 01. Finalne materiały i wymiary do potwierdzenia przed launchem.",
+      internalNotes:
+        "Final product copy, measurements, materials, care label and photography to confirm before launch.",
+      specifications: apparelSpecs("T-shirt"),
+      sizeGuide: apparelSizeGuide(),
       price: 44900,
       currency: "PLN",
       status: "draft",
@@ -90,6 +126,13 @@ export const draftProductDefinitions: DraftProductDefinition[] = [
           "SEO title placeholder: Garçonmaires Black Hoodie.",
           "SEO description placeholder: czarna bluza Garçonmaires DROP 01.",
         ].join("\n"),
+      seoTitle: "Garçonmaires Black Hoodie | DROP 01",
+      seoDescription:
+        "Czarna bluza z kapturem Garçonmaires DROP 01. Finalne materiały i wymiary do potwierdzenia przed launchem.",
+      internalNotes:
+        "Confirm hoodie weight, trims, measurements, care label, model sizing and final campaign images before launch.",
+      specifications: apparelSpecs("Hoodie"),
+      sizeGuide: apparelSizeGuide(),
       price: 89900,
       currency: "PLN",
       status: "draft",
@@ -133,6 +176,31 @@ export const draftProductDefinitions: DraftProductDefinition[] = [
           "SEO title placeholder: Garçonmaires Eyewear.",
           "SEO description placeholder: czarne eyewear Garçonmaires DROP 01.",
         ].join("\n"),
+      seoTitle: "Garçonmaires Eyewear | DROP 01",
+      seoDescription:
+        "Czarne eyewear Garçonmaires DROP 01. Finalna specyfikacja soczewek i wymiarów do potwierdzenia przed launchem.",
+      internalNotes:
+        "Confirm lens certification, frame material, dimensions, case/cloth packaging and final photography before launch.",
+      specifications: {
+        frameMaterial: "Acetate / polycarbonate placeholder [to confirm before launch]",
+        lensMaterial: "[to confirm before launch]",
+        lensCategoryUv: "UV400 placeholder [to confirm before launch]",
+        dimensions: "[to confirm before launch]",
+        color: "Black",
+        care: "Czyścić miękką ściereczką [to confirm before launch]",
+        countryOfManufacture: "[to confirm before launch]",
+        packageContents: "Eyewear, case, cloth [to confirm before launch]",
+        productWeight: "[to confirm before launch]",
+        packagingWeight: "[to confirm before launch]",
+      },
+      sizeGuide: {
+        eyewear: {
+          lensWidth: "[to confirm]",
+          bridgeWidth: "[to confirm]",
+          templeLength: "[to confirm]",
+          frameWidth: "[to confirm]",
+        },
+      },
       price: 49900,
       currency: "PLN",
       status: "draft",
@@ -203,6 +271,20 @@ export function seedDraftProducts(database: StoreDatabase) {
     const product: Product = {
       ...definition.product,
       ...existingProduct,
+      seoTitle: existingProduct?.seoTitle || definition.product.seoTitle,
+      seoDescription:
+        existingProduct?.seoDescription || definition.product.seoDescription,
+      internalNotes:
+        existingProduct?.internalNotes || definition.product.internalNotes,
+      specifications:
+        existingProduct?.specifications &&
+        Object.keys(existingProduct.specifications).length > 0
+          ? existingProduct.specifications
+          : definition.product.specifications,
+      sizeGuide:
+        existingProduct?.sizeGuide && Object.keys(existingProduct.sizeGuide).length > 0
+          ? existingProduct.sizeGuide
+          : definition.product.sizeGuide,
       status: existingProduct?.status === "archived" ? "archived" : "draft",
       isVisible: false,
       isFeatured: false,

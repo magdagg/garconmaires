@@ -54,6 +54,25 @@ export type Product = {
   shortDescription: string;
   editorialDescription: string;
   technicalDescription: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  internalNotes?: string;
+  specifications?: Record<string, string>;
+  sizeGuide?: {
+    apparel?: {
+      size: string;
+      chestWidth: string;
+      length: string;
+      sleeveLength?: string;
+      shoulderWidth?: string;
+    }[];
+    eyewear?: {
+      lensWidth: string;
+      bridgeWidth: string;
+      templeLength: string;
+      frameWidth?: string;
+    };
+  };
   price: number;
   currency: "PLN";
   status: ProductStatus;

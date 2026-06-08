@@ -224,6 +224,14 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
     products: products.map((item): Product => ({
       ...item,
       currency: "PLN",
+      specifications:
+        item.specifications && typeof item.specifications === "object"
+          ? (item.specifications as Record<string, string>)
+          : undefined,
+      sizeGuide:
+        item.sizeGuide && typeof item.sizeGuide === "object"
+          ? (item.sizeGuide as Product["sizeGuide"])
+          : undefined,
       createdAt: requiredIso(item.createdAt),
       updatedAt: requiredIso(item.updatedAt),
     })),
@@ -524,6 +532,11 @@ export async function writePostgresStore(database: StoreDatabase): Promise<Store
           shortDescription: product.shortDescription,
           editorialDescription: product.editorialDescription,
           technicalDescription: product.technicalDescription,
+          seoTitle: product.seoTitle ?? "",
+          seoDescription: product.seoDescription ?? "",
+          internalNotes: product.internalNotes ?? "",
+          specifications: product.specifications ?? undefined,
+          sizeGuide: product.sizeGuide ?? undefined,
           price: product.price,
           status: product.status,
           isVisible: product.isVisible,
@@ -534,6 +547,11 @@ export async function writePostgresStore(database: StoreDatabase): Promise<Store
         },
         create: {
           ...product,
+          seoTitle: product.seoTitle ?? "",
+          seoDescription: product.seoDescription ?? "",
+          internalNotes: product.internalNotes ?? "",
+          specifications: product.specifications ?? undefined,
+          sizeGuide: product.sizeGuide ?? undefined,
           createdAt: new Date(product.createdAt),
           updatedAt: new Date(product.updatedAt),
         },

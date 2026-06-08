@@ -7,6 +7,12 @@ import { createDefaultStoreDatabase } from "@/lib/store/defaults";
 import { getTrackingUrl, normalizeDeliveryMethods } from "@/lib/store/delivery";
 import { sendStoreEmail } from "@/lib/store/email";
 import {
+  assertVariantStockIsSafe,
+  duplicateSkuValues,
+  normalizeProductImageOrder,
+  setPrimaryProductImage,
+} from "@/lib/store/product-admin";
+import {
   getConfiguredStoreStorageDriver,
   readStoreDatabase,
   updateStoreDatabase,
@@ -15,6 +21,7 @@ import type {
   Drop,
   DropStatus,
   Product,
+  ProductImage,
   ProductStatus,
   ProductVariant,
   StoreDatabase,
@@ -418,6 +425,47 @@ function timelineEvent(
   };
 }
 
+function parseStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      String(entry ?? ""),
+    ]),
+  );
+}
+
+function parseSizeGuide(value: unknown): Product["sizeGuide"] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const guide = value as Product["sizeGuide"];
+
+  return {
+    apparel: Array.isArray(guide?.apparel)
+      ? guide.apparel.map((row) => ({
+          size: String(row.size ?? ""),
+          chestWidth: String(row.chestWidth ?? ""),
+          length: String(row.length ?? ""),
+          sleeveLength: row.sleeveLength ? String(row.sleeveLength) : "",
+          shoulderWidth: row.shoulderWidth ? String(row.shoulderWidth) : "",
+        }))
+      : undefined,
+    eyewear: guide?.eyewear
+      ? {
+          lensWidth: String(guide.eyewear.lensWidth ?? ""),
+          bridgeWidth: String(guide.eyewear.bridgeWidth ?? ""),
+          templeLength: String(guide.eyewear.templeLength ?? ""),
+          frameWidth: guide.eyewear.frameWidth ? String(guide.eyewear.frameWidth) : "",
+        }
+      : undefined,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const unauthorized = ensureAdmin(request);
 
@@ -670,6 +718,16 @@ export async function POST(request: NextRequest) {
           technicalDescription: String(
             payload.technicalDescription ?? existing?.technicalDescription ?? "",
           ),
+          seoTitle: String(payload.seoTitle ?? existing?.seoTitle ?? ""),
+          seoDescription: String(
+            payload.seoDescription ?? existing?.seoDescription ?? "",
+          ),
+          internalNotes: String(
+            payload.internalNotes ?? existing?.internalNotes ?? "",
+          ),
+          specifications:
+            parseStringRecord(payload.specifications) ?? existing?.specifications,
+          sizeGuide: parseSizeGuide(payload.sizeGuide) ?? existing?.sizeGuide,
           price: Number(payload.price ?? existing?.price ?? 0),
           currency: "PLN",
           status: String(payload.status ?? existing?.status ?? "draft") as ProductStatus,
@@ -705,15 +763,49 @@ export async function POST(request: NextRequest) {
       case "variant.upsert": {
         const id = String(payload.id || createId("var"));
         const existing = database.variants.find((variant) => variant.id === id);
+        const sku = String(payload.sku ?? existing?.sku ?? id).trim();
+        const stockQuantity = Number(
+          payload.stockQuantity ?? existing?.stockQuantity ?? 0,
+        );
+        const reservedQuantity = existing?.reservedQuantity ?? 0;
+        const variantsWithNextSku = database.variants.map((variant) =>
+          variant.id === id ? { ...variant, sku } : variant,
+        );
+
+        if (!existing) {
+          variantsWithNextSku.push({
+            id,
+            productId: String(payload.productId ?? ""),
+            size: String(payload.size ?? "OS"),
+            sku,
+            stockQuantity,
+            reservedQuantity: 0,
+            isAvailable: false,
+            priceOverride: null,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          });
+        }
+
+        const duplicateSkus = duplicateSkuValues(variantsWithNextSku);
+
+        if (duplicateSkus.includes(sku)) {
+          throw new Error(`Duplicate SKU is not allowed: ${sku}.`);
+        }
+
+        assertVariantStockIsSafe({
+          sku,
+          stockQuantity,
+          reservedQuantity,
+        });
+
         const next: ProductVariant = {
           id,
           productId: String(payload.productId ?? existing?.productId ?? ""),
           size: String(payload.size ?? existing?.size ?? "OS"),
-          sku: String(payload.sku ?? existing?.sku ?? id),
-          stockQuantity: Number(payload.stockQuantity ?? existing?.stockQuantity ?? 0),
-          reservedQuantity: Number(
-            payload.reservedQuantity ?? existing?.reservedQuantity ?? 0,
-          ),
+          sku,
+          stockQuantity,
+          reservedQuantity,
           isAvailable: Boolean(payload.isAvailable ?? existing?.isAvailable ?? false),
           priceOverride:
             payload.priceOverride === null || payload.priceOverride === undefined
@@ -731,13 +823,41 @@ export async function POST(request: NextRequest) {
 
         return { variant: next };
       }
+      case "variant.delete": {
+        const variant = database.variants.find((item) => item.id === payload.id);
+
+        if (!variant) {
+          throw new Error("Variant not found.");
+        }
+
+        if (variant.reservedQuantity > 0) {
+          throw new Error("Cannot delete a variant with reserved inventory.");
+        }
+
+        const activeReservations = database.reservations.some(
+          (reservation) =>
+            reservation.variantId === variant.id && reservation.status === "active",
+        );
+
+        if (activeReservations) {
+          throw new Error("Cannot delete a variant with active reservations.");
+        }
+
+        database.variants = database.variants.filter((item) => item.id !== variant.id);
+
+        return { variantId: variant.id };
+      }
       case "product.image.add": {
-        const image = {
+        const productId = String(payload.productId ?? "");
+        const image: ProductImage = {
           id: createId("img"),
-          productId: String(payload.productId ?? ""),
+          productId,
           url: String(payload.url ?? ""),
           alt: String(payload.alt ?? ""),
-          sortOrder: Number(payload.sortOrder ?? database.images.length),
+          sortOrder: Number(
+            payload.sortOrder ??
+              database.images.filter((item) => item.productId === productId).length,
+          ),
           isPrimary: Boolean(payload.isPrimary ?? false),
           createdAt: timestamp,
         };
@@ -751,7 +871,45 @@ export async function POST(request: NextRequest) {
         }
 
         database.images.unshift(image);
+        normalizeProductImageOrder(database, image.productId);
         return { image };
+      }
+      case "product.image.update": {
+        const image = database.images.find((item) => item.id === payload.id);
+
+        if (!image) {
+          throw new Error("Image not found.");
+        }
+
+        image.url = String(payload.url ?? image.url);
+        image.alt = String(payload.alt ?? image.alt);
+        image.sortOrder = Number(payload.sortOrder ?? image.sortOrder);
+        image.isPrimary = Boolean(payload.isPrimary ?? image.isPrimary);
+
+        if (image.isPrimary) {
+          setPrimaryProductImage(database, image.id);
+        }
+
+        normalizeProductImageOrder(database, image.productId);
+
+        return { image };
+      }
+      case "product.image.primary": {
+        const image = setPrimaryProductImage(database, String(payload.id ?? ""));
+
+        return { image };
+      }
+      case "product.image.delete": {
+        const image = database.images.find((item) => item.id === payload.id);
+
+        if (!image) {
+          throw new Error("Image not found.");
+        }
+
+        database.images = database.images.filter((item) => item.id !== image.id);
+        normalizeProductImageOrder(database, image.productId);
+
+        return { imageId: image.id };
       }
       case "drop.upsert": {
         const id = String(payload.id || createId("drop"));

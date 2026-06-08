@@ -16,6 +16,25 @@ type StoreSnapshot = {
     shortDescription: string;
     editorialDescription: string;
     technicalDescription: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    internalNotes?: string;
+    specifications?: Record<string, string>;
+    sizeGuide?: {
+      apparel?: {
+        size: string;
+        chestWidth: string;
+        length: string;
+        sleeveLength?: string;
+        shoulderWidth?: string;
+      }[];
+      eyewear?: {
+        lensWidth: string;
+        bridgeWidth: string;
+        templeLength: string;
+        frameWidth?: string;
+      };
+    };
     categoryId: string | null;
     dropId: string | null;
   }[];
@@ -27,7 +46,18 @@ type StoreSnapshot = {
     stockQuantity: number;
     reservedQuantity: number;
     isAvailable: boolean;
+    priceOverride?: number | null;
   }[];
+  images: {
+    id: string;
+    productId: string;
+    url: string;
+    alt: string;
+    sortOrder: number;
+    isPrimary: boolean;
+    createdAt: string;
+  }[];
+  categories: { id: string; name: string; slug: string }[];
   drops: { id: string; name: string; status: string; launchDate: string | null }[];
   orders: {
     id: string;
@@ -209,6 +239,11 @@ export function AdminStorePage() {
   const [snapshot, setSnapshot] = useState<StoreSnapshot | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [productStatusFilter, setProductStatusFilter] = useState("all");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("all");
+  const [productDropFilter, setProductDropFilter] = useState("all");
+  const [productVisibilityFilter, setProductVisibilityFilter] = useState("all");
+  const [productCompletenessFilter, setProductCompletenessFilter] = useState("all");
+  const [previewProductId, setPreviewProductId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   async function load() {
@@ -245,6 +280,32 @@ export function AdminStorePage() {
     }
 
     setMessage(data.message ?? "Zapisano.");
+    await load();
+  }
+
+  async function uploadProductImage(productId: string, file: File, alt: string, isPrimary: boolean) {
+    const formData = new FormData();
+    formData.set("productId", productId);
+    formData.set("alt", alt);
+    formData.set("isPrimary", String(isPrimary));
+    formData.set("file", file);
+
+    const response = await fetch("/api/admin/store/images", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      setMessage(data.error ?? "Nie udało się wgrać obrazu.");
+      return;
+    }
+
+    setMessage("Obraz dodany.");
     await load();
   }
 
@@ -296,10 +357,38 @@ export function AdminStorePage() {
       return [];
     }
 
-    return snapshot.products.filter((product) =>
-      productStatusFilter === "all" ? true : product.status === productStatusFilter,
-    );
-  }, [productStatusFilter, snapshot]);
+    return snapshot.products.filter((product) => {
+      const productImages = snapshot.images.filter((image) => image.productId === product.id);
+      const productVariants = snapshot.variants.filter((variant) => variant.productId === product.id);
+      const warnings = productWarnings(product, productVariants, productImages, snapshot);
+      const stockState = productVariants.some((variant) => variant.stockQuantity > 0)
+        ? "has_stock"
+        : "no_stock";
+
+      return (
+        (productStatusFilter === "all" || product.status === productStatusFilter) &&
+        (productCategoryFilter === "all" || product.categoryId === productCategoryFilter) &&
+        (productDropFilter === "all" || product.dropId === productDropFilter) &&
+        (productVisibilityFilter === "all" ||
+          (productVisibilityFilter === "visible" ? product.isVisible : !product.isVisible) ||
+          productVisibilityFilter === stockState) &&
+        (productCompletenessFilter === "all" ||
+          (productCompletenessFilter === "missing_images" && productImages.length === 0) ||
+          (productCompletenessFilter === "incomplete_specs" &&
+            warnings.some((warning) => warning.code === "placeholder_specs")))
+      );
+    });
+  }, [
+    productCategoryFilter,
+    productCompletenessFilter,
+    productDropFilter,
+    productStatusFilter,
+    productVisibilityFilter,
+    snapshot,
+  ]);
+  const previewProduct = snapshot?.products.find(
+    (product) => product.id === previewProductId,
+  );
 
   return (
     <main className="min-h-screen bg-black px-4 py-8 text-white md:px-8">
@@ -388,69 +477,114 @@ export function AdminStorePage() {
                     </button>
                   ))}
                 </div>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <SelectField
+                    label="category"
+                    value={productCategoryFilter}
+                    options={[
+                      { value: "all", label: "all categories" },
+                      ...snapshot.categories.map((category) => ({
+                        value: category.id,
+                        label: category.name,
+                      })),
+                    ]}
+                    onChange={setProductCategoryFilter}
+                  />
+                  <SelectField
+                    label="drop"
+                    value={productDropFilter}
+                    options={[
+                      { value: "all", label: "all drops" },
+                      ...snapshot.drops.map((drop) => ({
+                        value: drop.id,
+                        label: drop.name,
+                      })),
+                    ]}
+                    onChange={setProductDropFilter}
+                  />
+                  <SelectField
+                    label="visibility/stock"
+                    value={productVisibilityFilter}
+                    options={[
+                      { value: "all", label: "all" },
+                      { value: "visible", label: "visible" },
+                      { value: "hidden", label: "hidden" },
+                      { value: "has_stock", label: "has stock" },
+                      { value: "no_stock", label: "no stock" },
+                    ]}
+                    onChange={setProductVisibilityFilter}
+                  />
+                  <SelectField
+                    label="completeness"
+                    value={productCompletenessFilter}
+                    options={[
+                      { value: "all", label: "all" },
+                      { value: "missing_images", label: "missing images" },
+                      { value: "incomplete_specs", label: "incomplete specs" },
+                    ]}
+                    onChange={setProductCompletenessFilter}
+                  />
+                </div>
+
+                {previewProduct ? (
+                  <ProductPreview
+                    product={previewProduct}
+                    variants={snapshot.variants.filter((variant) => variant.productId === previewProduct.id)}
+                    images={snapshot.images.filter((image) => image.productId === previewProduct.id)}
+                    onClose={() => setPreviewProductId(null)}
+                  />
+                ) : null}
+
                 {filteredProducts.map((product) => (
-                  <div key={product.id} className="space-y-4 border border-white/10 p-4">
-                    <div>
-                      <p className="text-lg">{product.name}</p>
-                      <p className="text-sm text-white/45">
-                        {product.id === sandboxProductId ? "sandbox test product" : "real product"} / {product.status} / {product.isVisible ? "visible" : "hidden"} / {money(product.price)}
-                      </p>
-                      {product.status === "active" && !snapshot.settings.shopEnabled ? (
-                        <p className="mt-2 text-xs text-yellow-100">
-                          Warning: product is active while shopEnabled=false.
-                        </p>
-                      ) : null}
-                      {product.isVisible && snapshot.settings.shopMode === "PRE_LAUNCH" ? (
-                        <p className="mt-2 text-xs text-red-200">
-                          Warning: product is visible while shopMode=PRE_LAUNCH.
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                      <SettingsField label="name" value={product.name} onSave={(value) => action("product.upsert", { ...product, name: value })} />
-                      <SettingsField label="slug" value={product.slug} onSave={(value) => action("product.upsert", { ...product, slug: value })} />
-                      <SettingsField label="price PLN" value={String(product.price / 100)} onSave={(value) => action("product.upsert", { ...product, price: Math.round(Number(value) * 100) || 0 })} />
-                      <SettingsReadOnly label="drop association" value={product.dropId ?? "-"} />
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <SettingsField label="short description" value={product.shortDescription} onSave={(value) => action("product.upsert", { ...product, shortDescription: value })} />
-                      <SettingsField label="editorial description" value={product.editorialDescription} onSave={(value) => action("product.upsert", { ...product, editorialDescription: value })} />
-                      <SettingsField label="technical/material/care" value={product.technicalDescription} onSave={(value) => action("product.upsert", { ...product, technicalDescription: value })} />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {["draft", "hidden", "active", "sold_out", "archived"].map((status) => (
-                        <button key={status} type="button" onClick={() => action("product.status", { id: product.id, status, isVisible: false })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
-                          {status}
-                        </button>
-                      ))}
-                      <button type="button" onClick={() => action("product.status", { id: product.id, status: product.status, isVisible: !product.isVisible })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
-                        {product.isVisible ? "Hide public" : "Set visible"}
-                      </button>
-                    </div>
-                  </div>
+                  <ProductEditor
+                    key={product.id}
+                    product={product}
+                    variants={snapshot.variants.filter((variant) => variant.productId === product.id)}
+                    images={snapshot.images.filter((image) => image.productId === product.id)}
+                    categories={snapshot.categories}
+                    drops={snapshot.drops}
+                    snapshot={snapshot}
+                    onAction={action}
+                    onUploadImage={uploadProductImage}
+                    onPreview={() => setPreviewProductId(product.id)}
+                  />
                 ))}
               </section>
             ) : null}
 
             {activeTab === "inventory" ? (
               <section className="mt-8 grid gap-3">
-                {snapshot.variants.map((variant) => (
-                  <div key={variant.id} className="grid gap-3 border border-white/10 p-4 md:grid-cols-[1fr_0.7fr_auto_auto] md:items-center">
-                    <p>
-                      {variant.sku} / {variant.size}
-                      <span className="ml-3 text-white/45">
-                        stock {variant.stockQuantity}, reserved {variant.reservedQuantity}
-                      </span>
-                    </p>
-                    <SettingsField label="SKU" value={variant.sku} onSave={(value) => action("variant.upsert", { ...variant, sku: value })} />
-                    <button type="button" onClick={() => action("variant.upsert", { ...variant, stockQuantity: variant.stockQuantity + 1, isAvailable: true })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
-                      + Stock
-                    </button>
-                    <button type="button" onClick={() => action("variant.upsert", { ...variant, isAvailable: !variant.isAvailable })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
-                      {variant.isAvailable ? "Disable" : "Enable"}
-                    </button>
-                  </div>
-                ))}
+                {snapshot.variants.map((variant) => {
+                  const duplicate = snapshot.variants.some(
+                    (item) => item.id !== variant.id && item.sku === variant.sku,
+                  );
+                  const availableStock = variant.stockQuantity - variant.reservedQuantity;
+                  const product = snapshot.products.find((item) => item.id === variant.productId);
+
+                  return (
+                    <div key={variant.id} className="grid gap-3 border border-white/10 p-4 xl:grid-cols-[1fr_0.7fr_0.5fr_0.5fr_0.5fr_auto_auto] xl:items-end">
+                      <div>
+                        <p>{variant.sku} / {variant.size}</p>
+                        <p className="mt-1 text-xs text-white/45">
+                          {product?.name ?? variant.productId} / stock {variant.stockQuantity}, reserved {variant.reservedQuantity}, available {availableStock}
+                        </p>
+                        {duplicate ? <p className="mt-2 text-xs text-red-200">Duplicate SKU warning.</p> : null}
+                        {variant.reservedQuantity > variant.stockQuantity ? <p className="mt-2 text-xs text-red-200">Reserved exceeds stock.</p> : null}
+                        {variant.stockQuantity < 0 ? <p className="mt-2 text-xs text-red-200">Stock is negative.</p> : null}
+                      </div>
+                      <SettingsField label="SKU" value={variant.sku} onSave={(value) => action("variant.upsert", { ...variant, sku: value })} />
+                      <SettingsField label="size" value={variant.size} onSave={(value) => action("variant.upsert", { ...variant, size: value })} />
+                      <SettingsField label="stock" value={String(variant.stockQuantity)} onSave={(value) => action("variant.upsert", { ...variant, stockQuantity: Number(value) || 0 })} />
+                      <SettingsField label="price override PLN" value={variant.priceOverride ? String(variant.priceOverride / 100) : ""} onSave={(value) => action("variant.upsert", { ...variant, priceOverride: value ? Math.round(Number(value) * 100) : null })} />
+                      <button type="button" onClick={() => action("variant.upsert", { ...variant, isAvailable: !variant.isAvailable })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
+                        {variant.isAvailable ? "Disable" : "Enable"}
+                      </button>
+                      <button type="button" onClick={() => action("variant.delete", { id: variant.id })} className="border border-red-300/40 px-4 py-2 text-xs uppercase tracking-[0.2em] text-red-100">
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })}
               </section>
             ) : null}
 
@@ -680,6 +814,319 @@ function DiagnosticField({ label, value }: { label: string; value: string }) {
   );
 }
 
+type ProductSnapshot = StoreSnapshot["products"][number];
+type VariantSnapshot = StoreSnapshot["variants"][number];
+type ImageSnapshot = StoreSnapshot["images"][number];
+type CategorySnapshot = StoreSnapshot["categories"][number];
+type DropSnapshot = StoreSnapshot["drops"][number];
+
+function productWarnings(
+  product: ProductSnapshot,
+  variants: VariantSnapshot[],
+  images: ImageSnapshot[],
+  snapshot: StoreSnapshot,
+) {
+  const warnings: { code: string; message: string; critical?: boolean }[] = [];
+  const specText = [
+    product.technicalDescription,
+    ...Object.values(product.specifications ?? {}),
+  ].join("\n");
+
+  if (product.isVisible && snapshot.settings.shopMode === "PRE_LAUNCH") {
+    warnings.push({
+      code: "visible_prelaunch",
+      critical: true,
+      message: "Product is visible while shopMode=PRE_LAUNCH.",
+    });
+  }
+
+  if (product.status === "active" && !snapshot.settings.shopEnabled) {
+    warnings.push({
+      code: "active_shop_disabled",
+      message: "Product is active while shopEnabled=false.",
+    });
+  }
+
+  if (!product.isVisible && variants.some((variant) => variant.stockQuantity > 0)) {
+    warnings.push({
+      code: "stock_hidden",
+      message: "Product has stock but is hidden.",
+    });
+  }
+
+  if (images.length === 0) {
+    warnings.push({
+      code: "missing_images",
+      message: "Product has no images.",
+    });
+  }
+
+  if (/POTWIERDZIĆ|placeholder|to confirm/i.test(specText)) {
+    warnings.push({
+      code: "placeholder_specs",
+      message: "Material/care/specs still include placeholders to confirm before launch.",
+    });
+  }
+
+  for (const variant of variants) {
+    if (variant.stockQuantity < 0) {
+      warnings.push({
+        code: `negative_stock_${variant.id}`,
+        critical: true,
+        message: `${variant.sku} has negative stock.`,
+      });
+    }
+
+    if (variant.reservedQuantity > variant.stockQuantity) {
+      warnings.push({
+        code: `reserved_stock_${variant.id}`,
+        critical: true,
+        message: `${variant.sku} reservedQuantity exceeds stockQuantity.`,
+      });
+    }
+  }
+
+  const duplicateSkus = new Set(
+    variants
+      .map((variant) => variant.sku)
+      .filter((sku, index, all) => sku && all.indexOf(sku) !== index),
+  );
+
+  for (const sku of duplicateSkus) {
+    warnings.push({
+      code: `duplicate_${sku}`,
+      critical: true,
+      message: `Duplicate SKU: ${sku}.`,
+    });
+  }
+
+  return warnings;
+}
+
+function ProductEditor({
+  product,
+  variants,
+  images,
+  categories,
+  drops,
+  snapshot,
+  onAction,
+  onUploadImage,
+  onPreview,
+}: {
+  product: ProductSnapshot;
+  variants: VariantSnapshot[];
+  images: ImageSnapshot[];
+  categories: CategorySnapshot[];
+  drops: DropSnapshot[];
+  snapshot: StoreSnapshot;
+  onAction: (actionName: string, payload: Record<string, unknown>) => void;
+  onUploadImage: (productId: string, file: File, alt: string, isPrimary: boolean) => void;
+  onPreview: () => void;
+}) {
+  const warnings = productWarnings(product, variants, images, snapshot);
+  const sortedImages = [...images].sort((left, right) => left.sortOrder - right.sortOrder);
+
+  return (
+    <div className="space-y-5 border border-white/10 p-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-lg">{product.name}</p>
+          <p className="mt-1 text-sm text-white/45">
+            {product.id === sandboxProductId ? "sandbox test product" : "real product"} / {product.status} / {product.isVisible ? "visible" : "hidden"} / {money(product.price)}
+          </p>
+          {warnings.length ? (
+            <div className="mt-3 space-y-1 text-xs">
+              {warnings.map((warning) => (
+                <p key={warning.code} className={warning.critical ? "text-red-200" : "text-yellow-100"}>
+                  {warning.message}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-emerald-200">No admin completeness warnings.</p>
+          )}
+        </div>
+        <button type="button" onClick={onPreview} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+          Admin preview
+        </button>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <SettingsField label="name" value={product.name} onSave={(value) => onAction("product.upsert", { ...product, name: value })} />
+        <SettingsField label="slug" value={product.slug} onSave={(value) => onAction("product.upsert", { ...product, slug: value })} />
+        <SettingsField label="price PLN gross" value={String(product.price / 100)} onSave={(value) => onAction("product.upsert", { ...product, price: Math.round(Number(value) * 100) || 0 })} />
+        <SelectField
+          label="category"
+          value={product.categoryId ?? ""}
+          options={[{ value: "", label: "none" }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
+          onChange={(value) => onAction("product.upsert", { ...product, categoryId: value || null })}
+        />
+        <SelectField
+          label="drop"
+          value={product.dropId ?? ""}
+          options={[{ value: "", label: "none" }, ...drops.map((drop) => ({ value: drop.id, label: drop.name }))]}
+          onChange={(value) => onAction("product.upsert", { ...product, dropId: value || null })}
+        />
+        <SettingsField label="SEO title" value={product.seoTitle ?? ""} onSave={(value) => onAction("product.upsert", { ...product, seoTitle: value })} />
+        <SettingsField label="SEO description" value={product.seoDescription ?? ""} onSave={(value) => onAction("product.upsert", { ...product, seoDescription: value })} />
+        <SettingsField label="internal admin notes" value={product.internalNotes ?? ""} onSave={(value) => onAction("product.upsert", { ...product, internalNotes: value })} />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <SettingsTextarea label="short description" value={product.shortDescription} onSave={(value) => onAction("product.upsert", { ...product, shortDescription: value })} />
+        <SettingsTextarea label="editorial description" value={product.editorialDescription} onSave={(value) => onAction("product.upsert", { ...product, editorialDescription: value })} />
+        <SettingsTextarea label="technical/material/care" value={product.technicalDescription} onSave={(value) => onAction("product.upsert", { ...product, technicalDescription: value })} />
+      </div>
+
+      <SpecEditor
+        key={`${product.id}-specs-${JSON.stringify(product.specifications ?? {})}`}
+        product={product}
+        onSave={(specifications) => onAction("product.upsert", { ...product, specifications })}
+      />
+      <SizeGuideEditor
+        key={`${product.id}-size-${JSON.stringify(product.sizeGuide ?? {})}`}
+        product={product}
+        onSave={(sizeGuide) => onAction("product.upsert", { ...product, sizeGuide })}
+      />
+
+      <div className="flex flex-wrap gap-2">
+        {["draft", "hidden", "active", "sold_out", "archived"].map((status) => (
+          <button key={status} type="button" onClick={() => onAction("product.status", { id: product.id, status, isVisible: false })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+            {status}
+          </button>
+        ))}
+        <button type="button" onClick={() => onAction("product.status", { id: product.id, status: product.status, isVisible: !product.isVisible })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
+          {product.isVisible ? "Hide public" : "Set visible"}
+        </button>
+        <button type="button" onClick={() => onAction("product.upsert", { ...product, isFeatured: !product.isFeatured })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+          {product.isFeatured ? "Unfeature" : "Feature"}
+        </button>
+      </div>
+
+      <div className="border-t border-white/10 pt-5">
+        <p className="text-xs uppercase tracking-[0.24em] text-white/38">Media</p>
+        <ImageUploadForm productId={product.id} onUpload={onUploadImage} />
+        {sortedImages.length === 0 ? (
+          <p className="mt-3 text-xs text-yellow-100">No images yet. Do not use placeholder or random stock photos.</p>
+        ) : null}
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {sortedImages.map((image) => (
+            <div key={image.id} className="grid gap-3 border border-white/10 p-3 md:grid-cols-[80px_1fr_auto]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image.url} alt={image.alt} className="h-20 w-20 object-cover" />
+              <div className="grid gap-2 md:grid-cols-2">
+                <SettingsField label="alt" value={image.alt} onSave={(value) => onAction("product.image.update", { ...image, alt: value })} />
+                <SettingsField label="order" value={String(image.sortOrder)} onSave={(value) => onAction("product.image.update", { ...image, sortOrder: Number(value) || 0 })} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => onAction("product.image.primary", { id: image.id })} className="border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em]">
+                  {image.isPrimary ? "Primary" : "Set primary"}
+                </button>
+                <button type="button" onClick={() => onAction("product.image.delete", { id: image.id })} className="border border-red-300/40 px-3 py-2 text-xs uppercase tracking-[0.18em] text-red-100">
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-white/10 pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs uppercase tracking-[0.24em] text-white/38">Variants</p>
+          <button
+            type="button"
+            onClick={() =>
+              onAction("variant.upsert", {
+                productId: product.id,
+                size: "NEW",
+                sku: `GM-${product.id.replace("prod-", "").toUpperCase()}-NEW`,
+                stockQuantity: 0,
+                isAvailable: false,
+              })
+            }
+            className="border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em]"
+          >
+            Add variant
+          </button>
+        </div>
+        <div className="mt-3 grid gap-2">
+          {variants.map((variant) => (
+            <div key={variant.id} className="grid gap-3 border border-white/10 p-3 xl:grid-cols-[1fr_0.6fr_0.6fr_0.6fr_0.6fr_auto] xl:items-end">
+              <SettingsField label="SKU" value={variant.sku} onSave={(value) => onAction("variant.upsert", { ...variant, sku: value })} />
+              <SettingsField label="size" value={variant.size} onSave={(value) => onAction("variant.upsert", { ...variant, size: value })} />
+              <SettingsField label="stock" value={String(variant.stockQuantity)} onSave={(value) => onAction("variant.upsert", { ...variant, stockQuantity: Number(value) || 0 })} />
+              <SettingsReadOnly label="reserved" value={String(variant.reservedQuantity)} />
+              <SettingsReadOnly label="available" value={String(variant.stockQuantity - variant.reservedQuantity)} />
+              <button type="button" onClick={() => onAction("variant.upsert", { ...variant, isAvailable: !variant.isAvailable })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
+                {variant.isAvailable ? "Disable" : "Enable"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductPreview({
+  product,
+  variants,
+  images,
+  onClose,
+}: {
+  product: ProductSnapshot;
+  variants: VariantSnapshot[];
+  images: ImageSnapshot[];
+  onClose: () => void;
+}) {
+  const primaryImage =
+    images.find((image) => image.isPrimary) ??
+    [...images].sort((left, right) => left.sortOrder - right.sortOrder)[0];
+
+  return (
+    <section className="border border-white/15 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.24em] text-white/38">Admin-only preview / noindex</p>
+          <h2 className="mt-3 text-3xl">{product.name}</h2>
+          <p className="mt-2 text-white/55">{money(product.price)}</p>
+        </div>
+        <button type="button" onClick={onClose} className="border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em]">
+          Close
+        </button>
+      </div>
+      <div className="mt-5 grid gap-5 md:grid-cols-[0.8fr_1fr]">
+        {primaryImage ? (
+          <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={primaryImage.url} alt={primaryImage.alt} className="aspect-[4/5] w-full object-cover" />
+          </>
+        ) : (
+          <div className="flex aspect-[4/5] items-center justify-center border border-white/10 text-xs uppercase tracking-[0.18em] text-white/35">
+            Missing image
+          </div>
+        )}
+        <div className="space-y-4">
+          <p className="text-sm text-white/70">{product.shortDescription}</p>
+          <p className="text-sm leading-6 text-white/55">{product.editorialDescription}</p>
+          <div className="flex flex-wrap gap-2">
+            {variants.map((variant) => (
+              <span key={variant.id} className="border border-white/15 px-3 py-2 text-xs">
+                {variant.size} / available {variant.stockQuantity - variant.reservedQuantity}
+              </span>
+            ))}
+          </div>
+          <pre className="overflow-auto border border-white/10 p-3 text-xs leading-6 text-white/50">
+            {JSON.stringify({ specifications: product.specifications, sizeGuide: product.sizeGuide }, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function SettingsReadOnly({ label, value }: { label: string; value: string }) {
   return (
     <div className="border border-white/10 p-5">
@@ -720,6 +1167,281 @@ function SettingsField({
         Save
       </button>
     </label>
+  );
+}
+
+function SettingsTextarea({
+  label,
+  value,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  onSave: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  return (
+    <label className="block border border-white/10 p-5">
+      <span className="text-xs uppercase tracking-[0.22em] text-white/35">{label}</span>
+      <textarea
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        rows={7}
+        className="mt-3 w-full resize-y border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => onSave(draft)}
+        className="mt-3 border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/70"
+      >
+        Save
+      </button>
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block border border-white/10 p-5">
+      <span className="text-xs uppercase tracking-[0.22em] text-white/35">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-3 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function SpecEditor({
+  product,
+  onSave,
+}: {
+  product: ProductSnapshot;
+  onSave: (specifications: Record<string, string>) => void;
+}) {
+  const keys =
+    product.id.includes("eyewear")
+      ? [
+          "frameMaterial",
+          "lensMaterial",
+          "lensCategoryUv",
+          "dimensions",
+          "color",
+          "care",
+          "countryOfManufacture",
+          "packageContents",
+          "productWeight",
+          "packagingWeight",
+        ]
+      : [
+          "material",
+          "fit",
+          "color",
+          "care",
+          "countryOfManufacture",
+          "packageContents",
+          "modelSize",
+          "productWeight",
+          "packagingWeight",
+        ];
+  const [draft, setDraft] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      keys.map((key) => [key, product.specifications?.[key] ?? ""]),
+    ),
+  );
+
+  return (
+    <div className="border border-white/10 p-5">
+      <p className="text-xs uppercase tracking-[0.22em] text-white/35">Specifications to confirm before launch</p>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {keys.map((key) => (
+          <label key={key} className="block">
+            <span className="text-xs text-white/35">{key}</span>
+            <input
+              value={draft[key] ?? ""}
+              onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))}
+              className="mt-2 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+            />
+          </label>
+        ))}
+      </div>
+      <button type="button" onClick={() => onSave(draft)} className="mt-4 border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/70">
+        Save specs
+      </button>
+    </div>
+  );
+}
+
+function SizeGuideEditor({
+  product,
+  onSave,
+}: {
+  product: ProductSnapshot;
+  onSave: (sizeGuide: ProductSnapshot["sizeGuide"]) => void;
+}) {
+  const isEyewear = product.id.includes("eyewear");
+  const [apparelRows, setApparelRows] = useState(
+    product.sizeGuide?.apparel ?? [],
+  );
+  const [eyewear, setEyewear] = useState(
+    product.sizeGuide?.eyewear ?? {
+      lensWidth: "",
+      bridgeWidth: "",
+      templeLength: "",
+      frameWidth: "",
+    },
+  );
+
+  if (isEyewear) {
+    return (
+      <div className="border border-white/10 p-5">
+        <p className="text-xs uppercase tracking-[0.22em] text-white/35">Eyewear dimensions</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          {(["lensWidth", "bridgeWidth", "templeLength", "frameWidth"] as const).map((key) => (
+            <label key={key} className="block">
+              <span className="text-xs text-white/35">{key}</span>
+              <input
+                value={eyewear[key] ?? ""}
+                onChange={(event) => setEyewear((current) => ({ ...current, [key]: event.target.value }))}
+                className="mt-2 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+          ))}
+        </div>
+        <button type="button" onClick={() => onSave({ eyewear })} className="mt-4 border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/70">
+          Save dimensions
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-white/10 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs uppercase tracking-[0.22em] text-white/35">Apparel size guide</p>
+        <button
+          type="button"
+          onClick={() =>
+            setApparelRows((current) => [
+              ...current,
+              {
+                size: "",
+                chestWidth: "",
+                length: "",
+                sleeveLength: "",
+                shoulderWidth: "",
+              },
+            ])
+          }
+          className="border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em]"
+        >
+          Add row
+        </button>
+      </div>
+      <div className="mt-4 space-y-3">
+        {apparelRows.map((row, index) => (
+          <div key={`${row.size}-${index}`} className="grid gap-3 md:grid-cols-5">
+            {(["size", "chestWidth", "length", "sleeveLength", "shoulderWidth"] as const).map((key) => (
+              <label key={key} className="block">
+                <span className="text-xs text-white/35">{key}</span>
+                <input
+                  value={row[key] ?? ""}
+                  onChange={(event) =>
+                    setApparelRows((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, [key]: event.target.value } : item,
+                      ),
+                    )
+                  }
+                  className="mt-2 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+                />
+              </label>
+            ))}
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={() => onSave({ apparel: apparelRows })} className="mt-4 border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/70">
+        Save size guide
+      </button>
+    </div>
+  );
+}
+
+function ImageUploadForm({
+  productId,
+  onUpload,
+}: {
+  productId: string;
+  onUpload: (productId: string, file: File, alt: string, isPrimary: boolean) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [alt, setAlt] = useState("");
+  const [isPrimary, setIsPrimary] = useState(false);
+
+  return (
+    <div className="mt-4 grid gap-3 border border-white/10 p-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+      <label className="block">
+        <span className="text-xs text-white/35">image file</span>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          className="mt-2 w-full text-sm text-white/55"
+        />
+      </label>
+      <label className="block">
+        <span className="text-xs text-white/35">alt text</span>
+        <input
+          value={alt}
+          onChange={(event) => setAlt(event.target.value)}
+          className="mt-2 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+        />
+      </label>
+      <label className="flex items-center gap-2 text-xs text-white/55">
+        <input
+          type="checkbox"
+          checked={isPrimary}
+          onChange={(event) => setIsPrimary(event.target.checked)}
+        />
+        primary
+      </label>
+      <button
+        type="button"
+        onClick={() => {
+          if (file) {
+            onUpload(productId, file, alt, isPrimary);
+            setFile(null);
+            setAlt("");
+            setIsPrimary(false);
+          }
+        }}
+        className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
+      >
+        Upload
+      </button>
+    </div>
   );
 }
 

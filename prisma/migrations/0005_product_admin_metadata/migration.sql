@@ -1,0 +1,6 @@
+ALTER TABLE "Product"
+ADD COLUMN "seoTitle" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "seoDescription" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "internalNotes" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "specifications" JSONB,
+ADD COLUMN "sizeGuide" JSONB;

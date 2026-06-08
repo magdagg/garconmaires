@@ -150,6 +150,11 @@ model Product {
   shortDescription     String            @default("")
   editorialDescription String            @default("")
   technicalDescription String            @default("")
+  seoTitle             String            @default("")
+  seoDescription       String            @default("")
+  internalNotes        String            @default("")
+  specifications       Json?
+  sizeGuide            Json?
   price                Int
   currency             String            @default("PLN")
   status               ProductStatus     @default(draft)
