@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { getPublicProductBySlug } from "@/lib/store/public-catalog";
+import { notFound } from "next/navigation";
+import { ProductDetail } from "@/components/product/product-detail";
+import {
+  getPublicCatalogState,
+  getPublicProductBySlug,
+} from "@/lib/store/public-catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +38,14 @@ export async function generateMetadata({
       index: true,
       follow: true,
     },
+    openGraph: {
+      title: product.seoTitle || product.name,
+      description: product.seoDescription || product.shortDescription,
+      url: `https://garconmaires.com/produkt/${product.slug}`,
+      images: product.images[0]
+        ? [{ url: product.images[0].url, alt: product.images[0].alt }]
+        : undefined,
+    },
   };
 }
 
@@ -48,10 +60,17 @@ export default async function Page({
 }) {
   const { slug } = await params;
   const product = await getPublicProductBySlug(slug);
+  const catalog = await getPublicCatalogState();
 
   if (!product) {
     notFound();
   }
 
-  redirect(`/produkt/${product.slug}`);
+  return (
+    <ProductDetail
+      product={product}
+      locale="pl"
+      storefrontLive={catalog.storefrontLive}
+    />
+  );
 }

@@ -36,6 +36,11 @@ import {
   normalizeProductImageOrder,
   setPrimaryProductImage,
 } from "../product-admin";
+import {
+  getPublicCatalogStateFromDatabase,
+  isPublicProductCandidate,
+  toPublicProduct,
+} from "../public-catalog";
 import type { StoreDatabase } from "../types";
 
 afterEach(() => {
@@ -623,6 +628,157 @@ describe("draft product seed safety", () => {
 
     expect(validateCart(database, cart).ok).toBe(false);
     expect(validateCart(database, cart, { allowDisabledShop: true }).ok).toBe(false);
+  });
+});
+
+describe("public storefront catalog gating", () => {
+  it("returns a pre-launch collection state with no public products while shop is disabled", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const catalog = getPublicCatalogStateFromDatabase(database);
+
+    expect(catalog.storefrontLive).toBe(false);
+    expect(catalog.products).toHaveLength(0);
+    expect(database.settings.shopEnabled).toBe(false);
+    expect(database.settings.shopMode).toBe("PRE_LAUNCH");
+  });
+
+  it("excludes hidden, draft, archived and sandbox products from public queries", () => {
+    const database = createDefaultStoreDatabase();
+
+    for (const product of database.products) {
+      product.status = "draft";
+      product.isVisible = false;
+    }
+    seedDraftProducts(database);
+    database.products.push({
+      id: sandboxProductId,
+      name: "Sandbox",
+      slug: "sandbox",
+      shortDescription: "",
+      editorialDescription: "",
+      technicalDescription: "",
+      price: 100,
+      currency: "PLN",
+      status: "active",
+      isVisible: true,
+      isFeatured: false,
+      categoryId: null,
+      dropId: "drop-01",
+      createdAt: "2026-06-08T00:00:00.000Z",
+      updatedAt: "2026-06-08T00:00:00.000Z",
+    });
+    database.settings.shopEnabled = true;
+    database.settings.shopMode = "PUBLIC_DROP";
+    database.drops[0].status = "live";
+
+    const draftProduct = database.products.find(
+      (product) => product.id === "prod-garconmaires-black-tshirt",
+    );
+
+    expect(draftProduct).toBeTruthy();
+    if (!draftProduct) {
+      throw new Error("Missing seeded draft product fixture.");
+    }
+
+    expect(isPublicProductCandidate(database, draftProduct)).toBe(false);
+    expect(
+      isPublicProductCandidate(
+        database,
+        database.products.find((product) => product.id === sandboxProductId)!,
+      ),
+    ).toBe(false);
+    expect(getPublicCatalogStateFromDatabase(database).products).toHaveLength(0);
+  });
+
+  it("requires shop enabled, PUBLIC_DROP mode, live drop, active status and visibility", () => {
+    const database = createDefaultStoreDatabase();
+
+    for (const product of database.products) {
+      product.status = "draft";
+      product.isVisible = false;
+    }
+    seedDraftProducts(database);
+    const product = database.products.find(
+      (item) => item.id === "prod-garconmaires-black-hoodie",
+    );
+    const variant = database.variants.find((item) => item.productId === product?.id);
+
+    expect(product).toBeTruthy();
+    expect(variant).toBeTruthy();
+    if (!product || !variant) {
+      throw new Error("Missing seeded draft product fixture.");
+    }
+
+    product.status = "active";
+    product.isVisible = true;
+    variant.stockQuantity = 4;
+    variant.reservedQuantity = 1;
+    variant.isAvailable = true;
+
+    expect(getPublicCatalogStateFromDatabase(database).products).toHaveLength(0);
+
+    database.settings.shopEnabled = true;
+    database.settings.shopMode = "PUBLIC_DROP";
+    database.drops.find((drop) => drop.id === "drop-01")!.status = "live";
+
+    const catalog = getPublicCatalogStateFromDatabase(database);
+    const productIds = catalog.products.map((item) => item.id);
+
+    expect(catalog.storefrontLive).toBe(true);
+    expect(productIds).toEqual([product.id]);
+    expect(catalog.products.find((item) => item.id === product.id)).toMatchObject({
+      id: product.id,
+      slug: product.slug,
+      price: 89900,
+      dropName: "DROP 01",
+    });
+    expect(
+      catalog.products
+        .find((item) => item.id === product.id)
+        ?.variants.find((item) => item.id === variant.id),
+    ).toMatchObject({
+      sku: variant.sku,
+      availableStock: 3,
+    });
+    expect(JSON.stringify(catalog.products[0])).not.toContain("reservedQuantity");
+    expect(JSON.stringify(catalog.products[0])).not.toContain("internalNotes");
+  });
+
+  it("keeps sitemap product candidates empty for the current hidden pre-launch state", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+
+    expect(getPublicCatalogStateFromDatabase(database).products.map((product) => product.slug)).toEqual([]);
+  });
+
+  it("sanitizes a public product without leaking reserved stock or internal admin notes", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const product = database.products.find(
+      (item) => item.id === "prod-garconmaires-eyewear",
+    );
+    const variant = database.variants.find((item) => item.productId === product?.id);
+
+    expect(product).toBeTruthy();
+    expect(variant).toBeTruthy();
+    if (!product || !variant) {
+      throw new Error("Missing seeded draft product fixture.");
+    }
+
+    product.internalNotes = "Supplier secret";
+    variant.stockQuantity = 2;
+    variant.reservedQuantity = 1;
+    variant.isAvailable = true;
+
+    const publicProduct = toPublicProduct(database, product);
+
+    expect(publicProduct.variants[0].availableStock).toBe(1);
+    expect(JSON.stringify(publicProduct)).not.toContain("Supplier secret");
+    expect(JSON.stringify(publicProduct)).not.toContain("reservedQuantity");
   });
 });
 

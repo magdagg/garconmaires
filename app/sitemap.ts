@@ -1,9 +1,24 @@
 import type { MetadataRoute } from "next";
+import { getPublicCatalogState } from "@/lib/store/public-catalog";
 
 const baseUrl = "https://garconmaires.com";
 const lastModified = new Date();
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const catalog = await getPublicCatalogState();
+  const productEntries: MetadataRoute.Sitemap = catalog.products.map((product) => ({
+    url: `${baseUrl}/produkt/${product.slug}`,
+    lastModified,
+    changeFrequency: "weekly",
+    priority: 0.6,
+    alternates: {
+      languages: {
+        "pl-PL": `${baseUrl}/produkt/${product.slug}`,
+        "en-US": `${baseUrl}/en/product/${product.slug}`,
+      },
+    },
+  }));
+
   return [
     {
       url: `${baseUrl}/`,
@@ -125,5 +140,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
       },
     },
+    ...productEntries,
   ];
 }

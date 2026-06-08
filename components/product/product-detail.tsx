@@ -1,176 +1,217 @@
-"use client";
-
-import { useState } from "react";
-import { CheckoutButton } from "@/components/commerce/checkout-button";
-import type { Product } from "@/lib/data/products";
-import { copy, getProductCopy, type Locale } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
+import type { PublicProduct } from "@/lib/store/public-catalog";
 import { formatPrice } from "@/lib/utils";
-import { ProductMedia } from "@/components/ui/product-media";
-import { ProductCard } from "@/components/ui/product-card";
-import { useCart } from "@/components/providers/cart-provider";
 
 type ProductDetailProps = {
-  product: Product;
-  relatedProducts: Product[];
+  product: PublicProduct;
   locale?: Locale;
+  storefrontLive: boolean;
 };
+
+function copy(locale: Locale) {
+  if (locale === "en") {
+    return {
+      adminSafe: "Public product page",
+      size: "Size",
+      available: "Available",
+      soldOut: "Unavailable",
+      addToCart: "Add to cart",
+      gated: "Purchasing will open when DROP 01 is live.",
+      materials: "Materials and care",
+      specs: "Specifications",
+      sizeGuide: "Size guide",
+      delivery: "Delivery",
+      returns: "Returns",
+      deliveryBody:
+        "Delivery options will be confirmed at checkout. InPost and courier flows are prepared for launch.",
+      returnsBody:
+        "Returns and complaints follow the published legal terms for Poland and the EU.",
+    };
+  }
+
+  return {
+    adminSafe: "Publiczna karta produktu",
+    size: "Rozmiar",
+    available: "Dostępne",
+    soldOut: "Niedostępne",
+    addToCart: "Dodaj do koszyka",
+    gated: "Zakup zostanie odblokowany dopiero po uruchomieniu DROP 01.",
+    materials: "Materiały i pielęgnacja",
+    specs: "Specyfikacja",
+    sizeGuide: "Tabela rozmiarów",
+    delivery: "Dostawa",
+    returns: "Zwroty",
+    deliveryBody:
+      "Opcje dostawy zostaną potwierdzone przy zamówieniu. Przepływy InPost i kurierskie są przygotowane do launchu.",
+    returnsBody:
+      "Zwroty i reklamacje działają zgodnie z opublikowanymi dokumentami prawnymi dla Polski i UE.",
+  };
+}
+
+function primaryImage(product: PublicProduct) {
+  return product.images.find((image) => image.isPrimary) ?? product.images[0];
+}
+
+function specificationRows(product: PublicProduct) {
+  return Object.entries(product.specifications).filter(([, value]) => value);
+}
 
 export function ProductDetail({
   product,
-  relatedProducts,
   locale = "pl",
+  storefrontLive,
 }: ProductDetailProps) {
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0]);
-  const [quantity, setQuantity] = useState(1);
-  const { addItem } = useCart();
-  const t = copy[locale].product;
-  const productCopy = getProductCopy(product, locale);
+  const t = copy(locale);
+  const image = primaryImage(product);
+  const variants = product.variants;
+  const hasAvailableVariant = variants.some((variant) => variant.isAvailable);
+  const canPurchase = storefrontLive && hasAvailableVariant;
+  const specRows = specificationRows(product);
 
   return (
-    <div className="site-shell px-4 py-14 md:px-6 md:py-20">
-      <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="grid gap-4 md:grid-cols-2">
-          <ProductMedia product={product} label="Front View" />
-          <div className="grid gap-4">
-            <ProductMedia product={product} label="Material Study" />
-            <ProductMedia product={product} label="Detail Crop" />
+    <main className="bg-black text-white">
+      <section className="site-shell grid gap-10 px-4 py-12 md:px-6 md:py-16 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="space-y-4">
+          <div className="relative aspect-[4/5] overflow-hidden bg-neutral-950">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={image.url}
+                alt={image.alt}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-end justify-between border border-white/10 p-8">
+                <p className="font-label text-[10px] tracking-[0.3em] text-white/35 uppercase">
+                  {product.dropName ?? "DROP 01"}
+                </p>
+                <p className="text-right text-5xl leading-none text-white/50">
+                  Garçonmaires
+                </p>
+              </div>
+            )}
           </div>
+          {product.images.length > 1 ? (
+            <div className="grid grid-cols-4 gap-3">
+              {product.images.slice(0, 4).map((item) => (
+                <div key={item.id} className="aspect-[4/5] overflow-hidden bg-neutral-950">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.url} alt={item.alt} className="h-full w-full object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-8 lg:sticky lg:top-24 lg:self-start">
           <div className="space-y-4 border-b border-white/10 pb-8">
-            <p className="text-xs tracking-[0.34em] text-white/36 uppercase">
-              {productCopy.category}
+            <p className="font-label text-[10px] tracking-[0.32em] text-white/35 uppercase">
+              {product.dropName ?? t.adminSafe}
             </p>
             <h1 className="font-display text-5xl leading-none sm:text-6xl">
               {product.name}
             </h1>
-            <div className="flex flex-wrap items-center gap-4">
-              <p className="text-lg tracking-[0.14em] text-white/76">
-                {formatPrice(product.price, locale)}
-              </p>
-              <span className="border border-white/10 px-3 py-1 text-[10px] tracking-[0.28em] text-white/42 uppercase">
-                {t.limitedRelease}
-              </span>
-            </div>
+            <p className="text-lg tracking-[0.14em] text-white/76">
+              {formatPrice(product.price / 100, locale)}
+            </p>
             <p className="max-w-xl text-sm leading-8 text-white/62 sm:text-base">
-              {productCopy.description}
+              {product.shortDescription}
             </p>
           </div>
 
-          <div className="space-y-5">
-            <div>
-              <p className="mb-3 text-xs tracking-[0.28em] text-white/36 uppercase">
-                {t.selectSize}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => setSelectedSize(size)}
-                    className={
-                      selectedSize === size
-                        ? "border border-white bg-white px-4 py-3 text-xs tracking-[0.24em] uppercase text-black"
-                        : "border border-white/12 px-4 py-3 text-xs tracking-[0.24em] uppercase text-white hover:border-white"
-                    }
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-xs tracking-[0.28em] text-white/36 uppercase">
-                {t.quantity}
-              </p>
-              <div className="flex w-fit items-center border border-white/12">
-                <button
-                  type="button"
-                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                  className="px-4 py-3 text-white hover:bg-white hover:text-black"
+          <div className="space-y-4">
+            <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+              {t.size}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {variants.map((variant) => (
+                <span
+                  key={variant.id}
+                  className={
+                    variant.isAvailable
+                      ? "border border-white/28 px-4 py-3 text-xs tracking-[0.22em] uppercase text-white"
+                      : "border border-white/10 px-4 py-3 text-xs tracking-[0.22em] uppercase text-white/35"
+                  }
                 >
-                  -
-                </button>
-                <span className="min-w-14 text-center text-sm">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((value) => value + 1)}
-                  className="px-4 py-3 text-white hover:bg-white hover:text-black"
-                >
-                  +
-                </button>
-              </div>
+                  {variant.size}
+                </span>
+              ))}
             </div>
+            <p className="text-xs leading-6 text-white/45">
+              {hasAvailableVariant ? t.available : t.soldOut}
+            </p>
+          </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => addItem(product, selectedSize, quantity)}
-                className="flex-1 bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black hover:opacity-85"
-              >
-                {t.addToCart}
-              </button>
-              <CheckoutButton
-                items={[
-                  {
-                    productId: product.id,
-                    size: selectedSize,
-                    quantity,
-                  },
-                ]}
-                locale={locale}
-                label={t.buyNow}
-                className="flex-1 border border-white/12 px-6 py-4 text-xs tracking-[0.28em] uppercase text-white hover:bg-white hover:text-black"
-              />
-            </div>
+          <div className="space-y-3">
+            <button
+              type="button"
+              disabled={!canPurchase}
+              className={
+                canPurchase
+                  ? "w-full bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black"
+                  : "w-full border border-white/12 px-6 py-4 text-xs tracking-[0.28em] uppercase text-white/35"
+              }
+            >
+              {t.addToCart}
+            </button>
+            {!canPurchase ? (
+              <p className="text-xs leading-6 text-white/45">{t.gated}</p>
+            ) : null}
           </div>
 
           <div className="grid gap-px bg-white/8">
-            <div className="bg-black p-5">
-              <p className="text-xs tracking-[0.28em] text-white/36 uppercase">
+            <section className="bg-black p-5">
+              <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
                 {t.materials}
               </p>
-              <p className="mt-3 text-sm leading-7 text-white/70">
-                {productCopy.material}
+              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-white/70">
+                {product.technicalDescription}
               </p>
-            </div>
-            <div className="bg-black p-5">
-              <p className="text-xs tracking-[0.28em] text-white/36 uppercase">
-                {t.details}
+            </section>
+
+            {specRows.length ? (
+              <section className="bg-black p-5">
+                <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+                  {t.specs}
+                </p>
+                <dl className="mt-3 grid gap-3 text-sm leading-6 text-white/66">
+                  {specRows.map(([key, value]) => (
+                    <div key={key} className="grid gap-2 border-t border-white/8 pt-3 md:grid-cols-[0.45fr_1fr]">
+                      <dt className="text-white/36">{key}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
+            {product.sizeGuide ? (
+              <section className="bg-black p-5">
+                <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+                  {t.sizeGuide}
+                </p>
+                <pre className="mt-3 overflow-auto text-xs leading-6 text-white/62">
+                  {JSON.stringify(product.sizeGuide, null, 2)}
+                </pre>
+              </section>
+            ) : null}
+
+            <section className="bg-black p-5">
+              <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+                {t.delivery}
               </p>
-              <ul className="mt-3 space-y-2 text-sm leading-7 text-white/70">
-                {productCopy.details.map((detail) => (
-                  <li key={detail}>{detail}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-black p-5">
-              <p className="text-xs tracking-[0.28em] text-white/36 uppercase">
-                {t.service}
+              <p className="mt-3 text-sm leading-7 text-white/70">{t.deliveryBody}</p>
+            </section>
+
+            <section className="bg-black p-5">
+              <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+                {t.returns}
               </p>
-              <p className="mt-3 text-sm leading-7 text-white/70">
-                {t.serviceBody}
-              </p>
-            </div>
+              <p className="mt-3 text-sm leading-7 text-white/70">{t.returnsBody}</p>
+            </section>
           </div>
         </div>
-      </div>
-
-      <section className="mt-24 border-t border-white/10 pt-16">
-        <div className="mb-12 max-w-2xl space-y-4">
-          <p className="text-xs tracking-[0.34em] text-white/36 uppercase">
-            {t.relatedEyebrow}
-          </p>
-          <h2 className="font-display text-4xl sm:text-5xl">{t.relatedTitle}</h2>
-        </div>
-        <div className="grid gap-12 md:grid-cols-2 xl:grid-cols-4">
-          {relatedProducts.map((item) => (
-            <ProductCard key={item.id} product={item} locale={locale} />
-          ))}
-        </div>
       </section>
-    </div>
+    </main>
   );
 }

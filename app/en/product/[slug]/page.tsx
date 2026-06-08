@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductDetail } from "@/components/product/product-detail";
-import { getProductCopy } from "@/lib/i18n";
-import { getProductBySlug, getRelatedProducts, products } from "@/lib/data/products";
+import {
+  getPublicCatalogState,
+  getPublicProductBySlug,
+} from "@/lib/store/public-catalog";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -10,27 +14,42 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getPublicProductBySlug(slug);
 
   if (!product) {
     return {
       title: "Garçonmaires",
       description: "Product pages will be available once the first drop is released.",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
-  const productCopy = getProductCopy(product, "en");
-
   return {
-    title: product.name,
-    description: productCopy.description,
+    title: product.seoTitle || product.name,
+    description: product.seoDescription || product.shortDescription,
+    alternates: {
+      canonical: `https://garconmaires.com/en/product/${product.slug}`,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+    openGraph: {
+      title: product.seoTitle || product.name,
+      description: product.seoDescription || product.shortDescription,
+      url: `https://garconmaires.com/en/product/${product.slug}`,
+      images: product.images[0]
+        ? [{ url: product.images[0].url, alt: product.images[0].alt }]
+        : undefined,
+    },
   };
 }
 
-export function generateStaticParams() {
-  return products.map((product) => ({
-    slug: product.slug,
-  }));
+export async function generateStaticParams() {
+  return [];
 }
 
 export default async function Page({
@@ -39,7 +58,8 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getPublicProductBySlug(slug);
+  const catalog = await getPublicCatalogState();
 
   if (!product) {
     notFound();
@@ -48,8 +68,8 @@ export default async function Page({
   return (
     <ProductDetail
       product={product}
-      relatedProducts={getRelatedProducts(product)}
       locale="en"
+      storefrontLive={catalog.storefrontLive}
     />
   );
 }
