@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CartPage } from "@/components/pages/cart-page";
+import { CheckoutPage } from "@/components/pages/checkout-page";
 import {
   cartCheckoutNoindexMetadata,
   getCartCheckoutGate,
@@ -8,10 +8,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = cartCheckoutNoindexMetadata({
-  title: "Cart | Garçonmaires",
-  description: "The cart will be available once the first drop is released.",
+  title: "Checkout | Garçonmaires",
+  description: "Checkout Garçonmaires pozostaje zablokowany do startu DROP 01.",
 });
 
 export default async function Page() {
-  return <CartPage locale="en" gate={await getCartCheckoutGate()} />;
+  return <CheckoutPage locale="pl" gate={await getCartCheckoutGate()} />;
 }

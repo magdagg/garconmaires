@@ -1,6 +1,13 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { addCartItem, findOrCreateCart, serializeCart, updateCartItemQuantity, validateCart } from "@/lib/store/cart";
+import {
+  addCartItem,
+  assertPublicCartItemAllowed,
+  findOrCreateCart,
+  serializeCart,
+  updateCartItemQuantity,
+  validateCart,
+} from "@/lib/store/cart";
 import { createSessionId } from "@/lib/store/ids";
 import { trackAnalyticsEvent } from "@/lib/store/operations";
 import { updateStoreDatabase } from "@/lib/store/storage";
@@ -46,12 +53,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await updateStoreDatabase((database) => {
-      const cart = addCartItem(database, {
+      const itemInput = {
         sessionId,
         productId: String(body.productId ?? ""),
         variantId: body.variantId,
         size: body.size,
         quantity: Number(body.quantity ?? 1),
+      };
+
+      assertPublicCartItemAllowed(database, itemInput);
+      const cart = addCartItem(database, {
+        sessionId: itemInput.sessionId,
+        productId: itemInput.productId,
+        variantId: itemInput.variantId,
+        size: itemInput.size,
+        quantity: itemInput.quantity,
       });
       const validation = validateCart(database, cart);
       trackAnalyticsEvent(database, {

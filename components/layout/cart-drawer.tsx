@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckoutButton } from "@/components/commerce/checkout-button";
 import { useCart } from "@/components/providers/cart-provider";
 import { copy, getLocaleFromPathname, getProductCopy, withLocalePath } from "@/lib/i18n";
 import { formatPrice } from "@/lib/utils";
@@ -17,7 +16,6 @@ export function CartDrawer() {
     subtotal,
     updateQuantity,
     removeItem,
-    checkoutItems,
   } = useCart();
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
@@ -137,19 +135,19 @@ export function CartDrawer() {
           </div>
           <div className="flex gap-3">
             <Link
-              href={withLocalePath("/cart", locale)}
+              href={locale === "pl" ? "/koszyk" : "/en/cart"}
               onClick={closeCart}
               className="flex-1 border border-white/16 px-4 py-3 text-center text-xs tracking-[0.24em] uppercase text-white hover:bg-white hover:text-black"
             >
               {t.viewCart}
             </Link>
-            <CheckoutButton
-              items={checkoutItems}
-              locale={locale}
-              label={t.checkout}
-              onBeforeRedirect={closeCart}
-              className="flex-1 bg-white px-4 py-3 text-xs tracking-[0.24em] uppercase text-black"
-            />
+            <Link
+              href={locale === "pl" ? "/checkout" : "/en/checkout"}
+              onClick={closeCart}
+              className="flex-1 border border-white/16 px-4 py-3 text-center text-xs tracking-[0.24em] uppercase text-white/45"
+            >
+              {t.checkout}
+            </Link>
           </div>
         </div>
       </aside>

@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addCartItem, findOrCreateCart, validateCart } from "../cart";
+import sitemap from "@/app/sitemap";
+import {
+  addCartItem,
+  assertPublicCartItemAllowed,
+  findOrCreateCart,
+  validateCart,
+} from "../cart";
+import {
+  cartCheckoutNoindexMetadata,
+  getCartCheckoutGateFromDatabase,
+} from "../cart-checkout-gate";
 import { createDefaultStoreDatabase } from "../defaults";
 import {
   draftProductDefinitions,
@@ -161,6 +171,21 @@ describe("store checkout safety", () => {
     expect(validation.errors.join(" ")).toContain("Sklep nie jest jeszcze");
   });
 
+  it("blocks public cart adds while the shop is pre-launch before mutating cart state", () => {
+    const { database, product, variant } = makeCheckoutDatabase();
+    database.settings.shopEnabled = false;
+    database.settings.shopMode = "PRE_LAUNCH";
+
+    expect(() =>
+      assertPublicCartItemAllowed(database, {
+        productId: product.id,
+        variantId: variant.id,
+        quantity: 1,
+      }),
+    ).toThrow("Sklep nie jest jeszcze aktywny");
+    expect(findOrCreateCart(database, "session-public-blocked").items).toHaveLength(0);
+  });
+
   it.each(["draft", "hidden", "sold_out", "archived"] as const)(
     "blocks %s products from public purchase",
     (status) => {
@@ -181,6 +206,78 @@ describe("store checkout safety", () => {
       expect(validation.errors.join(" ")).toContain(product.name);
     },
   );
+
+  it("blocks hidden, draft and sandbox products from public cart adds", () => {
+    const { database, product, variant } = makeCheckoutDatabase();
+
+    product.status = "draft";
+    product.isVisible = false;
+
+    expect(() =>
+      assertPublicCartItemAllowed(database, {
+        productId: product.id,
+        variantId: variant.id,
+        quantity: 1,
+      }),
+    ).toThrow(product.name);
+
+    database.products.push({
+      id: sandboxProductId,
+      name: "Tpay sandbox product",
+      slug: "garconmaires-test-product",
+      shortDescription: "",
+      editorialDescription: "",
+      technicalDescription: "",
+      price: 100,
+      currency: "PLN",
+      status: "active",
+      isVisible: true,
+      isFeatured: false,
+      categoryId: null,
+      dropId: "drop-01",
+      createdAt: "2026-06-08T00:00:00.000Z",
+      updatedAt: "2026-06-08T00:00:00.000Z",
+    });
+    database.variants.push({
+      id: "var-tpay-sandbox-test-one-size",
+      productId: sandboxProductId,
+      size: "ONE SIZE",
+      sku: "GM-TPAY-SANDBOX",
+      stockQuantity: 1,
+      reservedQuantity: 0,
+      isAvailable: true,
+      priceOverride: null,
+      createdAt: "2026-06-08T00:00:00.000Z",
+      updatedAt: "2026-06-08T00:00:00.000Z",
+    });
+
+    expect(() =>
+      assertPublicCartItemAllowed(database, {
+        productId: sandboxProductId,
+        variantId: "var-tpay-sandbox-test-one-size",
+        quantity: 1,
+      }),
+    ).toThrow("Tpay sandbox product");
+  });
+
+  it("server cart pricing comes from store data instead of client input", () => {
+    const { database, product, variant } = makeCheckoutDatabase();
+    product.price = 12345;
+    const cart = findOrCreateCart(database, "session-price-source");
+
+    addCartItem(database, {
+      sessionId: cart.sessionId,
+      productId: product.id,
+      variantId: variant.id,
+      quantity: 2,
+    });
+
+    expect(cart.items[0]).toMatchObject({
+      priceAtTime: 12345,
+      quantity: 2,
+    });
+    expect(cart.subtotal).toBe(24690);
+  });
 
   it("creates a pending order with an active stock reservation", () => {
     const { database, variant } = makeCheckoutDatabase();
@@ -242,6 +339,44 @@ describe("store checkout safety", () => {
         },
       }),
     ).toThrow("telefon");
+  });
+
+  it("requires terms and privacy consent while keeping newsletter optional", () => {
+    const { database, product, variant } = makeCheckoutDatabase();
+    const cart = findOrCreateCart(database, "session-consent");
+
+    addCartItem(database, {
+      sessionId: cart.sessionId,
+      productId: product.id,
+      variantId: variant.id,
+      quantity: 1,
+    });
+
+    expect(() =>
+      createOrderFromCart({
+        database,
+        cartId: cart.id,
+        input: {
+          ...checkoutInput(),
+          acceptedTerms: false,
+          acceptedPrivacy: true,
+          marketingConsent: false,
+        },
+      }),
+    ).toThrow("Akceptacja regulaminu");
+
+    const { order } = createOrderFromCart({
+      database,
+      cartId: cart.id,
+      input: {
+        ...checkoutInput(),
+        marketingConsent: false,
+      },
+    });
+
+    expect(order.consentLog.termsAcceptedAt).toBeTruthy();
+    expect(order.consentLog.privacyAcceptedAt).toBeTruthy();
+    expect(order.consentLog.newsletterConsentAt).toBeNull();
   });
 
   it("allows a hidden active product only through admin checkout test mode", () => {
@@ -752,6 +887,40 @@ describe("public storefront catalog gating", () => {
     seedDraftProducts(database);
 
     expect(getPublicCatalogStateFromDatabase(database).products.map((product) => product.slug)).toEqual([]);
+  });
+
+  it("keeps cart and checkout noindexed and excluded from sitemap", async () => {
+    const metadata = cartCheckoutNoindexMetadata({
+      title: "Koszyk | Garçonmaires",
+      description: "Koszyk Garçonmaires pozostaje zablokowany.",
+    });
+    const urls = (await sitemap()).map((entry) => entry.url);
+
+    expect(metadata.robots).toMatchObject({
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
+    });
+    expect(urls.some((url) => url.endsWith("/koszyk"))).toBe(false);
+    expect(urls.some((url) => url.endsWith("/checkout"))).toBe(false);
+    expect(urls.some((url) => url.endsWith("/en/cart"))).toBe(false);
+    expect(urls.some((url) => url.endsWith("/en/checkout"))).toBe(false);
+  });
+
+  it("keeps cart and checkout gated while current store settings are pre-launch", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const gate = getCartCheckoutGateFromDatabase(database);
+
+    expect(gate.storefrontLive).toBe(false);
+    expect(gate.shopEnabled).toBe(false);
+    expect(gate.shopMode).toBe("PRE_LAUNCH");
+    expect(
+      database.products.filter(
+        (product) => product.id.startsWith("prod-garconmaires-") && product.isVisible,
+      ),
+    ).toHaveLength(0);
   });
 
   it("sanitizes a public product without leaking reserved stock or internal admin notes", () => {

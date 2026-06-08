@@ -1,4 +1,5 @@
 import type { Cart, CartItem, StoreDatabase } from "./types";
+import { sandboxProductId } from "./draft-products";
 import { addMinutes, createId, nowIso } from "./ids";
 import { getDefaultDeliveryQuotes } from "./delivery";
 import { getAvailableStock, isProductPubliclyBuyable, releaseExpiredReservations } from "./inventory";
@@ -137,6 +138,50 @@ export function addCartItem(database: StoreDatabase, input: AddCartItemInput) {
   recalculateCart(database, cart);
 
   return cart;
+}
+
+export function assertPublicCartItemAllowed(
+  database: StoreDatabase,
+  input: Pick<AddCartItemInput, "productId" | "variantId" | "size" | "quantity">,
+) {
+  releaseExpiredReservations(database);
+
+  if (
+    !database.settings.shopEnabled ||
+    database.settings.shopMode !== "PUBLIC_DROP" ||
+    database.settings.maintenanceMode
+  ) {
+    throw new Error("Sklep nie jest jeszcze aktywny.");
+  }
+
+  const product = database.products.find((item) => item.id === input.productId);
+  const variant = database.variants.find((item) =>
+    input.variantId
+      ? item.id === input.variantId
+      : item.productId === input.productId && item.size === input.size,
+  );
+
+  if (!product || !variant || variant.productId !== product.id) {
+    throw new Error("Produkt lub wariant nie istnieje.");
+  }
+
+  if (product.id === sandboxProductId || !isProductPubliclyBuyable(product)) {
+    throw new Error(`${product.name} nie jest aktualnie dostępny w sprzedaży.`);
+  }
+
+  const drop = product.dropId
+    ? database.drops.find((item) => item.id === product.dropId)
+    : null;
+
+  if (!drop || drop.status !== "live") {
+    throw new Error(`${product.name} nie jest aktualnie dostępny w sprzedaży.`);
+  }
+
+  const quantity = Math.max(1, Math.min(10, Math.floor(input.quantity)));
+
+  if (!variant.isAvailable || getAvailableStock(variant) < quantity) {
+    throw new Error(`${product.name} / ${variant.size} jest niedostępny w tej ilości.`);
+  }
 }
 
 export function updateCartItemQuantity(

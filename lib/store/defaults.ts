@@ -91,13 +91,17 @@ const variants: ProductVariant[] = staticProducts.flatMap((product) =>
   })),
 );
 
+function cloneDefault<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 export function createDefaultStoreDatabase(): StoreDatabase {
   return {
-    products: backendProducts,
-    variants,
+    products: cloneDefault(backendProducts),
+    variants: cloneDefault(variants),
     images: [],
-    categories,
-    drops: [defaultDrop],
+    categories: cloneDefault(categories),
+    drops: [cloneDefault(defaultDrop)],
     carts: [],
     reservations: [],
     orders: [],
@@ -106,7 +110,7 @@ export function createDefaultStoreDatabase(): StoreDatabase {
     complaints: [],
     newsletterSubscribers: [],
     discounts: [],
-    settings: defaultStoreSettings,
+    settings: cloneDefault(defaultStoreSettings),
     legalSubmissions: [],
     analyticsEvents: [],
     processedWebhookEvents: [],

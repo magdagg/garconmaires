@@ -8,10 +8,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = cartCheckoutNoindexMetadata({
-  title: "Cart | Garçonmaires",
-  description: "The cart will be available once the first drop is released.",
+  title: "Koszyk | Garçonmaires",
+  description: "Koszyk Garçonmaires pozostaje zablokowany do startu DROP 01.",
 });
 
 export default async function Page() {
-  return <CartPage locale="en" gate={await getCartCheckoutGate()} />;
+  return <CartPage locale="pl" gate={await getCartCheckoutGate()} />;
 }

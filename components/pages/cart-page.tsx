@@ -1,145 +1,144 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { CheckoutButton } from "@/components/commerce/checkout-button";
-import { useCart } from "@/components/providers/cart-provider";
-import { ProductMedia } from "@/components/ui/product-media";
-import { formatPrice } from "@/lib/utils";
-import { copy, getProductCopy, withLocalePath, type Locale } from "@/lib/i18n";
+import { AddToCartButton } from "@/components/commerce/add-to-cart-button";
+import { CartRow } from "@/components/commerce/cart-row";
+import { CheckoutSummary } from "@/components/commerce/checkout-summary";
+import { QuantitySelector } from "@/components/commerce/quantity-selector";
+import { SizeSelector } from "@/components/commerce/size-selector";
+import type { CartCheckoutGateState } from "@/lib/store/cart-checkout-gate";
 
-export function CartPage({ locale }: { locale: Locale }) {
-  const { items, subtotal, updateQuantity, removeItem, checkoutItems } =
-    useCart();
-  const t = copy[locale].cart;
-  const [isCanceled] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
+type CartPageProps = {
+  locale: "pl" | "en";
+  gate: CartCheckoutGateState;
+};
 
-    const params = new URLSearchParams(window.location.search);
-    return params.get("checkout") === "canceled";
-  });
+const copy = {
+  pl: {
+    eyebrow: "Koszyk",
+    title: "Sklep nie jest jeszcze aktywny",
+    body:
+      "DROP 01 pozostaje w trybie pre-launch. Koszyk jest przygotowany technicznie, ale publiczne dodawanie produktów i płatności są zablokowane.",
+    emptyTitle: "Koszyk",
+    emptyBody: "Dodane produkty pojawią się tutaj po uruchomieniu sprzedaży.",
+    sampleName: "Garçonmaires DROP 01",
+    sampleSize: "ONE SIZE",
+    size: "Rozmiar",
+    quantity: "Ilość",
+    add: "Dodaj do koszyka",
+    disabledAdd: "Dostępne po premierze",
+    remove: "Usuń",
+    clear: "Wyczyść koszyk",
+    continue: "Przejdź do checkoutu",
+    collection: "Wróć do kolekcji",
+    delivery: "Dostawa zostanie potwierdzona w checkout.",
+    summary: {
+      title: "Podsumowanie",
+      subtotal: "Suma produktów",
+      delivery: "Dostawa",
+      total: "Razem",
+      placeholder: "Do wyliczenia",
+    },
+  },
+  en: {
+    eyebrow: "Cart",
+    title: "The shop is not active yet",
+    body:
+      "DROP 01 remains in pre-launch mode. The cart is technically prepared, but public product adds and payments are blocked.",
+    emptyTitle: "Cart",
+    emptyBody: "Added pieces will appear here once sales open.",
+    sampleName: "Garçonmaires DROP 01",
+    sampleSize: "ONE SIZE",
+    size: "Size",
+    quantity: "Quantity",
+    add: "Add to cart",
+    disabledAdd: "Available at launch",
+    remove: "Remove",
+    clear: "Clear cart",
+    continue: "Continue checkout",
+    collection: "Back to collection",
+    delivery: "Delivery will be confirmed at checkout.",
+    summary: {
+      title: "Summary",
+      subtotal: "Subtotal",
+      delivery: "Delivery",
+      total: "Total",
+      placeholder: "Calculated later",
+    },
+  },
+};
+
+export function CartPage({ locale, gate }: CartPageProps) {
+  const t = copy[locale];
+  const collectionHref = locale === "pl" ? "/kolekcja" : "/en/collection";
+  const checkoutHref = locale === "pl" ? "/checkout" : "/en/checkout";
 
   return (
-    <div className="site-shell px-4 py-14 md:px-6 md:py-20">
-      <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-        <div>
-          <p className="text-xs tracking-[0.34em] text-white/38 uppercase">
-            {t.eyebrow}
-          </p>
-          <h1 className="mt-4 font-display text-5xl leading-none sm:text-7xl">
-            {t.title}
-          </h1>
-
-          {isCanceled ? (
-            <div className="mt-6 border border-white/10 bg-white/[0.03] px-5 py-4 text-sm leading-7 text-white/62">
-              {t.canceled}
+    <main className="min-h-screen bg-black text-white">
+      <section className="site-shell px-4 py-12 md:px-6 md:py-16">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-8">
+            <div className="space-y-4 border-b border-white/10 pb-8">
+              <p className="font-label text-[10px] tracking-[0.32em] text-white/35 uppercase">
+                {t.eyebrow}
+              </p>
+              <h1 className="font-display text-5xl leading-none sm:text-6xl">
+                {gate.storefrontLive ? t.emptyTitle : t.title}
+              </h1>
+              <p className="max-w-2xl text-sm leading-7 text-white/58">
+                {gate.storefrontLive ? t.emptyBody : t.body}
+              </p>
             </div>
-          ) : null}
 
-          <div className="mt-10 space-y-6">
-            {items.length === 0 ? (
-              <div className="border border-white/10 bg-white/[0.03] p-8">
-                <p className="font-display text-3xl">{t.emptyTitle}</p>
-                <p className="mt-4 max-w-lg text-sm leading-7 text-white/60">
-                  {t.emptyBody}
-                </p>
-                <Link
-                  href={withLocalePath("/shop", locale)}
-                  className="mt-6 inline-flex border border-white/18 px-5 py-3 text-xs tracking-[0.28em] uppercase text-white hover:bg-white hover:text-black"
-                >
-                  {t.continueShopping}
-                </Link>
+            {gate.storefrontLive ? (
+              <div className="space-y-6">
+                <CartRow
+                  locale={locale}
+                  name={t.sampleName}
+                  size={t.sampleSize}
+                  quantity={1}
+                  unitPrice={0}
+                  removeLabel={t.remove}
+                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    href={checkoutHref}
+                    className="bg-white px-6 py-4 text-xs tracking-[0.24em] text-black uppercase"
+                  >
+                    {t.continue}
+                  </Link>
+                  <button
+                    type="button"
+                    className="border border-white/12 px-6 py-4 text-xs tracking-[0.24em] text-white/45 uppercase"
+                  >
+                    {t.clear}
+                  </button>
+                </div>
               </div>
             ) : (
-              items.map((item) => {
-                const productCopy = getProductCopy(item.product, locale);
-
-                return (
-                  <div
-                    key={item.id}
-                    className="grid gap-5 border-b border-white/10 pb-6 sm:grid-cols-[160px_1fr]"
+              <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="space-y-6">
+                  <SizeSelector label={t.size} sizes={["S", "M", "L", "XL", "ONE SIZE"]} disabled />
+                  <QuantitySelector label={t.quantity} disabled />
+                  <AddToCartButton label={t.add} disabledLabel={t.disabledAdd} disabled />
+                  <p className="text-xs leading-6 text-white/42">{t.delivery}</p>
+                </div>
+                <div className="border-l border-white/10 pl-6">
+                  <p className="text-sm leading-7 text-white/58">
+                    {gate.shopMode === "PRE_LAUNCH" ? "DROP 01 coming soon" : t.emptyBody}
+                  </p>
+                  <Link
+                    href={collectionHref}
+                    className="mt-6 inline-flex border border-white/12 px-5 py-3 text-xs tracking-[0.22em] text-white/54 uppercase"
                   >
-                    <ProductMedia product={item.product} compact />
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="text-xs tracking-[0.28em] text-white/34 uppercase">
-                            {productCopy.category}
-                          </p>
-                          <h2 className="mt-2 text-xl text-white">
-                            {item.product.name}
-                          </h2>
-                          <p className="mt-2 text-xs tracking-[0.2em] text-white/50 uppercase">
-                            {t.size} {item.size}
-                          </p>
-                        </div>
-                        <p className="text-sm tracking-[0.14em] text-white/76">
-                          {formatPrice(item.product.price * item.quantity, locale)}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center border border-white/12">
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="px-4 py-3 hover:bg-white hover:text-black"
-                          >
-                            -
-                          </button>
-                          <span className="min-w-14 text-center text-sm">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="px-4 py-3 hover:bg-white hover:text-black"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item.id)}
-                          className="text-xs tracking-[0.24em] text-white/40 uppercase hover:text-white"
-                        >
-                          {t.remove}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
+                    {t.collection}
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
-        </div>
 
-        <aside className="h-fit border border-white/10 bg-white/[0.03] p-6 lg:sticky lg:top-24">
-          <p className="text-xs tracking-[0.34em] text-white/38 uppercase">
-            {t.summary}
-          </p>
-          <div className="mt-8 space-y-4 border-b border-white/10 pb-6 text-sm text-white/66">
-            <div className="flex items-center justify-between">
-              <span>{t.subtotal}</span>
-              <span className="text-white">{formatPrice(subtotal, locale)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>{t.shipping}</span>
-              <span>{t.shippingAtCheckout}</span>
-            </div>
-          </div>
-          <CheckoutButton
-            items={checkoutItems}
-            locale={locale}
-            label={t.checkout}
-            className="mt-6 w-full bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black hover:opacity-85"
-          />
-          <p className="mt-4 text-sm leading-7 text-white/46">
-            {t.paymentsNote}
-          </p>
-        </aside>
-      </div>
-    </div>
+          <CheckoutSummary locale={locale} labels={t.summary} />
+        </div>
+      </section>
+    </main>
   );
 }
