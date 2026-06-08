@@ -19,6 +19,7 @@ import type {
   Complaint,
   DiscountCode,
   Drop,
+  EmailEvent,
   InventoryReservation,
   NewsletterSubscriber,
   Order,
@@ -58,6 +59,18 @@ function requiredIso(date: Date | string) {
 
 function asDate(value: string | null | undefined) {
   return value ? new Date(value) : null;
+}
+
+async function emailEventTableExists(prisma: ReturnType<typeof getPrisma>) {
+  try {
+    const result = await prisma.$queryRaw<{ exists: boolean }[]>`
+      SELECT to_regclass('public."EmailEvent"') IS NOT NULL AS "exists"
+    `;
+
+    return Boolean(result[0]?.exists);
+  } catch {
+    return false;
+  }
 }
 
 function requireText(value: unknown, field: string) {
@@ -165,6 +178,7 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
   const prisma = getPrisma();
 
   await ensurePostgresDefaults(prisma as unknown as Db);
+  const hasEmailEvents = await emailEventTableExists(prisma);
 
   const [
     settings,
@@ -191,6 +205,7 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
     discountProducts,
     legalSubmissions,
     analyticsEvents,
+    emailEvents,
     webhookEvents,
   ] = await Promise.all([
     prisma.storeSettings.findUnique({ where: { id: "default" } }),
@@ -217,6 +232,9 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
     prisma.discountProduct.findMany(),
     prisma.legalSubmission.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.analyticsEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 }),
+    hasEmailEvents
+      ? prisma.emailEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
+      : Promise.resolve([]),
     prisma.paymentWebhookEvent.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }),
   ]);
 
@@ -455,6 +473,18 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
       productId: item.productId,
       data: item.data as Record<string, unknown>,
       createdAt: requiredIso(item.createdAt),
+    })),
+    emailEvents: emailEvents.map((item): EmailEvent => ({
+      id: item.id,
+      orderId: item.orderId,
+      recipientEmail: item.recipientEmail,
+      template: item.template as EmailEvent["template"],
+      provider: "resend",
+      status: item.status as EmailEvent["status"],
+      providerMessageId: item.providerMessageId,
+      errorSummary: item.errorSummary,
+      createdAt: requiredIso(item.createdAt),
+      sentAt: iso(item.sentAt),
     })),
     processedWebhookEvents: webhookEvents.map((item) => item.id),
   };
@@ -896,6 +926,35 @@ export async function writePostgresStore(database: StoreDatabase): Promise<Store
           productId: event.productId,
           data: event.data as Prisma.InputJsonValue,
           createdAt: new Date(event.createdAt),
+        },
+      });
+    }
+
+    for (const event of database.emailEvents) {
+      await tx.emailEvent.upsert({
+        where: { id: event.id },
+        update: {
+          orderId: event.orderId ?? null,
+          recipientEmail: event.recipientEmail,
+          template: event.template,
+          provider: event.provider,
+          status: event.status,
+          providerMessageId: event.providerMessageId ?? null,
+          errorSummary: event.errorSummary ?? null,
+          createdAt: new Date(event.createdAt),
+          sentAt: asDate(event.sentAt),
+        },
+        create: {
+          id: event.id,
+          orderId: event.orderId ?? null,
+          recipientEmail: event.recipientEmail,
+          template: event.template,
+          provider: event.provider,
+          status: event.status,
+          providerMessageId: event.providerMessageId ?? null,
+          errorSummary: event.errorSummary ?? null,
+          createdAt: new Date(event.createdAt),
+          sentAt: asDate(event.sentAt),
         },
       });
     }

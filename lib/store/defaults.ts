@@ -113,6 +113,7 @@ export function createDefaultStoreDatabase(): StoreDatabase {
     settings: cloneDefault(defaultStoreSettings),
     legalSubmissions: [],
     analyticsEvents: [],
+    emailEvents: [],
     processedWebhookEvents: [],
   };
 }

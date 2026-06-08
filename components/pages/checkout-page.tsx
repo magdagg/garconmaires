@@ -28,6 +28,17 @@ const copy = {
     terms: "Akceptuję regulamin.",
     privacy: "Akceptuję politykę prywatności.",
     newsletter: "Chcę otrzymywać informacje o premierach.",
+    legalLinks: {
+      terms: "/regulamin",
+      privacy: "/polityka-prywatnosci",
+      returns: "/zwroty-i-reklamacje",
+      delivery: "/dostawa",
+    },
+    legalNote: "Dokumenty: regulamin, prywatność, zwroty i dostawa.",
+    paymentSection: "Płatność",
+    paymentBody:
+      "Płatności zostaną aktywowane przy starcie sprzedaży. Przygotowane metody: Tpay, BLIK, szybki przelew, karta oraz Apple Pay / Google Pay, jeśli operator je udostępni.",
+    freeShipping: "Darmowa dostawa od",
     payment: "Przejdź do płatności",
     disabled: "Płatność dostępna po premierze",
     cart: "Wróć do koszyka",
@@ -59,6 +70,17 @@ const copy = {
     terms: "I accept the terms.",
     privacy: "I accept the privacy policy.",
     newsletter: "Send me launch updates.",
+    legalLinks: {
+      terms: "/en/terms",
+      privacy: "/en/privacy-policy",
+      returns: "/en/returns-complaints",
+      delivery: "/en/delivery",
+    },
+    legalNote: "Documents: terms, privacy, returns and delivery.",
+    paymentSection: "Payment",
+    paymentBody:
+      "Payments will be activated at launch. Prepared methods: Tpay, BLIK, fast transfer, card and Apple Pay / Google Pay if supported by the provider.",
+    freeShipping: "Free shipping from",
     payment: "Go to payment",
     disabled: "Payment available at launch",
     cart: "Back to cart",
@@ -145,20 +167,58 @@ export function CheckoutPage({ locale, gate }: CheckoutPageProps) {
               disabled={disabled}
             />
 
+            <p className="border-t border-white/10 pt-4 text-xs leading-6 text-white/42">
+              {t.freeShipping}{" "}
+              {new Intl.NumberFormat(locale === "pl" ? "pl-PL" : "en-GB", {
+                style: "currency",
+                currency: "PLN",
+              }).format(gate.freeShippingThreshold / 100)}
+              .
+            </p>
+
             <section className="space-y-3 text-sm leading-6 text-white/58">
               <label className="flex gap-3">
                 <input type="checkbox" required disabled={disabled} />
-                <span>{t.terms}</span>
+                <span>
+                  {t.terms}{" "}
+                  <Link href={t.legalLinks.terms} className="text-white underline underline-offset-4">
+                    {locale === "pl" ? "Regulamin" : "Terms"}
+                  </Link>
+                </span>
               </label>
               <label className="flex gap-3">
                 <input type="checkbox" required disabled={disabled} />
-                <span>{t.privacy}</span>
+                <span>
+                  {t.privacy}{" "}
+                  <Link href={t.legalLinks.privacy} className="text-white underline underline-offset-4">
+                    {locale === "pl" ? "Prywatność" : "Privacy"}
+                  </Link>
+                </span>
               </label>
               <label className="flex gap-3">
                 <input type="checkbox" disabled={disabled} />
                 <span>{t.newsletter}</span>
               </label>
+              <p className="text-xs text-white/36">
+                {t.legalNote}{" "}
+                <Link href={t.legalLinks.returns} className="text-white/60 underline underline-offset-4">
+                  {locale === "pl" ? "Zwroty" : "Returns"}
+                </Link>
+                {" / "}
+                <Link href={t.legalLinks.delivery} className="text-white/60 underline underline-offset-4">
+                  {locale === "pl" ? "Dostawa" : "Delivery"}
+                </Link>
+              </p>
               <p className="text-xs text-white/36">{t.validation}</p>
+            </section>
+
+            <section className="space-y-3 border-t border-white/10 pt-6">
+              <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
+                {t.paymentSection}
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-white/54">
+                {t.paymentBody}
+              </p>
             </section>
 
             <div className="flex flex-wrap items-center gap-3">

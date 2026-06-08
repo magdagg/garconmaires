@@ -122,6 +122,18 @@ type StoreSnapshot = {
   returns: { id: string; orderId: string; status: string; customerEmail: string }[];
   complaints: { id: string; orderId: string; status: string; customerEmail: string }[];
   newsletterSubscribers: { id: string; email: string; status: string; earlyAccess: boolean }[];
+  emailEvents: {
+    id: string;
+    orderId?: string | null;
+    recipientEmail: string;
+    template: string;
+    provider: string;
+    status: string;
+    providerMessageId?: string | null;
+    errorSummary?: string | null;
+    createdAt: string;
+    sentAt?: string | null;
+  }[];
   discounts: { id: string; code: string; type: string; value: number; isActive: boolean }[];
   settings: {
     shopEnabled: boolean;
@@ -174,6 +186,19 @@ type StoreSnapshot = {
         strippedKeyPrefix: boolean;
       };
     };
+    email: {
+      config: {
+        resendApiKeyPresent: boolean;
+        resendFromEmailPresent: boolean;
+        resendReplyToPresent: boolean;
+        emailTestMode: boolean;
+        emailTestRecipientPresent: boolean;
+        vercelEnv: string | null;
+        nodeEnv: string | null;
+        warnings: string[];
+      };
+      templates: { id: string; label: string }[];
+    };
   };
 };
 
@@ -196,6 +221,7 @@ const tabs = [
   "returns",
   "complaints",
   "newsletter",
+  "emails",
   "discounts",
   "settings",
 ] as const;
@@ -244,6 +270,14 @@ export function AdminStorePage() {
   const [productVisibilityFilter, setProductVisibilityFilter] = useState("all");
   const [productCompletenessFilter, setProductCompletenessFilter] = useState("all");
   const [previewProductId, setPreviewProductId] = useState<string | null>(null);
+  const [emailTemplate, setEmailTemplate] = useState("order_created");
+  const [emailSample, setEmailSample] = useState("synthetic");
+  const [emailRecipient, setEmailRecipient] = useState("");
+  const [emailPreview, setEmailPreview] = useState<{
+    subject: string;
+    html: string;
+    text: string;
+  } | null>(null);
   const [message, setMessage] = useState("");
 
   async function load() {
@@ -280,6 +314,55 @@ export function AdminStorePage() {
     }
 
     setMessage(data.message ?? "Zapisano.");
+    await load();
+  }
+
+  async function previewEmail() {
+    const response = await fetch("/api/admin/store", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        action: "email.preview",
+        payload: { template: emailTemplate, sample: emailSample },
+      }),
+    });
+    const data = (await response.json()) as {
+      error?: string;
+      result?: { preview: { subject: string; html: string; text: string } };
+    };
+
+    if (!response.ok) {
+      setMessage(data.error ?? "Nie udało się wyrenderować maila.");
+      return;
+    }
+
+    setEmailPreview(data.result?.preview ?? null);
+    setMessage("Preview maila gotowy.");
+  }
+
+  async function sendEmailTest() {
+    const response = await fetch("/api/admin/store", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        action: "email.testSend",
+        payload: { template: emailTemplate, recipient: emailRecipient },
+      }),
+    });
+    const data = (await response.json()) as { error?: string; message?: string };
+
+    if (!response.ok) {
+      setMessage(data.error ?? "Nie udało się wysłać testu.");
+      return;
+    }
+
+    setMessage(data.message ?? "Test mail obsłużony.");
     await load();
   }
 
@@ -676,10 +759,56 @@ export function AdminStorePage() {
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "processing", fulfillmentStatus: "packing" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
                         Packing
                       </button>
-                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "shipped", deliveryStatus: "shipped" })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const trackingNumber =
+                            order.delivery.trackingNumber ||
+                            window.prompt("Tracking number") ||
+                            "";
+
+                          if (!trackingNumber.trim()) {
+                            setMessage("Tracking number is required before marking shipped.");
+                            return;
+                          }
+
+                          action("order.status", {
+                            id: order.id,
+                            orderStatus: "completed",
+                            fulfillmentStatus: "shipped",
+                            deliveryStatus: "shipped",
+                            shipmentProvider: "inpost",
+                            trackingNumber,
+                          });
+                        }}
+                        className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
+                      >
                         Shipped
                       </button>
-                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "shipped", deliveryStatus: "shipped", shipmentProvider: "inpost", trackingNumber: order.delivery.trackingNumber ?? "" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const trackingNumber =
+                            order.delivery.trackingNumber ||
+                            window.prompt("InPost tracking number") ||
+                            "";
+
+                          if (!trackingNumber.trim()) {
+                            setMessage("Tracking number is required before marking shipped.");
+                            return;
+                          }
+
+                          action("order.status", {
+                            id: order.id,
+                            orderStatus: "completed",
+                            fulfillmentStatus: "shipped",
+                            deliveryStatus: "shipped",
+                            shipmentProvider: "inpost",
+                            trackingNumber,
+                          });
+                        }}
+                        className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]"
+                      >
                         Shipped InPost
                       </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "completed", fulfillmentStatus: "delivered", deliveryStatus: "delivered" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
@@ -700,6 +829,20 @@ export function AdminStorePage() {
             {activeTab === "returns" ? <SimpleList rows={snapshot.returns} /> : null}
             {activeTab === "complaints" ? <SimpleList rows={snapshot.complaints} /> : null}
             {activeTab === "newsletter" ? <SimpleList rows={snapshot.newsletterSubscribers} /> : null}
+            {activeTab === "emails" ? (
+              <EmailAdminPanel
+                snapshot={snapshot}
+                template={emailTemplate}
+                sample={emailSample}
+                recipient={emailRecipient}
+                preview={emailPreview}
+                onTemplateChange={setEmailTemplate}
+                onSampleChange={setEmailSample}
+                onRecipientChange={setEmailRecipient}
+                onPreview={previewEmail}
+                onTestSend={sendEmailTest}
+              />
+            ) : null}
             {activeTab === "discounts" ? <SimpleList rows={snapshot.discounts} /> : null}
 
             {activeTab === "settings" ? (
@@ -811,6 +954,180 @@ function DiagnosticField({ label, value }: { label: string; value: string }) {
       <span className="block uppercase tracking-[0.18em] text-white/30">{label}</span>
       <span className="mt-1 block break-words text-white/68">{value}</span>
     </p>
+  );
+}
+
+function EmailAdminPanel({
+  snapshot,
+  template,
+  sample,
+  recipient,
+  preview,
+  onTemplateChange,
+  onSampleChange,
+  onRecipientChange,
+  onPreview,
+  onTestSend,
+}: {
+  snapshot: StoreSnapshot;
+  template: string;
+  sample: string;
+  recipient: string;
+  preview: { subject: string; html: string; text: string } | null;
+  onTemplateChange: (value: string) => void;
+  onSampleChange: (value: string) => void;
+  onRecipientChange: (value: string) => void;
+  onPreview: () => void;
+  onTestSend: () => void;
+}) {
+  const config = snapshot.diagnostics?.email.config;
+  const templates = snapshot.diagnostics?.email.templates ?? [];
+
+  return (
+    <section className="mt-8 space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <div className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.24em] text-white/38">
+            Email configuration
+          </p>
+          <div className="mt-4 grid gap-2 text-xs text-white/58 md:grid-cols-2">
+            <DiagnosticField
+              label="RESEND_API_KEY"
+              value={config?.resendApiKeyPresent ? "present" : "missing"}
+            />
+            <DiagnosticField
+              label="RESEND_FROM_EMAIL"
+              value={config?.resendFromEmailPresent ? "present" : "missing"}
+            />
+            <DiagnosticField
+              label="RESEND_REPLY_TO"
+              value={config?.resendReplyToPresent ? "present" : "not set"}
+            />
+            <DiagnosticField
+              label="EMAIL_TEST_MODE"
+              value={config?.emailTestMode ? "true" : "false"}
+            />
+            <DiagnosticField
+              label="EMAIL_TEST_RECIPIENT"
+              value={config?.emailTestRecipientPresent ? "present" : "not set"}
+            />
+            <DiagnosticField label="VERCEL_ENV" value={config?.vercelEnv ?? "-"} />
+          </div>
+          {config?.warnings.length ? (
+            <div className="mt-4 space-y-1 text-xs text-yellow-100">
+              {config.warnings.map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.24em] text-white/38">
+            Preview and test send
+          </p>
+          <div className="mt-4 grid gap-3">
+            <SelectField
+              label="template"
+              value={template}
+              options={templates.map((item) => ({
+                value: item.id,
+                label: `${item.id} / ${item.label}`,
+              }))}
+              onChange={onTemplateChange}
+            />
+            <SelectField
+              label="sample data"
+              value={sample}
+              options={[
+                { value: "synthetic", label: "synthetic sample order" },
+                { value: "latest_order", label: "latest order if available" },
+              ]}
+              onChange={onSampleChange}
+            />
+            <label className="block border border-white/10 p-5">
+              <span className="text-xs uppercase tracking-[0.22em] text-white/35">
+                optional test recipient
+              </span>
+              <input
+                value={recipient}
+                onChange={(event) => onRecipientChange(event.target.value)}
+                className="mt-3 w-full border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none"
+                placeholder="test@example.com"
+              />
+              <p className="mt-2 text-xs leading-5 text-white/35">
+                Preview never sends. Test send uses EMAIL_TEST_RECIPIENT when configured; production test sends stay blocked unless explicitly enabled.
+              </p>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onPreview}
+                className="bg-white px-4 py-3 text-xs uppercase tracking-[0.2em] text-black"
+              >
+                Render preview
+              </button>
+              <button
+                type="button"
+                onClick={onTestSend}
+                className="border border-white/15 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white/70"
+              >
+                Send safe test
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {preview ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-4 border border-white/10 p-5">
+            <DiagnosticField label="subject" value={preview.subject} />
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-white/35">
+                Plain text
+              </p>
+              <pre className="mt-3 max-h-[360px] overflow-auto whitespace-pre-wrap border border-white/10 p-4 text-xs leading-6 text-white/62">
+                {preview.text}
+              </pre>
+            </div>
+          </div>
+          <div className="border border-white/10 p-5">
+            <p className="text-xs uppercase tracking-[0.22em] text-white/35">
+              HTML preview
+            </p>
+            <iframe
+              title="Email HTML preview"
+              srcDoc={preview.html}
+              className="mt-3 h-[420px] w-full border border-white/10 bg-white"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="border border-white/10 p-5">
+        <p className="text-xs uppercase tracking-[0.24em] text-white/38">
+          Email event log
+        </p>
+        <div className="mt-4 grid gap-2">
+          {snapshot.emailEvents.length === 0 ? (
+            <p className="text-sm text-white/45">No email events recorded yet.</p>
+          ) : null}
+          {snapshot.emailEvents.slice(0, 30).map((event) => (
+            <div
+              key={event.id}
+              className="grid gap-2 border-t border-white/10 pt-3 text-xs text-white/55 md:grid-cols-[0.8fr_0.8fr_0.7fr_0.7fr_1fr]"
+            >
+              <DiagnosticField label="template" value={event.template} />
+              <DiagnosticField label="recipient" value={event.recipientEmail} />
+              <DiagnosticField label="status" value={event.status} />
+              <DiagnosticField label="provider id" value={event.providerMessageId ?? "-"} />
+              <DiagnosticField label="error" value={event.errorSummary ?? "-"} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

@@ -5,7 +5,14 @@ import { createId, nowIso } from "@/lib/store/ids";
 import { createDiscountCode } from "@/lib/store/operations";
 import { createDefaultStoreDatabase } from "@/lib/store/defaults";
 import { getTrackingUrl, normalizeDeliveryMethods } from "@/lib/store/delivery";
-import { sendStoreEmail } from "@/lib/store/email";
+import {
+  createSyntheticEmailPayload,
+  getAvailableEmailTemplates,
+  getEmailConfigDiagnostics,
+  previewStoreEmail,
+  sendStoreEmail,
+  sendStoreEmailTest,
+} from "@/lib/store/email";
 import {
   assertVariantStockIsSafe,
   duplicateSkuValues,
@@ -20,6 +27,7 @@ import {
 import type {
   Drop,
   DropStatus,
+  StoreEmailTemplate,
   Product,
   ProductImage,
   ProductStatus,
@@ -580,6 +588,7 @@ export async function GET(request: NextRequest) {
     drops: database.drops,
     orders,
     payments: database.payments,
+    emailEvents: database.emailEvents,
     webhookEvents,
     returns: database.returns,
     complaints: database.complaints,
@@ -589,6 +598,10 @@ export async function GET(request: NextRequest) {
     diagnostics: {
       adminAuth: getAdminAuthDiagnostics(),
       tpaySandbox: await getTpaySandboxDiagnostics({ database, readError }),
+      email: {
+        config: getEmailConfigDiagnostics(),
+        templates: getAvailableEmailTemplates(),
+      },
     },
     analyticsEvents: database.analyticsEvents.slice(0, 200),
   });
@@ -693,6 +706,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         message: "Tpay sandbox product reset to stockQuantity=1 and reservedQuantity=0.",
+        result,
+      });
+    }
+
+    if (body.action === "email.preview") {
+      const template = String(body.payload?.template ?? "order_created") as StoreEmailTemplate;
+      const sample = String(body.payload?.sample ?? "synthetic");
+      const database = await readStoreDatabase();
+      const orderTemplates: StoreEmailTemplate[] = [
+        "order_created",
+        "payment_pending",
+        "payment_confirmed",
+        "payment_failed",
+        "order_shipped",
+      ];
+      const payload =
+        sample === "latest_order" &&
+        orderTemplates.includes(template) &&
+        database.orders[0]
+          ? { order: database.orders[0] }
+          : createSyntheticEmailPayload(template);
+      const preview = await previewStoreEmail(template, payload);
+
+      return NextResponse.json({ ok: true, result: { preview } });
+    }
+
+    if (body.action === "email.testSend") {
+      const template = String(body.payload?.template ?? "order_created") as StoreEmailTemplate;
+      const recipient =
+        typeof body.payload?.recipient === "string" ? body.payload.recipient : null;
+      const result = await sendStoreEmailTest({
+        template,
+        recipient,
+        payload: createSyntheticEmailPayload(template),
+      });
+
+      return NextResponse.json({
+        ok: true,
+        message:
+          result.status === "sent" || result.status === "queued"
+            ? "Test email queued."
+            : "Test email skipped.",
         result,
       });
     }
@@ -996,6 +1051,12 @@ export async function POST(request: NextRequest) {
           order.delivery.deliveryStatus =
             payload.deliveryStatus as typeof order.delivery.deliveryStatus;
           if (order.delivery.deliveryStatus === "shipped") {
+            if (
+              order.delivery.shipmentProvider !== "manual" &&
+              !String(order.delivery.trackingNumber ?? "").trim()
+            ) {
+              throw new Error("Tracking number is required before marking the order as shipped.");
+            }
             order.delivery.shippedAt = order.delivery.shippedAt ?? timestamp;
           }
         }

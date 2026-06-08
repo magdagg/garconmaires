@@ -284,6 +284,7 @@ model Order {
   returns           ReturnRequest[]
   complaints        Complaint[]
   analyticsEvents   AnalyticsEvent[]
+  emailEvents       EmailEvent[]
 }
 
 model OrderItem {
@@ -518,6 +519,24 @@ model AnalyticsEvent {
 
   @@index([name])
   @@index([orderId])
+}
+
+model EmailEvent {
+  id                String   @id
+  orderId           String?
+  recipientEmail    String
+  template          String
+  provider          String
+  status            String
+  providerMessageId String?
+  errorSummary      String?
+  createdAt         DateTime @default(now())
+  sentAt            DateTime?
+  order             Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([template])
+  @@index([recipientEmail])
 }
 
 model PaymentWebhookEvent {

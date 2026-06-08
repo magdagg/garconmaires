@@ -14,6 +14,17 @@ export type ComplaintStatus = "submitted" | "under_review" | "accepted" | "rejec
 export type ComplaintSolution = "repair" | "replacement" | "refund" | "price_reduction";
 export type NewsletterStatus = "pending" | "confirmed" | "unsubscribed";
 export type DiscountType = "percentage" | "fixed_amount" | "free_shipping";
+export type EmailEventStatus = "skipped" | "queued" | "sent" | "failed";
+export type StoreEmailTemplate =
+  | "order_created"
+  | "payment_pending"
+  | "payment_confirmed"
+  | "payment_failed"
+  | "order_shipped"
+  | "return_requested"
+  | "complaint_submitted"
+  | "newsletter_confirmation"
+  | "early_access_invitation";
 export type AnalyticsEventName =
   | "view_product"
   | "add_to_cart"
@@ -355,6 +366,19 @@ export type AnalyticsEvent = {
   createdAt: string;
 };
 
+export type EmailEvent = {
+  id: string;
+  orderId?: string | null;
+  recipientEmail: string;
+  template: StoreEmailTemplate;
+  provider: "resend";
+  status: EmailEventStatus;
+  providerMessageId?: string | null;
+  errorSummary?: string | null;
+  createdAt: string;
+  sentAt?: string | null;
+};
+
 export type StoreDatabase = {
   products: Product[];
   variants: ProductVariant[];
@@ -372,5 +396,6 @@ export type StoreDatabase = {
   settings: StoreSettings;
   legalSubmissions: LegalSubmission[];
   analyticsEvents: AnalyticsEvent[];
+  emailEvents: EmailEvent[];
   processedWebhookEvents: string[];
 };

@@ -22,8 +22,10 @@ GOOGLE_SHEETS_NEWSLETTER_ID=
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 ORDER_ADMIN_TOKEN=
-ORDER_EMAIL_FROM="Garçonmaires Studio <studio@garconmaires.com>"
-ORDER_STUDIO_EMAIL=studio@garconmaires.com
+RESEND_FROM_EMAIL="Garçonmaires Studio <studio@garconmaires.com>"
+RESEND_REPLY_TO=studio@garconmaires.com
+EMAIL_TEST_MODE=false
+EMAIL_TEST_RECIPIENT=
 BLOB_READ_WRITE_TOKEN=
 PAYMENT_PROVIDER=tpay
 TPAY_MERCHANT_ID=
@@ -95,7 +97,8 @@ The Prisma schema persists:
 Product, ProductVariant, ProductImage, ProductCategory, Drop, Cart, CartItem,
 InventoryReservation, Order, OrderItem, Payment, Delivery, ReturnRequest,
 ReturnItem, Complaint, NewsletterSubscriber, DiscountCode, StoreSettings,
-LegalConsent, legal submissions, AnalyticsEvent and PaymentWebhookEvent.
+LegalConsent, legal submissions, AnalyticsEvent, EmailEvent and
+PaymentWebhookEvent.
 
 Admin API endpoints require `ORDER_ADMIN_TOKEN`. Generate a long random value
 and store it only in local `.env.local` or the deployment secret manager:
@@ -146,6 +149,57 @@ Each provider adapter declares its expected env variables:
 
 Webhook handlers must verify the provider signature/checksum before marking an
 order as paid. Duplicate provider event IDs are stored in PostgreSQL and ignored.
+
+## Transactional Emails
+
+Transactional emails use Resend through a server-only integration. Required
+variables:
+
+```env
+RESEND_API_KEY=
+RESEND_FROM_EMAIL="Garçonmaires Studio <studio@garconmaires.com>"
+```
+
+Optional variables:
+
+```env
+RESEND_REPLY_TO=studio@garconmaires.com
+EMAIL_TEST_MODE=false
+EMAIL_TEST_RECIPIENT=
+```
+
+If `RESEND_API_KEY` or `RESEND_FROM_EMAIL` is missing, sending skips safely and
+records a sanitized email event. Admin email preview never sends. Preview test
+sends use `EMAIL_TEST_RECIPIENT` when configured, or an explicit
+admin-entered test address. Production test sends stay blocked unless
+`EMAIL_TEST_MODE=true` and `EMAIL_TEST_RECIPIENT` are configured.
+
+Email events store only operational metadata: recipient email, template type,
+provider, status, provider message id if available, a short error summary and
+timestamps. They do not store secrets, provider payloads, tokens or headers.
+
+## Delivery Readiness
+
+Default delivery configuration remains prepared for the Polish market:
+
+- InPost Paczkomat: `14.99 PLN`
+- Courier: `17.99 PLN`
+- Manual pickup placeholder: disabled by default
+- Free shipping threshold: `499.00 PLN`
+
+The checkout UI is gated during pre-launch but prepared for parcel locker data,
+courier addresses, phone/email validation, delivery price and legal consents.
+The future InPost adapter should use these env names when credentials are
+available:
+
+```env
+INPOST_ORGANIZATION_ID=
+INPOST_API_TOKEN=
+INPOST_ENV=sandbox
+```
+
+Do not invent or fake InPost credentials. Keep shipment creation manual until a
+real sandbox account and labels flow are connected.
 
 ### Tpay sandbox staging test
 

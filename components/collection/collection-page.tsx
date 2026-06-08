@@ -14,7 +14,8 @@ const spaceGrotesk = Space_Grotesk({
 function HeroVisual() {
   return (
     <div className="relative min-h-[32rem] overflow-hidden bg-black md:min-h-[calc(100svh-72px)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_76%_22%,rgba(255,255,255,0.09),transparent_24%),radial-gradient(circle_at_24%_68%,rgba(255,255,255,0.045),transparent_22%),linear-gradient(135deg,#101010_0%,#020202_58%,#080808_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,#111_0%,#020202_58%,#080808_100%)]" />
+      <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:72px_72px]" />
       <div className="absolute inset-x-[10%] top-[18%] h-px bg-white/12" />
       <div className="absolute inset-y-[18%] right-[18%] w-px bg-white/10" />
       <div className="absolute right-[12%] bottom-[18%] max-w-[18rem] text-right">
@@ -23,7 +24,6 @@ function HeroVisual() {
         </p>
       </div>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.76)_34%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.58)_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.08),transparent_24%),radial-gradient(circle_at_76%_18%,rgba(255,255,255,0.04),transparent_18%)]" />
     </div>
   );
 }
@@ -31,7 +31,8 @@ function HeroVisual() {
 function EditorialPlaceholder({ label }: { label: string }) {
   return (
     <div className="relative aspect-[4/5] overflow-hidden bg-black">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.08),transparent_22%),linear-gradient(180deg,#020202_0%,#000000_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,#101010_0%,#000000_100%)]" />
+      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:48px_48px]" />
       <div className="absolute inset-x-8 top-8 h-px bg-white/12" />
       <div className="absolute inset-y-8 left-8 w-px bg-white/10" />
       <div className="absolute right-8 bottom-8 left-8">
@@ -143,7 +144,7 @@ export function CollectionPage({
           <div className="site-shell w-full px-4 pb-10 pt-24 md:px-6 md:pb-14 md:pt-28">
             <div className="max-w-xl">
               <h1
-                className={`${spaceGrotesk.className} hero-reveal font-bold text-[4.5rem] leading-[0.82] tracking-[-0.08em] text-white sm:text-[6.5rem] md:text-[8.5rem]`}
+                className={`${spaceGrotesk.className} hero-reveal font-bold text-[4.5rem] leading-[0.82] tracking-normal text-white sm:text-[6.5rem] md:text-[8.5rem]`}
               >
                 {t.title}
               </h1>

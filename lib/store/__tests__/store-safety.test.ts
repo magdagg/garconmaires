@@ -21,7 +21,14 @@ import {
   getTrackingUrl,
   normalizeDeliveryMethods,
 } from "../delivery";
-import { sendStoreEmail } from "../email";
+import {
+  createSyntheticEmailPayload,
+  escapeHtml,
+  getAvailableEmailTemplates,
+  getEmailConfigDiagnostics,
+  renderStoreEmail,
+  sendStoreEmail,
+} from "../email";
 import {
   releaseExpiredReservations,
   reserveVariantStock,
@@ -511,10 +518,15 @@ describe("store checkout safety", () => {
       trackingNumber: "1234567890",
       shipmentProvider: "inpost",
     });
-    await expect(sendStoreEmail("order_shipped", { order })).resolves.toBeUndefined();
+    await expect(sendStoreEmail("order_shipped", { order })).resolves.toMatchObject({
+      status: "skipped",
+    });
     expect(info).toHaveBeenCalledWith(
-      "[store-email] skipped; RESEND_API_KEY is not configured",
-      expect.objectContaining({ template: `Zamówienie wysłane / ${order.orderNumber}` }),
+      "[store-email] skipped; provider is not configured",
+      expect.objectContaining({
+        template: "order_shipped",
+        reason: "RESEND_API_KEY is not configured.",
+      }),
     );
   });
 
@@ -538,6 +550,60 @@ describe("store checkout safety", () => {
     expect(first).not.toBeNull();
     expect(second).toBeNull();
     expect(variant.reservedQuantity).toBe(1);
+  });
+});
+
+describe("transactional email readiness", () => {
+  it("renders all available templates with HTML and plain text", () => {
+    for (const template of getAvailableEmailTemplates()) {
+      const rendered = renderStoreEmail(
+        template.id,
+        createSyntheticEmailPayload(template.id),
+      );
+
+      expect(rendered.subject).toContain("Garçonmaires");
+      expect(rendered.html).toContain("Garçonmaires / Warsaw");
+      expect(rendered.text).toContain("Garçonmaires / Warsaw");
+    }
+  });
+
+  it("escapes dynamic content before rendering HTML", () => {
+    const payload = createSyntheticEmailPayload("order_created");
+
+    if (!payload.order) {
+      throw new Error("Synthetic order missing.");
+    }
+    payload.order.customer.firstName = "<script>alert(1)</script>";
+    payload.order.items[0].name = "Tee & <raw>";
+
+    const rendered = renderStoreEmail("order_created", payload);
+
+    expect(rendered.html).not.toContain("<script>");
+    expect(rendered.html).not.toContain("<raw>");
+    expect(rendered.html).toContain("&lt;script&gt;");
+    expect(rendered.html).toContain("Tee &amp; &lt;raw&gt;");
+    expect(escapeHtml("\"quote\"")).toBe("&quot;quote&quot;");
+  });
+
+  it("reports missing Resend config without exposing values", () => {
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    vi.stubEnv("ORDER_EMAIL_FROM", "");
+
+    const diagnostics = getEmailConfigDiagnostics();
+
+    expect(diagnostics.resendApiKeyPresent).toBe(false);
+    expect(diagnostics.resendFromEmailPresent).toBe(false);
+    expect(diagnostics.warnings.join(" ")).toContain("RESEND_API_KEY missing");
+  });
+
+  it("renders shipped email with tracking URL", () => {
+    const payload = createSyntheticEmailPayload("order_shipped");
+    const rendered = renderStoreEmail("order_shipped", payload);
+
+    expect(rendered.subject).toContain("zamówienie wysłane");
+    expect(rendered.text).toContain("https://inpost.pl/sledzenie-przesylek");
+    expect(rendered.html).toContain("https://inpost.pl/sledzenie-przesylek");
   });
 });
 
