@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { addCartItem, findOrCreateCart, validateCart } from "../cart";
 import { createDefaultStoreDatabase } from "../defaults";
 import {
+  draftProductDefinitions,
+  sandboxProductId,
+  seedDraftProducts,
+} from "../draft-products";
+import {
   calculateDeliveryPrice,
   getTrackingUrl,
   normalizeDeliveryMethods,
@@ -386,6 +391,87 @@ describe("store checkout safety", () => {
     expect(first).not.toBeNull();
     expect(second).toBeNull();
     expect(variant.reservedQuantity).toBe(1);
+  });
+});
+
+describe("draft product seed safety", () => {
+  it("seeds real Garçonmaires products as hidden draft products", () => {
+    const database = createDefaultStoreDatabase();
+    const seeded = seedDraftProducts(database);
+
+    expect(seeded).toHaveLength(3);
+    for (const definition of draftProductDefinitions) {
+      const product = database.products.find((item) => item.id === definition.product.id);
+
+      expect(product).toMatchObject({
+        status: "draft",
+        isVisible: false,
+        isFeatured: false,
+        currency: "PLN",
+        dropId: "drop-01",
+      });
+      expect(product?.technicalDescription).toContain("POTWIERDZIĆ");
+    }
+    expect(database.products.find((item) => item.id === sandboxProductId)).toBeUndefined();
+    expect(database.settings.shopEnabled).toBe(false);
+    expect(database.settings.shopMode).toBe("PRE_LAUNCH");
+  });
+
+  it("creates product variants and SKUs idempotently", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    seedDraftProducts(database);
+
+    const draftProducts = database.products.filter((product) =>
+      product.id.startsWith("prod-garconmaires-"),
+    );
+    const variants = database.variants.filter((variant) =>
+      variant.productId.startsWith("prod-garconmaires-"),
+    );
+
+    expect(draftProducts).toHaveLength(3);
+    expect(variants.map((variant) => variant.sku).sort()).toEqual([
+      "GM-EYEWEAR-BLK-ONE",
+      "GM-HOODIE-BLK-L",
+      "GM-HOODIE-BLK-M",
+      "GM-HOODIE-BLK-S",
+      "GM-HOODIE-BLK-XL",
+      "GM-TSHIRT-BLK-L",
+      "GM-TSHIRT-BLK-M",
+      "GM-TSHIRT-BLK-S",
+      "GM-TSHIRT-BLK-XL",
+    ]);
+    expect(variants.every((variant) => variant.reservedQuantity === 0)).toBe(true);
+    expect(variants.every((variant) => variant.isAvailable === false)).toBe(true);
+  });
+
+  it("does not allow seeded real products to be purchased during pre-launch", () => {
+    const database = createDefaultStoreDatabase();
+
+    seedDraftProducts(database);
+    const product = database.products.find(
+      (item) => item.id === "prod-garconmaires-black-tshirt",
+    );
+    const variant = database.variants.find((item) => item.productId === product?.id);
+    const cart = findOrCreateCart(database, "session-draft-product");
+
+    expect(product).toBeTruthy();
+    expect(variant).toBeTruthy();
+    if (!product || !variant) {
+      throw new Error("Missing seeded draft product fixture.");
+    }
+
+    variant.stockQuantity = 1;
+    addCartItem(database, {
+      sessionId: cart.sessionId,
+      productId: product.id,
+      variantId: variant.id,
+      quantity: 1,
+    });
+
+    expect(validateCart(database, cart).ok).toBe(false);
+    expect(validateCart(database, cart, { allowDisabledShop: true }).ok).toBe(false);
   });
 });
 

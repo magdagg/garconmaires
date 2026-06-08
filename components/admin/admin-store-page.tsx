@@ -2,8 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+const sandboxProductId = "prod-tpay-sandbox-test";
+
 type StoreSnapshot = {
-  products: { id: string; name: string; status: string; isVisible: boolean; price: number }[];
+  products: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    isVisible: boolean;
+    isFeatured: boolean;
+    price: number;
+    shortDescription: string;
+    editorialDescription: string;
+    technicalDescription: string;
+    categoryId: string | null;
+    dropId: string | null;
+  }[];
   variants: {
     id: string;
     productId: string;
@@ -193,6 +208,7 @@ export function AdminStorePage() {
   const [token, setToken] = useState("");
   const [snapshot, setSnapshot] = useState<StoreSnapshot | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [productStatusFilter, setProductStatusFilter] = useState("all");
   const [message, setMessage] = useState("");
 
   async function load() {
@@ -275,6 +291,15 @@ export function AdminStorePage() {
       ["Newsletter", snapshot.newsletterSubscribers.length],
     ];
   }, [snapshot]);
+  const filteredProducts = useMemo(() => {
+    if (!snapshot) {
+      return [];
+    }
+
+    return snapshot.products.filter((product) =>
+      productStatusFilter === "all" ? true : product.status === productStatusFilter,
+    );
+  }, [productStatusFilter, snapshot]);
 
   return (
     <main className="min-h-screen bg-black px-4 py-8 text-white md:px-8">
@@ -347,20 +372,61 @@ export function AdminStorePage() {
 
             {activeTab === "products" ? (
               <section className="mt-8 space-y-3">
-                {snapshot.products.map((product) => (
-                  <div key={product.id} className="grid gap-4 border border-white/10 p-4 md:grid-cols-[1fr_auto_auto] md:items-center">
+                <div className="flex flex-wrap gap-2">
+                  {["all", "draft", "hidden", "active", "sold_out", "archived"].map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setProductStatusFilter(status)}
+                      className={
+                        productStatusFilter === status
+                          ? "border border-white bg-white px-3 py-2 text-xs uppercase tracking-[0.18em] text-black"
+                          : "border border-white/10 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/55"
+                      }
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="space-y-4 border border-white/10 p-4">
                     <div>
                       <p className="text-lg">{product.name}</p>
                       <p className="text-sm text-white/45">
-                        {product.status} / {product.isVisible ? "visible" : "hidden"} / {money(product.price)}
+                        {product.id === sandboxProductId ? "sandbox test product" : "real product"} / {product.status} / {product.isVisible ? "visible" : "hidden"} / {money(product.price)}
                       </p>
+                      {product.status === "active" && !snapshot.settings.shopEnabled ? (
+                        <p className="mt-2 text-xs text-yellow-100">
+                          Warning: product is active while shopEnabled=false.
+                        </p>
+                      ) : null}
+                      {product.isVisible && snapshot.settings.shopMode === "PRE_LAUNCH" ? (
+                        <p className="mt-2 text-xs text-red-200">
+                          Warning: product is visible while shopMode=PRE_LAUNCH.
+                        </p>
+                      ) : null}
                     </div>
-                    <button type="button" onClick={() => action("product.status", { id: product.id, status: "hidden", isVisible: false })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
-                      Hide
-                    </button>
-                    <button type="button" onClick={() => action("product.status", { id: product.id, status: "active", isVisible: false })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
-                      Activate hidden
-                    </button>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      <SettingsField label="name" value={product.name} onSave={(value) => action("product.upsert", { ...product, name: value })} />
+                      <SettingsField label="slug" value={product.slug} onSave={(value) => action("product.upsert", { ...product, slug: value })} />
+                      <SettingsField label="price PLN" value={String(product.price / 100)} onSave={(value) => action("product.upsert", { ...product, price: Math.round(Number(value) * 100) || 0 })} />
+                      <SettingsReadOnly label="drop association" value={product.dropId ?? "-"} />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <SettingsField label="short description" value={product.shortDescription} onSave={(value) => action("product.upsert", { ...product, shortDescription: value })} />
+                      <SettingsField label="editorial description" value={product.editorialDescription} onSave={(value) => action("product.upsert", { ...product, editorialDescription: value })} />
+                      <SettingsField label="technical/material/care" value={product.technicalDescription} onSave={(value) => action("product.upsert", { ...product, technicalDescription: value })} />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {["draft", "hidden", "active", "sold_out", "archived"].map((status) => (
+                        <button key={status} type="button" onClick={() => action("product.status", { id: product.id, status, isVisible: false })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                          {status}
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => action("product.status", { id: product.id, status: product.status, isVisible: !product.isVisible })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
+                        {product.isVisible ? "Hide public" : "Set visible"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </section>
@@ -369,13 +435,14 @@ export function AdminStorePage() {
             {activeTab === "inventory" ? (
               <section className="mt-8 grid gap-3">
                 {snapshot.variants.map((variant) => (
-                  <div key={variant.id} className="grid gap-3 border border-white/10 p-4 md:grid-cols-[1fr_auto_auto] md:items-center">
+                  <div key={variant.id} className="grid gap-3 border border-white/10 p-4 md:grid-cols-[1fr_0.7fr_auto_auto] md:items-center">
                     <p>
                       {variant.sku} / {variant.size}
                       <span className="ml-3 text-white/45">
                         stock {variant.stockQuantity}, reserved {variant.reservedQuantity}
                       </span>
                     </p>
+                    <SettingsField label="SKU" value={variant.sku} onSave={(value) => action("variant.upsert", { ...variant, sku: value })} />
                     <button type="button" onClick={() => action("variant.upsert", { ...variant, stockQuantity: variant.stockQuantity + 1, isAvailable: true })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
                       + Stock
                     </button>

@@ -13,6 +13,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx scripts/seed-store.ts",
     "db:seed:tpay-sandbox": "tsx scripts/seed-tpay-sandbox.ts",
+    "db:seed:products-draft": "tsx scripts/seed-products-draft.ts",
     "tpay:webhook:dev": "node scripts/tpay-webhook-dev.mjs",
     "newsletter:setup": "node scripts/newsletter-setup-wizard.mjs",
     "newsletter:sheet": "node scripts/setup-newsletter-sheet.mjs",
