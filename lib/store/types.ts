@@ -9,6 +9,24 @@ export type DeliveryMethod = "inpost_locker" | "inpost_courier" | "courier";
 export type DeliveryStatus = "pending" | "label_created" | "shipped" | "delivered" | "returned";
 export type DeliveryMethodType = "parcel_locker" | "courier" | "manual_pickup";
 export type DeliveryProvider = "inpost" | "manual";
+export type ShippingProviderId =
+  | "manual"
+  | "inpost"
+  | "dpd"
+  | "dhl"
+  | "gls"
+  | "ups"
+  | "pocztex"
+  | "orlen_paczka"
+  | "other";
+export type ShipmentStatus =
+  | "draft"
+  | "created"
+  | "label_created"
+  | "in_transit"
+  | "delivered"
+  | "cancelled"
+  | "failed";
 export type ReturnStatus = "requested" | "approved" | "received" | "refunded" | "rejected";
 export type ComplaintStatus = "submitted" | "under_review" | "accepted" | "rejected" | "resolved";
 export type ComplaintSolution = "repair" | "replacement" | "refund" | "price_reduction";
@@ -206,11 +224,54 @@ export type DeliveryMethodSetting = {
   name: string;
   type: DeliveryMethodType;
   provider: DeliveryProvider;
+  description?: string;
+  nameEn?: string;
+  descriptionEn?: string;
+  serviceCode?: string;
+  freeShippingEligible?: boolean;
+  requiresParcelLocker?: boolean;
+  requiresShippingAddress?: boolean;
   price: number;
   currency: "PLN";
   estimatedDeliveryTime: string;
+  estimatedDeliveryTimeEn?: string;
   enabled: boolean;
   displayOrder: number;
+};
+
+export type Shipment = {
+  id: string;
+  orderId: string;
+  provider: ShippingProviderId;
+  providerShipmentId: string | null;
+  providerTrackingNumber: string | null;
+  trackingUrl: string | null;
+  labelUrl: string | null;
+  labelBlobPath: string | null;
+  labelFormat: string | null;
+  status: ShipmentStatus;
+  serviceCode: string | null;
+  deliveryMethodId: string | null;
+  parcelLockerId: string | null;
+  parcelLockerName: string | null;
+  parcelLockerAddress: string | null;
+  recipientName: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  recipientStreet: string | null;
+  recipientBuilding: string | null;
+  recipientApartment: string | null;
+  recipientPostalCode: string | null;
+  recipientCity: string | null;
+  recipientCountry: string | null;
+  senderAddress: Record<string, unknown> | null;
+  providerRequestSummary: Record<string, unknown> | null;
+  providerErrorSummary: string | null;
+  createdAt: string;
+  updatedAt: string;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  cancelledAt: string | null;
 };
 
 export type OrderItemSnapshot = {
@@ -397,5 +458,6 @@ export type StoreDatabase = {
   legalSubmissions: LegalSubmission[];
   analyticsEvents: AnalyticsEvent[];
   emailEvents: EmailEvent[];
+  shipments: Shipment[];
   processedWebhookEvents: string[];
 };

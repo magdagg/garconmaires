@@ -193,13 +193,35 @@ The future InPost adapter should use these env names when credentials are
 available:
 
 ```env
-INPOST_ORGANIZATION_ID=
-INPOST_API_TOKEN=
 INPOST_ENV=sandbox
+INPOST_API_TOKEN=
+INPOST_ORGANIZATION_ID=
+INPOST_DEFAULT_SENDER_ID=
+INPOST_DEFAULT_SERVICE=inpost_locker_standard
+INPOST_LABEL_FORMAT=pdf
+INPOST_TEST_MODE=true
 ```
 
-Do not invent or fake InPost credentials. Keep shipment creation manual until a
-real sandbox account and labels flow are connected.
+Shipping provider architecture now supports a manual fallback provider and an
+InPost ShipX provider. In Preview, keep `INPOST_ENV=sandbox` and
+`INPOST_TEST_MODE=true`. Production InPost shipment creation is blocked from
+Vercel Preview. Admin diagnostics show only safe status values: configured
+true/false, environment, test mode, token present true/false and organization id
+present true/false. Tokens and raw provider credentials are never displayed.
+
+Admin shipment workflow:
+
+1. Confirm the order is paid/ready for fulfillment.
+2. Confirm delivery data: parcel locker for Paczkomat, address for courier.
+3. Use manual tracking fallback if InPost credentials are missing.
+4. With sandbox credentials configured, create an InPost shipment from `/admin`.
+5. Generate a label from `/admin`.
+6. Refresh tracking status from `/admin`.
+7. Cancel only non-delivered shipments when provider state allows it.
+
+Do not invent or fake InPost credentials. Do not create production shipments
+from Preview. Keep manual fulfillment available until real sandbox shipment,
+label and tracking flows are verified.
 
 ### Tpay sandbox staging test
 

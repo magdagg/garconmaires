@@ -97,6 +97,26 @@ type StoreSnapshot = {
       shippedAt: string | null;
       adminNote: string | null;
     };
+    shipments?: {
+      id: string;
+      orderId: string;
+      provider: string;
+      providerShipmentId: string | null;
+      providerTrackingNumber: string | null;
+      trackingUrl: string | null;
+      labelUrl: string | null;
+      labelFormat: string | null;
+      status: string;
+      serviceCode: string | null;
+      parcelLockerId: string | null;
+      parcelLockerName: string | null;
+      parcelLockerAddress: string | null;
+      providerErrorSummary: string | null;
+      createdAt: string;
+      shippedAt: string | null;
+      deliveredAt: string | null;
+      cancelledAt: string | null;
+    }[];
     stock?: {
       productName: string;
       sku: string;
@@ -198,6 +218,22 @@ type StoreSnapshot = {
         warnings: string[];
       };
       templates: { id: string; label: string }[];
+    };
+    shipping: {
+      providers: {
+        provider: string;
+        configured: boolean;
+        enabled: boolean;
+        environment: string;
+        testMode: boolean;
+        apiTokenPresent: boolean;
+        organizationIdPresent: boolean;
+        defaultSenderIdPresent?: boolean;
+        defaultService: string | null;
+        labelFormat: string;
+        missing: string[];
+        warnings: string[];
+      }[];
     };
   };
 };
@@ -723,6 +759,27 @@ export function AdminStorePage() {
                         <DiagnosticField label="last webhook id" value={order.lastWebhookEvent?.id ?? "-"} />
                       </div>
 
+                      {order.shipments?.length ? (
+                        <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                          <p className="text-xs uppercase tracking-[0.22em] text-white/38">
+                            Shipments
+                          </p>
+                          {order.shipments.map((shipment) => (
+                            <div key={shipment.id} className="grid gap-2 text-xs text-white/55 md:grid-cols-2 xl:grid-cols-3">
+                              <DiagnosticField label="shipment status" value={shipment.status} />
+                              <DiagnosticField label="provider" value={shipment.provider} />
+                              <DiagnosticField label="providerShipmentId" value={shipment.providerShipmentId ?? "-"} />
+                              <DiagnosticField label="tracking number" value={shipment.providerTrackingNumber ?? "-"} />
+                              <DiagnosticField label="tracking URL" value={shipment.trackingUrl ?? "-"} />
+                              <DiagnosticField label="label" value={shipment.labelUrl ? `${shipment.labelFormat ?? "label"} ready` : "-"} />
+                              <DiagnosticField label="service" value={shipment.serviceCode ?? "-"} />
+                              <DiagnosticField label="last provider error" value={shipment.providerErrorSummary ?? "-"} />
+                              <DiagnosticField label="createdAt" value={shipment.createdAt} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
                       {order.stock?.length ? (
                         <div className="mt-4 space-y-2 border-t border-white/10 pt-4">
                           {order.stock.map((item) => (
@@ -753,6 +810,59 @@ export function AdminStorePage() {
                       ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2 lg:flex-col">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const provider =
+                            window.prompt("Provider: inpost or manual", order.delivery.shipmentProvider || "inpost") ||
+                            "inpost";
+                          action("shipment.create", { orderId: order.id, provider });
+                        }}
+                        className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]"
+                      >
+                        Create shipment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => action("shipment.label", { orderId: order.id, shipmentId: order.shipments?.[0]?.id })}
+                        className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]"
+                      >
+                        Generate label
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => action("shipment.track", { orderId: order.id, shipmentId: order.shipments?.[0]?.id })}
+                        className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]"
+                      >
+                        Refresh tracking
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => action("shipment.cancel", { orderId: order.id, shipmentId: order.shipments?.[0]?.id })}
+                        className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]"
+                      >
+                        Cancel shipment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          action("order.delivery.update", {
+                            id: order.id,
+                            parcelLockerId:
+                              window.prompt("Parcel locker ID", order.delivery.parcelLockerId ?? "") ??
+                              order.delivery.parcelLockerId,
+                            parcelLockerName:
+                              window.prompt("Parcel locker name", order.delivery.parcelLockerName ?? "") ??
+                              order.delivery.parcelLockerName,
+                            parcelLockerAddress:
+                              window.prompt("Parcel locker address", order.delivery.parcelLockerAddress ?? "") ??
+                              order.delivery.parcelLockerAddress,
+                          });
+                        }}
+                        className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]"
+                      >
+                        Edit locker
+                      </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "new", fulfillmentStatus: "unfulfilled", deliveryStatus: "pending" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
                         Pending
                       </button>
@@ -880,7 +990,24 @@ export function AdminStorePage() {
                   <SettingsReadOnly label="default country" value={snapshot.settings.defaultCountry} />
                   <SettingsReadOnly label="payment provider" value={readinessDetail(snapshot.diagnostics?.tpaySandbox, "PAYMENT_PROVIDER")} />
                   <SettingsReadOnly label="delivery provider placeholder" value="InPost courier, InPost parcel locker, manual tracking" />
-                  <SettingsReadOnly label="InPost API connected" value="false" />
+                  {snapshot.diagnostics?.shipping.providers.map((provider) => (
+                    <SettingsReadOnly
+                      key={provider.provider}
+                      label={`${provider.provider} config`}
+                      value={[
+                        `configured=${String(provider.configured)}`,
+                        `enabled=${String(provider.enabled)}`,
+                        `env=${provider.environment}`,
+                        `test=${String(provider.testMode)}`,
+                        `token=${String(provider.apiTokenPresent)}`,
+                        `org=${String(provider.organizationIdPresent)}`,
+                        provider.missing.length ? `missing=${provider.missing.join(",")}` : null,
+                        provider.warnings.length ? `warnings=${provider.warnings.join("; ")}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    />
+                  ))}
                 </div>
 
                 <div className="space-y-3">

@@ -111,6 +111,7 @@ function normalizeStoreDatabase(input: Partial<StoreDatabase>): StoreDatabase {
     emailEvents: Array.isArray(input.emailEvents)
       ? input.emailEvents
       : [],
+    shipments: Array.isArray(input.shipments) ? input.shipments : [],
     processedWebhookEvents: Array.isArray(input.processedWebhookEvents)
       ? input.processedWebhookEvents
       : [],

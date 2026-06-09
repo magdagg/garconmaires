@@ -29,9 +29,23 @@ export function DeliverySelector({
           >
             <input type="radio" name="deliveryMethodId" value={method.id} disabled={disabled} />
             <span>
-              {method.name}
+              {locale === "en" ? method.nameEn ?? method.name : method.name}
               <span className="mt-1 block text-xs text-white/36">
-                {method.estimatedDeliveryTime}
+                {locale === "en"
+                  ? method.estimatedDeliveryTimeEn ?? method.estimatedDeliveryTime
+                  : method.estimatedDeliveryTime}
+              </span>
+              {method.description || method.descriptionEn ? (
+                <span className="mt-1 block text-xs leading-5 text-white/32">
+                  {locale === "en"
+                    ? method.descriptionEn ?? method.description
+                    : method.description}
+                </span>
+              ) : null}
+              <span className="mt-2 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.18em] text-white/30">
+                {method.requiresParcelLocker ? <span>Parcel locker</span> : null}
+                {method.requiresShippingAddress ? <span>Address</span> : null}
+                {method.serviceCode ? <span>{method.serviceCode}</span> : null}
               </span>
             </span>
             <span>{formatPrice(method.price / 100, locale)}</span>
@@ -42,9 +56,17 @@ export function DeliverySelector({
         <span>{lockerLabel}</span>
         <input
           type="text"
+          name="parcelLockerId"
+          placeholder={disabled ? "Search prepared for launch" : "WAW01A"}
           disabled={disabled}
           className="h-12 w-full border border-white/10 bg-transparent px-3 text-sm tracking-normal text-white outline-none disabled:text-white/30"
         />
+        <span className="block text-[11px] normal-case tracking-normal text-white/32">
+          InPost parcel locker search is prepared through
+          {" "}
+          <code>/api/delivery/inpost/parcel-lockers</code>
+          , but checkout remains locked while the store is in pre-launch.
+        </span>
       </label>
     </fieldset>
   );

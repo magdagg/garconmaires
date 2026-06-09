@@ -277,6 +277,7 @@ model Order {
   items             OrderItem[]
   payment           Payment?
   delivery          Delivery?
+  shipments         Shipment[]
   invoice           Invoice?
   shippingAddress   ShippingAddress?
   legalConsent      LegalConsent?
@@ -348,6 +349,48 @@ model Delivery {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   order               Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Shipment {
+  id                     String   @id
+  orderId                String
+  provider               String
+  providerShipmentId     String?
+  providerTrackingNumber String?
+  trackingUrl            String?
+  labelUrl               String?
+  labelBlobPath          String?
+  labelFormat            String?
+  status                 String   @default("draft")
+  serviceCode            String?
+  deliveryMethodId       String?
+  parcelLockerId         String?
+  parcelLockerName       String?
+  parcelLockerAddress    String?
+  recipientName          String
+  recipientEmail         String
+  recipientPhone         String
+  recipientStreet        String?
+  recipientBuilding      String?
+  recipientApartment     String?
+  recipientPostalCode    String?
+  recipientCity          String?
+  recipientCountry       String?  @default("PL")
+  senderAddress          Json?
+  providerRequestSummary Json?
+  providerErrorSummary   String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  shippedAt              DateTime?
+  deliveredAt            DateTime?
+  cancelledAt            DateTime?
+  order                  Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([provider])
+  @@index([status])
+  @@index([providerShipmentId])
+  @@index([providerTrackingNumber])
 }
 
 model ShippingAddress {

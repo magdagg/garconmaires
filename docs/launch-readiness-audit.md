@@ -28,7 +28,7 @@ Area scores:
 | Product catalog safety | 90 | Safe pre-launch |
 | Product content | 35 | Not launch-ready |
 | Payments | 55 | Implemented, externally blocked |
-| Delivery | 70 | Manual-ready, InPost API not live |
+| Delivery | 76 | Provider architecture ready, InPost sandbox credentials/test pending |
 | Email | 72 | Templates/logging ready, provider config/test pending |
 | Legal/compliance | 35 | Draft only |
 | Frontend | 78 | Strong pre-launch, storefront launch polish pending |
@@ -84,7 +84,7 @@ Area scores:
    - Real sending still requires Resend API key, verified sender/domain, and admin-only test sends.
 
 5. Delivery is operationally incomplete.
-   - InPost methods and tracking URL helper exist, but no live InPost API credentials or label creation test are complete.
+   - InPost provider architecture, parcel locker search endpoint, shipment model and admin actions exist, but no live InPost sandbox credentials or label creation test are complete.
    - Manual fulfillment decision, final prices/times, and return address must be finalized.
 
 ## Must-fix before launch
@@ -470,7 +470,9 @@ Delivery readiness:
 - Tracking number can be saved.
 - InPost tracking URL helper exists.
 - Shipped email can include tracking URL.
-- InPost adapter type placeholder exists, but live API integration is not implemented/tested.
+- InPost provider architecture exists with sandbox/prod config separation, safe diagnostics, shipment creation, label, tracking and cancel action support.
+- Parcel locker search endpoint exists at `/api/delivery/inpost/parcel-lockers`.
+- InPost sandbox credentials and real sandbox label/tracking verification are still pending.
 
 Remaining before launch:
 
@@ -667,7 +669,7 @@ Do not execute these phases until blockers are resolved.
 | Admin | Mostly ready | Medium | Token auth is simple; no full admin identity/audit trail. | Keep long token, rotate before launch, consider stronger auth/audit trail. | Engineering |
 | Products | Not ready | High | Images missing, stock zero, specs placeholders. | Complete product content, images, specs, stock. | Brand/ops |
 | Stock/inventory | Ready in code | Medium | Needs real concurrent staging checkout after Tpay works. | Run sandbox checkout and webhook test. | Engineering |
-| Delivery | Partial | Medium | InPost API not live/tested; final details missing. | Decide manual vs InPost API, finalize prices/times/return address. | Ops |
+| Delivery | Partial | Medium | InPost API architecture exists, but sandbox credentials and real label/tracking tests are pending; final details missing. | Decide manual vs InPost API, configure sandbox credentials, test labels/tracking, finalize prices/times/return address. | Ops |
 | Email | Partial | Medium | Resend config/domain/test sends pending. | Configure Resend, verify DNS, test admin-only sends. | Engineering/ops |
 | Legal | Draft | High | Seller/tax/address/GDPR/operator details incomplete. | Complete and legally review docs. | Owner/legal |
 | Frontend | Good pre-launch | Medium | Product launch UI not visually validated with real images/content. | QA product/detail/cart/checkout once content exists. | Design/engineering |
@@ -704,7 +706,7 @@ Resend:
 Delivery/InPost:
 
 - Decide manual first-drop fulfillment versus InPost API.
-- If InPost API: obtain credentials and test shipment/tracking/labels.
+- If InPost API: obtain credentials and test shipment/tracking/labels through the admin shipment actions.
 - If manual: write exact packing/shipping/tracking SOP.
 
 ## Product checklist

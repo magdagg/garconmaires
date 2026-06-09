@@ -58,6 +58,11 @@ import {
   isPublicProductCandidate,
   toPublicProduct,
 } from "../public-catalog";
+import { GET as parcelLockerSearch } from "@/app/api/delivery/inpost/parcel-lockers/route";
+import { NextRequest } from "next/server";
+import { inpostProvider, getInPostPublicConfigStatus } from "../shipping/providers/inpost";
+import { manualProvider } from "../shipping/providers/manual";
+import { getShippingTrackingUrl } from "../shipping/tracking";
 import type { StoreDatabase } from "../types";
 
 afterEach(() => {
@@ -1073,5 +1078,167 @@ describe("post-purchase ownership checks", () => {
     });
 
     expect(complaint.status).toBe("submitted");
+  });
+});
+
+describe("shipping provider readiness", () => {
+  it("reports missing InPost config without exposing secrets", () => {
+    vi.stubEnv("INPOST_API_TOKEN", "");
+    vi.stubEnv("INPOST_ORGANIZATION_ID", "");
+    vi.stubEnv("INPOST_ENV", "sandbox");
+
+    const status = getInPostPublicConfigStatus();
+
+    expect(status.configured).toBe(false);
+    expect(status.environment).toBe("sandbox");
+    expect(status.apiTokenPresent).toBe(false);
+    expect(status.organizationIdPresent).toBe(false);
+    expect(status.missing).toEqual(["INPOST_API_TOKEN", "INPOST_ORGANIZATION_ID"]);
+    expect(JSON.stringify(status)).not.toContain("secret-token");
+  });
+
+  it("blocks production InPost usage from Preview", () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("INPOST_ENV", "production");
+    vi.stubEnv("INPOST_API_TOKEN", "secret-token");
+    vi.stubEnv("INPOST_ORGANIZATION_ID", "123");
+
+    const status = getInPostPublicConfigStatus();
+
+    expect(status.configured).toBe(true);
+    expect(status.enabled).toBe(false);
+    expect(status.warnings.join(" ")).toContain("forbidden");
+    expect(JSON.stringify(status)).not.toContain("secret-token");
+  });
+
+  it("requires parcel locker data for InPost Paczkomat shipment creation", async () => {
+    vi.stubEnv("INPOST_ENV", "sandbox");
+    vi.stubEnv("INPOST_API_TOKEN", "secret-token");
+    vi.stubEnv("INPOST_ORGANIZATION_ID", "123");
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+
+    order.delivery.deliveryMethod = "inpost_locker";
+    order.delivery.parcelLockerId = null;
+
+    await expect(
+      inpostProvider().createShipment({ order, shipment: null }),
+    ).rejects.toThrow("Parcel locker ID is required");
+  });
+
+  it("requires courier address data for InPost courier shipment creation", async () => {
+    vi.stubEnv("INPOST_ENV", "sandbox");
+    vi.stubEnv("INPOST_API_TOKEN", "secret-token");
+    vi.stubEnv("INPOST_ORGANIZATION_ID", "123");
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+
+    order.delivery.deliveryMethod = "inpost_courier";
+    order.shippingAddress.addressLine1 = "";
+
+    await expect(
+      inpostProvider().createShipment({ order, shipment: null }),
+    ).rejects.toThrow("Recipient street, postal code and city are required");
+  });
+
+  it("does not create InPost shipment for cancelled or returned orders", async () => {
+    vi.stubEnv("INPOST_ENV", "sandbox");
+    vi.stubEnv("INPOST_API_TOKEN", "secret-token");
+    vi.stubEnv("INPOST_ORGANIZATION_ID", "123");
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+
+    order.orderStatus = "cancelled";
+
+    await expect(
+      inpostProvider().createShipment({ order, shipment: null }),
+    ).rejects.toThrow("Cancelled orders cannot receive API shipments");
+
+    order.orderStatus = "new";
+    order.fulfillmentStatus = "returned";
+
+    await expect(
+      inpostProvider().createShipment({ order, shipment: null }),
+    ).rejects.toThrow("Returned orders cannot receive API shipments");
+  });
+
+  it("prevents duplicate InPost shipment creation for existing provider shipment", async () => {
+    vi.stubEnv("INPOST_ENV", "sandbox");
+    vi.stubEnv("INPOST_API_TOKEN", "secret-token");
+    vi.stubEnv("INPOST_ORGANIZATION_ID", "123");
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+
+    await expect(
+      inpostProvider().createShipment({
+        order,
+        shipment: {
+          id: "shp_existing",
+          orderId: order.id,
+          provider: "inpost",
+          providerShipmentId: "123",
+          providerTrackingNumber: null,
+          trackingUrl: null,
+          labelUrl: null,
+          labelBlobPath: null,
+          labelFormat: null,
+          status: "created",
+          serviceCode: null,
+          deliveryMethodId: order.delivery.deliveryMethod,
+          parcelLockerId: null,
+          parcelLockerName: null,
+          parcelLockerAddress: null,
+          recipientName: "Anna Nowak",
+          recipientEmail: order.customer.email,
+          recipientPhone: order.customer.phone,
+          recipientStreet: null,
+          recipientBuilding: null,
+          recipientApartment: null,
+          recipientPostalCode: null,
+          recipientCity: null,
+          recipientCountry: "PL",
+          senderAddress: null,
+          providerRequestSummary: null,
+          providerErrorSummary: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          shippedAt: null,
+          deliveredAt: null,
+          cancelledAt: null,
+        },
+      }),
+    ).rejects.toThrow("already has an InPost shipment");
+  });
+
+  it("keeps manual fallback available", async () => {
+    const { database } = makeCheckoutDatabase();
+    const order = createPendingOrder(database);
+
+    order.delivery.trackingNumber = "MANUAL-123";
+
+    const result = await manualProvider().createShipment({ order, shipment: null });
+
+    expect(result.status).toBe("created");
+    expect(result.providerTrackingNumber).toBe("MANUAL-123");
+  });
+
+  it("builds InPost tracking URLs", () => {
+    expect(
+      getShippingTrackingUrl({
+        provider: "inpost",
+        trackingNumber: "1234567890",
+      }),
+    ).toBe("https://inpost.pl/sledzenie-przesylek?number=1234567890");
+  });
+
+  it("parcel locker endpoint returns sanitized empty results for short queries", async () => {
+    const response = await parcelLockerSearch(
+      new NextRequest("https://garconmaires.test/api/delivery/inpost/parcel-lockers?q=w"),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload).toEqual({ items: [] });
+    expect(JSON.stringify(payload)).not.toContain("INPOST_API_TOKEN");
   });
 });

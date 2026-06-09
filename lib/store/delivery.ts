@@ -40,9 +40,17 @@ export const defaultDeliveryMethods: DeliveryMethodSetting[] = [
     name: "InPost Paczkomat",
     type: "parcel_locker",
     provider: "inpost",
+    description: "Odbiór w wybranym Paczkomacie InPost.",
+    nameEn: "InPost Parcel Locker",
+    descriptionEn: "Pickup from a selected InPost parcel locker.",
+    serviceCode: "inpost_locker_standard",
+    freeShippingEligible: true,
+    requiresParcelLocker: true,
+    requiresShippingAddress: false,
     price: 1499,
     currency: "PLN",
     estimatedDeliveryTime: "1-3 dni robocze",
+    estimatedDeliveryTimeEn: "1-3 business days",
     enabled: true,
     displayOrder: 10,
   },
@@ -51,9 +59,17 @@ export const defaultDeliveryMethods: DeliveryMethodSetting[] = [
     name: "Kurier",
     type: "courier",
     provider: "inpost",
+    description: "Dostawa kurierska pod adres.",
+    nameEn: "Courier",
+    descriptionEn: "Courier delivery to an address.",
+    serviceCode: "inpost_courier_standard",
+    freeShippingEligible: true,
+    requiresParcelLocker: false,
+    requiresShippingAddress: true,
     price: 1799,
     currency: "PLN",
     estimatedDeliveryTime: "1-3 dni robocze",
+    estimatedDeliveryTimeEn: "1-3 business days",
     enabled: true,
     displayOrder: 20,
   },
@@ -62,9 +78,17 @@ export const defaultDeliveryMethods: DeliveryMethodSetting[] = [
     name: "Odbiór osobisty",
     type: "manual_pickup",
     provider: "manual",
+    description: "Placeholder do ręcznego odbioru.",
+    nameEn: "Manual pickup",
+    descriptionEn: "Manual pickup placeholder.",
+    serviceCode: undefined,
+    freeShippingEligible: false,
+    requiresParcelLocker: false,
+    requiresShippingAddress: false,
     price: 0,
     currency: "PLN",
     estimatedDeliveryTime: "Do ustalenia",
+    estimatedDeliveryTimeEn: "To be arranged",
     enabled: false,
     displayOrder: 30,
   },
@@ -96,12 +120,35 @@ function normalizeDeliveryMethodSetting(
     name: typeof value.name === "string" && value.name.trim() ? value.name.trim() : fallback.name,
     type: value.type ?? fallback.type,
     provider: value.provider === "manual" ? "manual" : fallback.provider,
+    description:
+      typeof value.description === "string" ? value.description : fallback.description,
+    nameEn: typeof value.nameEn === "string" ? value.nameEn : fallback.nameEn,
+    descriptionEn:
+      typeof value.descriptionEn === "string"
+        ? value.descriptionEn
+        : fallback.descriptionEn,
+    serviceCode:
+      typeof value.serviceCode === "string" ? value.serviceCode : fallback.serviceCode,
+    freeShippingEligible: Boolean(
+      value.freeShippingEligible ?? fallback.freeShippingEligible,
+    ),
+    requiresParcelLocker: Boolean(
+      value.requiresParcelLocker ?? fallback.requiresParcelLocker,
+    ),
+    requiresShippingAddress: Boolean(
+      value.requiresShippingAddress ?? fallback.requiresShippingAddress,
+    ),
     price: Number.isFinite(value.price) ? Math.max(0, Number(value.price)) : fallback.price,
     currency: "PLN",
     estimatedDeliveryTime:
       typeof value.estimatedDeliveryTime === "string" && value.estimatedDeliveryTime.trim()
         ? value.estimatedDeliveryTime.trim()
         : fallback.estimatedDeliveryTime,
+    estimatedDeliveryTimeEn:
+      typeof value.estimatedDeliveryTimeEn === "string" &&
+      value.estimatedDeliveryTimeEn.trim()
+        ? value.estimatedDeliveryTimeEn.trim()
+        : fallback.estimatedDeliveryTimeEn,
     enabled: Boolean(value.enabled ?? fallback.enabled),
     displayOrder: Number.isFinite(value.displayOrder)
       ? Number(value.displayOrder)

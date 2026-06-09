@@ -24,6 +24,13 @@ import {
   readStoreDatabase,
   updateStoreDatabase,
 } from "@/lib/store/storage";
+import {
+  cancelOrderShipment,
+  createOrderShipment,
+  generateShipmentLabel,
+  getShippingProviderDiagnostics,
+  refreshShipmentTracking,
+} from "@/lib/store/shipping";
 import type {
   Drop,
   DropStatus,
@@ -569,6 +576,7 @@ export async function GET(request: NextRequest) {
 
     return {
       ...order,
+      shipments: database.shipments.filter((shipment) => shipment.orderId === order.id),
       provider: payment?.provider ?? order.provider,
       providerTransactionId: payment?.providerTransactionId ?? null,
       providerPaymentId: payment?.providerPaymentId ?? null,
@@ -589,6 +597,7 @@ export async function GET(request: NextRequest) {
     orders,
     payments: database.payments,
     emailEvents: database.emailEvents,
+    shipments: database.shipments,
     webhookEvents,
     returns: database.returns,
     complaints: database.complaints,
@@ -601,6 +610,9 @@ export async function GET(request: NextRequest) {
       email: {
         config: getEmailConfigDiagnostics(),
         templates: getAvailableEmailTemplates(),
+      },
+      shipping: {
+        providers: getShippingProviderDiagnostics(),
       },
     },
     analyticsEvents: database.analyticsEvents.slice(0, 200),
@@ -750,6 +762,68 @@ export async function POST(request: NextRequest) {
             : "Test email skipped.",
         result,
       });
+    }
+
+    if (body.action?.startsWith("shipment.")) {
+      if (getConfiguredStoreStorageDriver() !== "postgres") {
+        throw new Error("Shipment API actions require STORE_STORAGE=postgres.");
+      }
+
+      const orderId = String(body.payload?.orderId ?? "");
+      const shipmentId =
+        typeof body.payload?.shipmentId === "string"
+          ? body.payload.shipmentId
+          : undefined;
+      const provider =
+        typeof body.payload?.provider === "string"
+          ? body.payload.provider
+          : undefined;
+      const database = await readStoreDatabase();
+      const order = database.orders.find((item) => item.id === orderId);
+
+      if (!order) {
+        throw new Error("Order not found.");
+      }
+
+      if (body.action === "shipment.create") {
+        const shipment = await createOrderShipment(order, provider);
+
+        return NextResponse.json({
+          ok: true,
+          message: "Shipment created or prepared.",
+          result: { shipment },
+        });
+      }
+
+      if (body.action === "shipment.label") {
+        const shipment = await generateShipmentLabel(order, shipmentId);
+
+        return NextResponse.json({
+          ok: true,
+          message: "Shipment label generated.",
+          result: { shipment },
+        });
+      }
+
+      if (body.action === "shipment.track") {
+        const shipment = await refreshShipmentTracking(order, shipmentId);
+
+        return NextResponse.json({
+          ok: true,
+          message: "Shipment tracking refreshed.",
+          result: { shipment },
+        });
+      }
+
+      if (body.action === "shipment.cancel") {
+        const shipment = await cancelOrderShipment(order, shipmentId);
+
+        return NextResponse.json({
+          ok: true,
+          message: "Shipment cancelled.",
+          result: { shipment },
+        });
+      }
     }
 
     const result = await updateStoreDatabase((database) => {
@@ -1059,6 +1133,45 @@ export async function POST(request: NextRequest) {
             }
             order.delivery.shippedAt = order.delivery.shippedAt ?? timestamp;
           }
+        }
+
+        order.updatedAt = timestamp;
+        return { order };
+      }
+      case "order.delivery.update": {
+        const order = database.orders.find((item) => item.id === payload.id);
+
+        if (!order) {
+          throw new Error("Order not found.");
+        }
+
+        if (order.delivery.deliveryStatus === "shipped") {
+          throw new Error("Delivery data cannot be edited after shipping.");
+        }
+
+        if (payload.deliveryMethod) {
+          order.delivery.deliveryMethod = payload.deliveryMethod as typeof order.delivery.deliveryMethod;
+        }
+
+        if (payload.shipmentProvider) {
+          order.delivery.shipmentProvider =
+            payload.shipmentProvider === "manual" ? "manual" : "inpost";
+        }
+
+        if (payload.parcelLockerId !== undefined) {
+          order.delivery.parcelLockerId = String(payload.parcelLockerId || "");
+        }
+
+        if (payload.parcelLockerName !== undefined) {
+          order.delivery.parcelLockerName = String(payload.parcelLockerName || "");
+        }
+
+        if (payload.parcelLockerAddress !== undefined) {
+          order.delivery.parcelLockerAddress = String(payload.parcelLockerAddress || "");
+        }
+
+        if (payload.adminNote !== undefined) {
+          order.delivery.adminNote = String(payload.adminNote || "");
         }
 
         order.updatedAt = timestamp;

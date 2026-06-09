@@ -114,6 +114,7 @@ export function createDefaultStoreDatabase(): StoreDatabase {
     legalSubmissions: [],
     analyticsEvents: [],
     emailEvents: [],
+    shipments: [],
     processedWebhookEvents: [],
   };
 }

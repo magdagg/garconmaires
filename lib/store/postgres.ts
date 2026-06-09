@@ -30,6 +30,7 @@ import type {
   ProductImage,
   ProductVariant,
   ReturnRequest,
+  Shipment,
   StoreDatabase,
   StoreSettings,
 } from "./types";
@@ -65,6 +66,18 @@ async function emailEventTableExists(prisma: ReturnType<typeof getPrisma>) {
   try {
     const result = await prisma.$queryRaw<{ exists: boolean }[]>`
       SELECT to_regclass('public."EmailEvent"') IS NOT NULL AS "exists"
+    `;
+
+    return Boolean(result[0]?.exists);
+  } catch {
+    return false;
+  }
+}
+
+async function shipmentTableExists(prisma: ReturnType<typeof getPrisma>) {
+  try {
+    const result = await prisma.$queryRaw<{ exists: boolean }[]>`
+      SELECT to_regclass('public."Shipment"') IS NOT NULL AS "exists"
     `;
 
     return Boolean(result[0]?.exists);
@@ -179,6 +192,7 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
 
   await ensurePostgresDefaults(prisma as unknown as Db);
   const hasEmailEvents = await emailEventTableExists(prisma);
+  const hasShipments = await shipmentTableExists(prisma);
 
   const [
     settings,
@@ -206,6 +220,7 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
     legalSubmissions,
     analyticsEvents,
     emailEvents,
+    shipments,
     webhookEvents,
   ] = await Promise.all([
     prisma.storeSettings.findUnique({ where: { id: "default" } }),
@@ -234,6 +249,9 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
     prisma.analyticsEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 }),
     hasEmailEvents
       ? prisma.emailEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
+      : Promise.resolve([]),
+    hasShipments
+      ? prisma.shipment.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
       : Promise.resolve([]),
     prisma.paymentWebhookEvent.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }),
   ]);
@@ -485,6 +503,46 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
       errorSummary: item.errorSummary,
       createdAt: requiredIso(item.createdAt),
       sentAt: iso(item.sentAt),
+    })),
+    shipments: shipments.map((item): Shipment => ({
+      id: item.id,
+      orderId: item.orderId,
+      provider: item.provider as Shipment["provider"],
+      providerShipmentId: item.providerShipmentId,
+      providerTrackingNumber: item.providerTrackingNumber,
+      trackingUrl: item.trackingUrl,
+      labelUrl: item.labelUrl,
+      labelBlobPath: item.labelBlobPath,
+      labelFormat: item.labelFormat,
+      status: item.status as Shipment["status"],
+      serviceCode: item.serviceCode,
+      deliveryMethodId: item.deliveryMethodId,
+      parcelLockerId: item.parcelLockerId,
+      parcelLockerName: item.parcelLockerName,
+      parcelLockerAddress: item.parcelLockerAddress,
+      recipientName: item.recipientName,
+      recipientEmail: item.recipientEmail,
+      recipientPhone: item.recipientPhone,
+      recipientStreet: item.recipientStreet,
+      recipientBuilding: item.recipientBuilding,
+      recipientApartment: item.recipientApartment,
+      recipientPostalCode: item.recipientPostalCode,
+      recipientCity: item.recipientCity,
+      recipientCountry: item.recipientCountry,
+      senderAddress:
+        item.senderAddress && typeof item.senderAddress === "object"
+          ? (item.senderAddress as Record<string, unknown>)
+          : null,
+      providerRequestSummary:
+        item.providerRequestSummary && typeof item.providerRequestSummary === "object"
+          ? (item.providerRequestSummary as Record<string, unknown>)
+          : null,
+      providerErrorSummary: item.providerErrorSummary,
+      createdAt: requiredIso(item.createdAt),
+      updatedAt: requiredIso(item.updatedAt),
+      shippedAt: iso(item.shippedAt),
+      deliveredAt: iso(item.deliveredAt),
+      cancelledAt: iso(item.cancelledAt),
     })),
     processedWebhookEvents: webhookEvents.map((item) => item.id),
   };
