@@ -188,6 +188,11 @@ type StoreSnapshot = {
       environment: {
         nodeEnv: string | null;
         vercelEnv: string | null;
+        vercelUrlPresent: boolean;
+        vercelGitCommitShaShort: string | null;
+        vercelGitCommitRef: string | null;
+        vercelDeploymentId: string | null;
+        runtimeTimestamp: string;
       };
       isStagingLike: boolean;
       isProductionDeployment: boolean;
@@ -276,6 +281,7 @@ type TpayEnvValueDiagnostics = {
   present: boolean;
   length: number;
   rawLength: number;
+  fingerprint: string | null;
   hasWhitespaceIssue: boolean;
   hasPrefixIssue: boolean;
   hasOwnNamePrefix: boolean;
@@ -291,6 +297,7 @@ type TpayOAuthDiagnosticResult = {
   ok: boolean;
   provider: "tpay";
   operation: "oauth_token";
+  selectedVariant: string | null;
   selectedEnvironment: "sandbox" | "production";
   baseUrl: string;
   endpointHost: string;
@@ -324,6 +331,27 @@ type TpayOAuthDiagnosticResult = {
   errorDescription: string | null;
   errorBody: unknown;
   hints: string[];
+  variants: {
+    id: "A" | "B" | "C" | "D";
+    label: string;
+    tested: boolean;
+    ok: boolean;
+    httpStatus: number | null;
+    errorCode: string | null;
+    errorDescription: string | null;
+    request: {
+      method: "POST";
+      contentType: "application/x-www-form-urlencoded";
+      authMethod:
+        | "client_id_client_secret_body"
+        | "basic_auth_client_credentials"
+        | "client_id_client_secret_body_with_grant_type"
+        | "scope_variant_not_tested";
+      includesGrantType: boolean;
+      includesScope: boolean;
+    };
+    skippedReason: string | null;
+  }[];
 };
 
 const tabs = [
@@ -2040,6 +2068,10 @@ function TpayDiagnostics({
         <div className="text-xs text-white/45 md:text-right">
           <p>NODE_ENV={diagnostics.environment.nodeEnv ?? "-"}</p>
           <p>VERCEL_ENV={diagnostics.environment.vercelEnv ?? "-"}</p>
+          <p>commit={diagnostics.environment.vercelGitCommitShaShort ?? "-"}</p>
+          <p>ref={diagnostics.environment.vercelGitCommitRef ?? "-"}</p>
+          <p>deployment={diagnostics.environment.vercelDeploymentId ?? "-"}</p>
+          <p>runtime={diagnostics.environment.runtimeTimestamp}</p>
           <p>{diagnostics.isProductionDeployment ? "production" : "staging/local"}</p>
         </div>
       </div>
@@ -2147,6 +2179,7 @@ function TpayDiagnostics({
               Key length: {oauthDiagnostic.credentials.apiKeyLength} / Secret length:{" "}
               {oauthDiagnostic.credentials.apiSecretLength}
             </p>
+            <p>Selected variant: {oauthDiagnostic.selectedVariant ?? "none"}</p>
             <p>
               Key prefix/quotes/whitespace/newline:{" "}
               {String(oauthDiagnostic.credentials.apiKeyHadAnyPrefix)} /{" "}
@@ -2168,6 +2201,31 @@ function TpayDiagnostics({
                 ))}
               </div>
             ) : null}
+            <div className="mt-4 space-y-2">
+              {oauthDiagnostic.variants.map((variant) => (
+                <div key={variant.id} className="border border-white/10 p-3">
+                  <p className={variant.ok ? "text-emerald-200" : "text-white/70"}>
+                    Variant {variant.id}: {variant.label}
+                  </p>
+                  <p>
+                    tested={String(variant.tested)} / ok={String(variant.ok)} /
+                    status={variant.httpStatus ?? "-"} / auth=
+                    {variant.request.authMethod}
+                  </p>
+                  <p>
+                    grant_type={String(variant.request.includesGrantType)} /
+                    scope={String(variant.request.includesScope)}
+                  </p>
+                  {variant.errorCode ? <p>error={variant.errorCode}</p> : null}
+                  {variant.errorDescription ? (
+                    <p>description={variant.errorDescription}</p>
+                  ) : null}
+                  {variant.skippedReason ? (
+                    <p className="text-yellow-100">{variant.skippedReason}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>
@@ -2207,6 +2265,7 @@ function TpayEnvShapeRow({
         present={String(value.present)} / length={value.length} / raw length=
         {value.rawLength}
       </p>
+      <p>fingerprint={value.fingerprint ?? "-"}</p>
       <p>
         whitespace={String(value.hasWhitespaceIssue)} / prefix=
         {String(value.hasPrefixIssue)} / quotes={String(value.hasQuotes)} /

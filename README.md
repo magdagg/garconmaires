@@ -310,8 +310,32 @@ Admin-only OAuth diagnostic:
   create a Tpay transaction, or fake a webhook/payment success.
 - It displays only sanitized fields: selected environment, base URL, endpoint
   host/path, HTTP status, error code/description, key length, secret length,
-  and prefix/quotes/whitespace flags. It never displays Client ID, Secret,
-  access token, webhook secret, or authorization headers.
+  short non-reversible SHA-256 fingerprints, and prefix/quotes/whitespace flags.
+  It never displays Client ID, Secret, access token, webhook secret,
+  authorization headers, request bodies or full hashes.
+- It also displays Vercel runtime metadata when available:
+  `VERCEL_ENV`, short `VERCEL_GIT_COMMIT_SHA`, `VERCEL_GIT_COMMIT_REF`,
+  deployment id and runtime timestamp. Use these fields to confirm that a
+  redeploy happened after changing Preview env vars.
+- Vercel Preview env listing should include `TPAY_API_KEY`,
+  `TPAY_API_SECRET`, `TPAY_ENV`, `PAYMENT_PROVIDER`, `TPAY_MERCHANT_ID`,
+  `TPAY_WEBHOOK_SECRET`, `ORDER_ADMIN_TOKEN`, `NEXT_PUBLIC_SITE_URL`,
+  `CHECKOUT_TEST_MODE`, `STORE_STORAGE` and `DATABASE_URL` with Preview scope.
+  Sensitive values remain encrypted and are not readable through `vercel env
+  pull`.
+- If OAuth still fails after changing Vercel env vars, compare the displayed
+  `TPAY_API_KEY` and `TPAY_API_SECRET` fingerprints before/after redeploy. If
+  the fingerprint did not change, the deployment is still using old env values
+  or the values were changed in the wrong Vercel scope.
+- The diagnostic compares OAuth formats without creating transactions:
+  - Variant A: form body `client_id` + `client_secret`.
+  - Variant B: HTTP Basic Auth with `grant_type=client_credentials`.
+  - Variant C: form body `client_id` + `client_secret` +
+    `grant_type=client_credentials`.
+  - Variant D: scope parameter is skipped unless Tpay documentation identifies a
+    required scope.
+- The regular payment adapter still uses Variant A unless a diagnostic proves
+  another format works and the adapter is intentionally updated.
 - Run this before the hidden-product checkout. Continue to checkout only when it
   says `OAuth OK — sandbox credentials valid`.
 

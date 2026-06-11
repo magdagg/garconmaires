@@ -1,4 +1,7 @@
-import { diagnoseTpayOAuthConfig } from "../lib/store/payments";
+import {
+  diagnoseTpayOAuthConfig,
+  getTpayPublicConfigDiagnostics,
+} from "../lib/store/payments";
 
 function redactUnknown(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -20,7 +23,18 @@ function redactUnknown(value: unknown): unknown {
 }
 
 const result = await diagnoseTpayOAuthConfig();
+const config = getTpayPublicConfigDiagnostics();
 const safeResult = {
+  config: {
+    selectedEnvironment: config.selectedEnvironment,
+    selectedBaseUrl: config.selectedBaseUrl,
+    oauthEndpoint: config.oauthEndpoint,
+    transactionEndpoint: config.transactionEndpoint,
+    apiKey: config.apiKey,
+    apiSecret: config.apiSecret,
+    possibleCredentialSwap: config.possibleCredentialSwap,
+    warnings: config.warnings,
+  },
   ...result,
   errorBody: redactUnknown(result.errorBody),
 };

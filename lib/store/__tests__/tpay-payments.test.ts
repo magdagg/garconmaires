@@ -373,6 +373,7 @@ describe("Tpay adapter", () => {
     expect(diagnostics.apiKey).toMatchObject({
       present: true,
       length: 52,
+      fingerprint: expect.stringMatching(/^sha256:[a-f0-9]{8}$/),
       hasWhitespaceIssue: true,
       hasPrefixIssue: true,
       hasOwnNamePrefix: true,
@@ -388,6 +389,29 @@ describe("Tpay adapter", () => {
     expect(serialized).not.toContain('"secret"');
   });
 
+  it("changes safe fingerprints when Tpay env values change", () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "client-one");
+    vi.stubEnv("TPAY_API_SECRET", "secret-one");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    const first = getTpayPublicConfigDiagnostics();
+
+    vi.stubEnv("TPAY_API_KEY", "client-two");
+    vi.stubEnv("TPAY_API_SECRET", "secret-two");
+
+    const second = getTpayPublicConfigDiagnostics();
+
+    expect(first.apiKey.fingerprint).toMatch(/^sha256:[a-f0-9]{8}$/);
+    expect(first.apiSecret.fingerprint).toMatch(/^sha256:[a-f0-9]{8}$/);
+    expect(first.apiKey.fingerprint).not.toBe(second.apiKey.fingerprint);
+    expect(first.apiSecret.fingerprint).not.toBe(second.apiSecret.fingerprint);
+    expect(JSON.stringify(first)).not.toContain("client-one");
+    expect(JSON.stringify(first)).not.toContain("secret-one");
+  });
+
   it("returns sanitized OAuth diagnostics and invalid_client hints", async () => {
     vi.stubEnv("TPAY_ENV", "sandbox");
     vi.stubEnv("PAYMENT_PROVIDER", "tpay");
@@ -395,9 +419,9 @@ describe("Tpay adapter", () => {
     vi.stubEnv("TPAY_API_KEY", "client");
     vi.stubEnv("TPAY_API_SECRET", "secret");
     vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
-
-    const result = await diagnoseTpayOAuthConfig({
-      fetchImpl: vi.fn().mockResolvedValueOnce({
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({
         ok: false,
         status: 401,
         json: async () => ({
@@ -406,7 +430,10 @@ describe("Tpay adapter", () => {
           access_token: "must-not-leak",
           client_secret: "must-not-leak",
         }),
-      }) as never,
+      });
+
+    const result = await diagnoseTpayOAuthConfig({
+      fetchImpl: fetchMock as never,
     });
     const serialized = JSON.stringify(result);
 
@@ -420,12 +447,26 @@ describe("Tpay adapter", () => {
       errorCode: "invalid_client",
       errorDescription: "The client credentials are invalid",
     });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.variants.map((variant) => variant.id)).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+    ]);
+    expect(result.variants.slice(0, 3).every((variant) => variant.tested)).toBe(true);
+    expect(result.variants[3]).toMatchObject({
+      id: "D",
+      tested: false,
+      request: { authMethod: "scope_variant_not_tested" },
+    });
     expect(result.hints.join(" ")).toContain("production Tpay panel");
     expect(serialized).not.toContain("must-not-leak");
     expect(serialized).not.toContain('"client_secret":"must-not-leak"');
+    expect(serialized).not.toContain("Y2xpZW50OnNlY3JldA");
   });
 
-  it("does not expose access tokens when OAuth succeeds", async () => {
+  it("selects the successful OAuth variant without exposing access tokens", async () => {
     vi.stubEnv("TPAY_ENV", "sandbox");
     vi.stubEnv("PAYMENT_PROVIDER", "tpay");
     vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
@@ -433,21 +474,36 @@ describe("Tpay adapter", () => {
     vi.stubEnv("TPAY_API_SECRET", "secret");
     vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
 
-    const result = await diagnoseTpayOAuthConfig({
-      fetchImpl: vi.fn().mockResolvedValueOnce({
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          error: "invalid_client",
+          access_token: "must-not-leak-a",
+        }),
+      })
+      .mockResolvedValueOnce({
         ok: true,
         status: 200,
         json: async () => ({
-          access_token: "must-not-leak",
+          access_token: "must-not-leak-b",
           token_type: "Bearer",
         }),
-      }) as never,
+      });
+
+    const result = await diagnoseTpayOAuthConfig({
+      fetchImpl: fetchMock as never,
     });
     const serialized = JSON.stringify(result);
 
     expect(result.ok).toBe(true);
+    expect(result.selectedVariant).toBe("B");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result.errorBody).toBeNull();
     expect(serialized).not.toContain("must-not-leak");
+    expect(serialized).not.toContain("Y2xpZW50OnNlY3JldA");
   });
 
   it("verifies a valid Tpay JWS webhook and maps paid status", async () => {

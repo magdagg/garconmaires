@@ -111,6 +111,18 @@ function getAdminAuthDiagnostics() {
     orderAdminTokenLength: orderAdminToken.length,
     nodeEnv: envValue("NODE_ENV") || null,
     vercelEnv: envValue("VERCEL_ENV") || null,
+    vercelUrlPresent: Boolean(envValue("VERCEL_URL")),
+    vercelGitCommitShaPresent: Boolean(envValue("VERCEL_GIT_COMMIT_SHA")),
+    vercelGitCommitShaShort: envValue("VERCEL_GIT_COMMIT_SHA")
+      ? envValue("VERCEL_GIT_COMMIT_SHA").slice(0, 8)
+      : null,
+    vercelGitCommitRef: envValue("VERCEL_GIT_COMMIT_REF") || null,
+    vercelDeploymentIdPresent: Boolean(envValue("VERCEL_DEPLOYMENT_ID")),
+    vercelDeploymentId:
+      envValue("VERCEL_DEPLOYMENT_ID") ||
+      envValue("VERCEL_DEPLOYMENT_ID_V2") ||
+      null,
+    runtimeTimestamp: new Date().toISOString(),
   };
 }
 
@@ -403,6 +415,16 @@ async function getTpaySandboxDiagnostics(input: {
     environment: {
       nodeEnv: runtimeEnv || null,
       vercelEnv: vercelEnv || null,
+      vercelUrlPresent: Boolean(envValue("VERCEL_URL")),
+      vercelGitCommitShaShort: envValue("VERCEL_GIT_COMMIT_SHA")
+        ? envValue("VERCEL_GIT_COMMIT_SHA").slice(0, 8)
+        : null,
+      vercelGitCommitRef: envValue("VERCEL_GIT_COMMIT_REF") || null,
+      vercelDeploymentId:
+        envValue("VERCEL_DEPLOYMENT_ID") ||
+        envValue("VERCEL_DEPLOYMENT_ID_V2") ||
+        null,
+      runtimeTimestamp: new Date().toISOString(),
     },
     isStagingLike,
     isProductionDeployment,

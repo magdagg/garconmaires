@@ -1,5 +1,6 @@
 import {
   X509Certificate,
+  createHash,
   createHmac,
   createVerify,
   timingSafeEqual,
@@ -98,6 +99,7 @@ export type TpayEnvValueDiagnostics = {
   present: boolean;
   length: number;
   rawLength: number;
+  fingerprint: string | null;
   hasWhitespaceIssue: boolean;
   hasPrefixIssue: boolean;
   hasOwnNamePrefix: boolean;
@@ -138,6 +140,7 @@ export type TpayOAuthDiagnosticResult = {
   ok: boolean;
   provider: "tpay";
   operation: "oauth_token";
+  selectedVariant: string | null;
   selectedEnvironment: "sandbox" | "production";
   baseUrl: string;
   endpointHost: string;
@@ -146,7 +149,13 @@ export type TpayOAuthDiagnosticResult = {
   request: {
     method: "POST";
     contentType: "application/x-www-form-urlencoded";
-    authMethod: "client_id_client_secret_body";
+    authMethod:
+      | "client_id_client_secret_body"
+      | "basic_auth_client_credentials"
+      | "client_id_client_secret_body_with_grant_type"
+      | "scope_variant_not_tested";
+    includesGrantType: boolean;
+    includesScope: boolean;
   };
   credentials: {
     apiKeyPresent: boolean;
@@ -171,6 +180,30 @@ export type TpayOAuthDiagnosticResult = {
   errorDescription: string | null;
   errorBody: unknown;
   hints: string[];
+  variants: TpayOAuthVariantResult[];
+};
+
+export type TpayOAuthVariantResult = {
+  id: "A" | "B" | "C" | "D";
+  label: string;
+  tested: boolean;
+  ok: boolean;
+  httpStatus: number | null;
+  errorCode: string | null;
+  errorDescription: string | null;
+  errorBody: unknown;
+  request: {
+    method: "POST";
+    contentType: "application/x-www-form-urlencoded";
+    authMethod:
+      | "client_id_client_secret_body"
+      | "basic_auth_client_credentials"
+      | "client_id_client_secret_body_with_grant_type"
+      | "scope_variant_not_tested";
+    includesGrantType: boolean;
+    includesScope: boolean;
+  };
+  skippedReason: string | null;
 };
 
 class PaymentProviderRequestError extends Error {
@@ -316,6 +349,10 @@ function normalizeSecretEnvValue(name: string) {
   };
 }
 
+function shortSha256Fingerprint(value: string) {
+  return value ? `sha256:${createHash("sha256").update(value).digest("hex").slice(0, 8)}` : null;
+}
+
 function publicEnvDiagnostics(name: string): TpayEnvValueDiagnostics {
   const normalized = normalizeSecretEnvValue(name);
 
@@ -324,6 +361,7 @@ function publicEnvDiagnostics(name: string): TpayEnvValueDiagnostics {
     present: normalized.present,
     length: normalized.length,
     rawLength: normalized.rawLength,
+    fingerprint: shortSha256Fingerprint(normalized.value),
     hasWhitespaceIssue: normalized.hadWhitespace || normalized.hadNewline,
     hasPrefixIssue: normalized.hadAnyPrefix,
     hasOwnNamePrefix: normalized.hadNamePrefix,
@@ -665,6 +703,134 @@ async function fetchTpayAccessToken(options: {
   return accessToken;
 }
 
+function getTpayOAuthVariantDefinitions(
+  clientId: ReturnType<typeof normalizeSecretEnvValue>,
+  clientSecret: ReturnType<typeof normalizeSecretEnvValue>,
+) {
+  return [
+    {
+      id: "A" as const,
+      label: "Form body client_id + client_secret",
+      tested: true,
+      request: {
+        method: "POST" as const,
+        contentType: "application/x-www-form-urlencoded" as const,
+        authMethod: "client_id_client_secret_body" as const,
+        includesGrantType: false,
+        includesScope: false,
+      },
+      init: {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({
+          client_id: clientId.value,
+          client_secret: clientSecret.value,
+        }),
+      } satisfies RequestInit,
+    },
+    {
+      id: "B" as const,
+      label: "HTTP Basic Auth + client_credentials grant",
+      tested: true,
+      request: {
+        method: "POST" as const,
+        contentType: "application/x-www-form-urlencoded" as const,
+        authMethod: "basic_auth_client_credentials" as const,
+        includesGrantType: true,
+        includesScope: false,
+      },
+      init: {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${clientId.value}:${clientSecret.value}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+        }),
+      } satisfies RequestInit,
+    },
+    {
+      id: "C" as const,
+      label: "Form body client_id + client_secret + client_credentials grant",
+      tested: true,
+      request: {
+        method: "POST" as const,
+        contentType: "application/x-www-form-urlencoded" as const,
+        authMethod: "client_id_client_secret_body_with_grant_type" as const,
+        includesGrantType: true,
+        includesScope: false,
+      },
+      init: {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({
+          client_id: clientId.value,
+          client_secret: clientSecret.value,
+          grant_type: "client_credentials",
+        }),
+      } satisfies RequestInit,
+    },
+  ];
+}
+
+function skippedScopeVariant(): TpayOAuthVariantResult {
+  return {
+    id: "D",
+    label: "Scope parameter variant",
+    tested: false,
+    ok: false,
+    httpStatus: null,
+    errorCode: null,
+    errorDescription: null,
+    errorBody: null,
+    request: {
+      method: "POST",
+      contentType: "application/x-www-form-urlencoded",
+      authMethod: "scope_variant_not_tested",
+      includesGrantType: false,
+      includesScope: false,
+    },
+    skippedReason:
+      "Not tested because the rendered Tpay Open API sandbox documentation does not specify a required OAuth scope.",
+  };
+}
+
+function resultFromOAuthPayload(input: {
+  id: TpayOAuthVariantResult["id"];
+  label: string;
+  request: TpayOAuthVariantResult["request"];
+  response: Response;
+  payload: unknown;
+}): TpayOAuthVariantResult {
+  const payloadObject =
+    typeof input.payload === "object" && input.payload !== null
+      ? (input.payload as Record<string, unknown>)
+      : {};
+  const accessToken = text(payloadObject.access_token);
+  const ok = input.response.ok && Boolean(accessToken);
+
+  return {
+    id: input.id,
+    label: input.label,
+    tested: true,
+    ok,
+    httpStatus: input.response.status,
+    errorCode: ok ? null : getTpayErrorCode(input.payload),
+    errorDescription: ok ? null : getTpayErrorDescription(input.payload),
+    errorBody: ok ? null : sanitizeTpayErrorPayload(input.payload),
+    request: input.request,
+    skippedReason: null,
+  };
+}
+
 export async function diagnoseTpayOAuthConfig(options: {
   fetchImpl?: typeof fetch;
 } = {}): Promise<TpayOAuthDiagnosticResult> {
@@ -676,6 +842,7 @@ export async function diagnoseTpayOAuthConfig(options: {
   const baseResult = {
     provider: "tpay" as const,
     operation: "oauth_token" as const,
+    selectedVariant: null as string | null,
     selectedEnvironment: config.selectedEnvironment,
     baseUrl: config.selectedBaseUrl,
     endpointHost: endpoint.host,
@@ -684,6 +851,8 @@ export async function diagnoseTpayOAuthConfig(options: {
       method: "POST" as const,
       contentType: "application/x-www-form-urlencoded" as const,
       authMethod: "client_id_client_secret_body" as const,
+      includesGrantType: false,
+      includesScope: false,
     },
     credentials: {
       apiKeyPresent: clientId.present,
@@ -727,37 +896,47 @@ export async function diagnoseTpayOAuthConfig(options: {
           : "TPAY_API_KEY or TPAY_API_SECRET looks like a placeholder.",
       errorBody: null,
       hints: getTpayOAuthFailureHints(errorCode),
+      variants: [skippedScopeVariant()],
     };
   }
 
-  const response = await fetchImpl(endpoint.toString(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-    },
-    body: new URLSearchParams({
-      client_id: clientId.value,
-      client_secret: clientSecret.value,
-    }),
-  });
-  const payload = (await response.json().catch(() => ({}))) as unknown;
-  const payloadObject =
-    typeof payload === "object" && payload !== null
-      ? (payload as Record<string, unknown>)
-      : {};
-  const accessToken = text(payloadObject.access_token);
-  const errorCode = getTpayErrorCode(payload);
-  const errorDescription = getTpayErrorDescription(payload);
+  const variants: TpayOAuthVariantResult[] = [];
+
+  for (const variant of getTpayOAuthVariantDefinitions(clientId, clientSecret)) {
+    const response = await fetchImpl(endpoint.toString(), variant.init as RequestInit);
+    const payload = (await response.json().catch(() => ({}))) as unknown;
+    const result = resultFromOAuthPayload({
+      id: variant.id,
+      label: variant.label,
+      request: variant.request,
+      response,
+      payload,
+    });
+
+    variants.push(result);
+
+    if (result.ok) {
+      break;
+    }
+  }
+
+  variants.push(skippedScopeVariant());
+
+  const selected = variants.find((variant) => variant.ok) ?? variants[0];
+  const errorCode = selected?.errorCode ?? null;
+  const errorDescription = selected?.errorDescription ?? null;
 
   return {
     ...baseResult,
-    ok: response.ok && Boolean(accessToken),
-    httpStatus: response.status,
-    errorCode: response.ok && accessToken ? null : errorCode,
-    errorDescription: response.ok && accessToken ? null : errorDescription,
-    errorBody: response.ok && accessToken ? null : sanitizeTpayErrorPayload(payload),
-    hints: response.ok && accessToken ? [] : getTpayOAuthFailureHints(errorCode),
+    selectedVariant: selected?.ok ? selected.id : null,
+    ok: Boolean(selected?.ok),
+    httpStatus: selected?.httpStatus ?? null,
+    request: selected?.request ?? baseResult.request,
+    errorCode: selected?.ok ? null : errorCode,
+    errorDescription: selected?.ok ? null : errorDescription,
+    errorBody: selected?.ok ? null : (selected?.errorBody ?? null),
+    hints: selected?.ok ? [] : getTpayOAuthFailureHints(errorCode),
+    variants,
   };
 }
 
