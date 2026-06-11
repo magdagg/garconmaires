@@ -69,16 +69,108 @@ export type PaymentProviderAdapter = {
 type SafePaymentProviderDiagnostics = {
   provider: PaymentProvider;
   operation: string;
+  environment?: "sandbox" | "production";
+  baseUrl?: string;
   endpointHost: string;
   endpointPath: string;
   httpStatus: number | null;
   apiKeyPresent: boolean;
   apiKeyLength: number;
   apiKeyHadNamePrefix: boolean;
+  apiKeyHadAnyPrefix?: boolean;
+  apiKeyHadQuotes?: boolean;
+  apiKeyHadWhitespace?: boolean;
+  apiKeyHadNewline?: boolean;
+  apiKeyLooksPlaceholder?: boolean;
   apiSecretPresent: boolean;
   apiSecretLength: number;
   apiSecretHadNamePrefix: boolean;
+  apiSecretHadAnyPrefix?: boolean;
+  apiSecretHadQuotes?: boolean;
+  apiSecretHadWhitespace?: boolean;
+  apiSecretHadNewline?: boolean;
+  apiSecretLooksPlaceholder?: boolean;
   errorBody: unknown;
+};
+
+export type TpayEnvValueDiagnostics = {
+  name: string;
+  present: boolean;
+  length: number;
+  rawLength: number;
+  hasWhitespaceIssue: boolean;
+  hasPrefixIssue: boolean;
+  hasOwnNamePrefix: boolean;
+  hasAnyAssignmentPrefix: boolean;
+  hasQuotes: boolean;
+  hasNewline: boolean;
+  looksPlaceholder: boolean;
+};
+
+export type TpayPublicConfigDiagnostics = {
+  provider: "tpay";
+  selectedEnvironment: "sandbox" | "production";
+  selectedBaseUrl: string;
+  oauthEndpoint: string;
+  transactionEndpoint: string;
+  usesSandboxBaseUrl: boolean;
+  usesProductionBaseUrl: boolean;
+  usesOriginApi: boolean;
+  paymentProvider: {
+    present: boolean;
+    value: string | null;
+    valid: boolean;
+  };
+  tpayEnv: {
+    present: boolean;
+    value: string | null;
+    valid: boolean;
+  };
+  merchantId: TpayEnvValueDiagnostics;
+  apiKey: TpayEnvValueDiagnostics;
+  apiSecret: TpayEnvValueDiagnostics;
+  webhookSecret: TpayEnvValueDiagnostics;
+  possibleCredentialSwap: boolean;
+  warnings: string[];
+};
+
+export type TpayOAuthDiagnosticResult = {
+  ok: boolean;
+  provider: "tpay";
+  operation: "oauth_token";
+  selectedEnvironment: "sandbox" | "production";
+  baseUrl: string;
+  endpointHost: string;
+  endpointPath: string;
+  httpStatus: number | null;
+  request: {
+    method: "POST";
+    contentType: "application/x-www-form-urlencoded";
+    authMethod: "client_id_client_secret_body";
+  };
+  credentials: {
+    apiKeyPresent: boolean;
+    apiKeyLength: number;
+    apiKeyHadNamePrefix: boolean;
+    apiKeyHadAnyPrefix: boolean;
+    apiKeyHadQuotes: boolean;
+    apiKeyHadWhitespace: boolean;
+    apiKeyHadNewline: boolean;
+    apiKeyLooksPlaceholder: boolean;
+    apiSecretPresent: boolean;
+    apiSecretLength: number;
+    apiSecretHadNamePrefix: boolean;
+    apiSecretHadAnyPrefix: boolean;
+    apiSecretHadQuotes: boolean;
+    apiSecretHadWhitespace: boolean;
+    apiSecretHadNewline: boolean;
+    apiSecretLooksPlaceholder: boolean;
+    possibleCredentialSwap: boolean;
+  };
+  errorCode: string | null;
+  errorDescription: string | null;
+  errorBody: unknown;
+  hints: string[];
 };
 
 class PaymentProviderRequestError extends Error {
@@ -177,24 +269,148 @@ function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function looksLikePlaceholder(value: string) {
+  return (
+    !value ||
+    /^(your|change[-_ ]?me|changeme|todo|placeholder|example|test|xxx)$/i.test(
+      value,
+    ) ||
+    /^your[-_ ].+/i.test(value) ||
+    /^your[A-Z0-9_]*$/i.test(value) ||
+    /^(client[_ -]?id|api[_ -]?key|secret)[-_ ]+(here|value)$/i.test(value) ||
+    /\bplaceholder\b/i.test(value)
+  );
+}
+
 function normalizeSecretEnvValue(name: string) {
   const rawValue = process.env[name] ?? "";
   const trimmed = rawValue.trim();
   const prefix = `${name}=`;
-  const withoutNamePrefix = trimmed.startsWith(prefix)
+  const assignmentPrefix = trimmed.match(/^([A-Z0-9_]+)=/);
+  const hadNamePrefix = trimmed.startsWith(prefix);
+  const withoutNamePrefix = hadNamePrefix
     ? trimmed.slice(prefix.length).trim()
     : trimmed;
-  const withoutQuotes =
+  const hadQuotes =
     (withoutNamePrefix.startsWith('"') && withoutNamePrefix.endsWith('"')) ||
-    (withoutNamePrefix.startsWith("'") && withoutNamePrefix.endsWith("'"))
+    (withoutNamePrefix.startsWith("'") && withoutNamePrefix.endsWith("'"));
+  const withoutQuotes =
+    hadQuotes
       ? withoutNamePrefix.slice(1, -1).trim()
       : withoutNamePrefix;
+  const hadWhitespace = rawValue !== trimmed;
+  const hadNewline = /[\r\n]/.test(rawValue);
 
   return {
     value: withoutQuotes,
     present: withoutQuotes.length > 0,
     length: withoutQuotes.length,
-    hadNamePrefix: trimmed.startsWith(prefix),
+    rawLength: rawValue.length,
+    hadNamePrefix,
+    hadAnyPrefix: Boolean(assignmentPrefix),
+    assignmentPrefixName: assignmentPrefix?.[1] ?? null,
+    hadQuotes,
+    hadWhitespace,
+    hadNewline,
+    looksPlaceholder: looksLikePlaceholder(withoutQuotes),
+  };
+}
+
+function publicEnvDiagnostics(name: string): TpayEnvValueDiagnostics {
+  const normalized = normalizeSecretEnvValue(name);
+
+  return {
+    name,
+    present: normalized.present,
+    length: normalized.length,
+    rawLength: normalized.rawLength,
+    hasWhitespaceIssue: normalized.hadWhitespace || normalized.hadNewline,
+    hasPrefixIssue: normalized.hadAnyPrefix,
+    hasOwnNamePrefix: normalized.hadNamePrefix,
+    hasAnyAssignmentPrefix: normalized.hadAnyPrefix,
+    hasQuotes: normalized.hadQuotes,
+    hasNewline: normalized.hadNewline,
+    looksPlaceholder: normalized.looksPlaceholder,
+  };
+}
+
+function getTpayPossibleCredentialSwap() {
+  const apiKey = normalizeSecretEnvValue("TPAY_API_KEY");
+  const apiSecret = normalizeSecretEnvValue("TPAY_API_SECRET");
+
+  return apiKey.length > 48 && apiSecret.length > 0 && apiSecret.length < 24;
+}
+
+export function getTpayPublicConfigDiagnostics(): TpayPublicConfigDiagnostics {
+  const selectedEnvironment = getTpayEnvironment();
+  const selectedBaseUrl = getTpayApiBaseUrl(selectedEnvironment);
+  const oauthEndpoint = new URL("/oauth/auth", selectedBaseUrl).toString();
+  const transactionEndpoint = new URL("/transactions", selectedBaseUrl).toString();
+  const paymentProvider = process.env.PAYMENT_PROVIDER?.trim().toLowerCase() ?? "";
+  const tpayEnv = process.env.TPAY_ENV?.trim().toLowerCase() ?? "";
+  const warnings: string[] = [];
+  const merchantId = publicEnvDiagnostics("TPAY_MERCHANT_ID");
+  const apiKey = publicEnvDiagnostics("TPAY_API_KEY");
+  const apiSecret = publicEnvDiagnostics("TPAY_API_SECRET");
+  const webhookSecret = publicEnvDiagnostics("TPAY_WEBHOOK_SECRET");
+  const usesSandboxBaseUrl =
+    selectedBaseUrl === "https://openapi.sandbox.tpay.com";
+  const usesProductionBaseUrl = selectedBaseUrl === "https://api.tpay.com";
+  const usesOriginApi = /secure|securecard|origin/i.test(selectedBaseUrl);
+  const possibleCredentialSwap = getTpayPossibleCredentialSwap();
+
+  for (const diagnostic of [merchantId, apiKey, apiSecret, webhookSecret]) {
+    if (diagnostic.hasWhitespaceIssue) {
+      warnings.push(`${diagnostic.name} has leading/trailing whitespace or newline characters.`);
+    }
+    if (diagnostic.hasPrefixIssue) {
+      warnings.push(`${diagnostic.name} appears to include an env-name prefix.`);
+    }
+    if (diagnostic.hasQuotes) {
+      warnings.push(`${diagnostic.name} appears to include wrapping quote characters.`);
+    }
+    if (diagnostic.looksPlaceholder) {
+      warnings.push(`${diagnostic.name} looks like a placeholder value.`);
+    }
+  }
+
+  if (possibleCredentialSwap) {
+    warnings.push(
+      "TPAY_API_KEY shape looks unusually long compared with TPAY_API_SECRET; verify Client ID and Secret were not swapped.",
+    );
+  }
+  if (selectedEnvironment === "sandbox" && !usesSandboxBaseUrl) {
+    warnings.push("TPAY_ENV=sandbox is not selecting the sandbox Open API base URL.");
+  }
+  if (selectedEnvironment === "production" && process.env.VERCEL_ENV === "preview") {
+    warnings.push("TPAY_ENV=production must not be used on Vercel Preview.");
+  }
+
+  return {
+    provider: "tpay",
+    selectedEnvironment,
+    selectedBaseUrl,
+    oauthEndpoint,
+    transactionEndpoint,
+    usesSandboxBaseUrl,
+    usesProductionBaseUrl,
+    usesOriginApi,
+    paymentProvider: {
+      present: Boolean(paymentProvider),
+      value: paymentProvider || null,
+      valid: paymentProvider === "tpay",
+    },
+    tpayEnv: {
+      present: Boolean(tpayEnv),
+      value: tpayEnv || null,
+      valid: tpayEnv === "sandbox" || tpayEnv === "production",
+    },
+    merchantId,
+    apiKey,
+    apiSecret,
+    webhookSecret,
+    possibleCredentialSwap,
+    warnings,
   };
 }
 
@@ -296,8 +512,8 @@ function getTpayEnvironment() {
   return process.env.TPAY_ENV === "production" ? "production" : "sandbox";
 }
 
-function getTpayApiBaseUrl() {
-  return getTpayEnvironment() === "production"
+function getTpayApiBaseUrl(environment = getTpayEnvironment()) {
+  return environment === "production"
     ? "https://api.tpay.com"
     : "https://openapi.sandbox.tpay.com";
 }
@@ -308,16 +524,89 @@ function getTpaySecureBaseUrl(environment = getTpayEnvironment()) {
     : "https://secure.sandbox.tpay.com";
 }
 
-async function fetchTpayAccessToken() {
+function getTpayOAuthFailureHints(errorCode: string | null) {
+  if (errorCode === "invalid_client") {
+    return [
+      "Credentials may be from the production Tpay panel but TPAY_ENV=sandbox uses openapi.sandbox.tpay.com.",
+      "Credentials may be from Origin API instead of the Open API Client ID / Secret section.",
+      "Sandbox account Open API access may not be registered or activated.",
+      "Client ID and Secret may have been copied incorrectly or swapped.",
+      "Vercel env values may include whitespace, quotes, or a TPAY_API_KEY= / TPAY_API_SECRET= prefix.",
+    ];
+  }
+
+  return [
+    "Verify TPAY_ENV, TPAY_API_KEY and TPAY_API_SECRET in Vercel Preview.",
+    "Verify the credentials are Open API credentials for the selected Tpay environment.",
+  ];
+}
+
+function getTpayErrorCode(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const direct = text(record.error) ?? text(record.code);
+
+  if (direct) {
+    return direct;
+  }
+
+  const errors = Array.isArray(record.errors) ? record.errors : [];
+  const firstObject = errors.find(
+    (item): item is Record<string, unknown> =>
+      typeof item === "object" && item !== null,
+  );
+
+  return firstObject ? text(firstObject.code) ?? text(firstObject.error) : null;
+}
+
+function getTpayErrorDescription(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return typeof payload === "string" ? payload : null;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const direct =
+    text(record.error_description) ??
+    text(record.description) ??
+    text(record.message);
+
+  if (direct) {
+    return direct;
+  }
+
+  const errors = Array.isArray(record.errors) ? record.errors : [];
+  const firstObject = errors.find(
+    (item): item is Record<string, unknown> =>
+      typeof item === "object" && item !== null,
+  );
+
+  return firstObject
+    ? text(firstObject.message) ?? text(firstObject.description)
+    : null;
+}
+
+async function fetchTpayAccessToken(options: {
+  fetchImpl?: typeof fetch;
+  logFailure?: boolean;
+} = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
   const clientId = normalizeSecretEnvValue("TPAY_API_KEY");
   const clientSecret = normalizeSecretEnvValue("TPAY_API_SECRET");
 
-  if (!clientId.present || !clientSecret.present) {
+  if (
+    !clientId.present ||
+    !clientSecret.present ||
+    clientId.looksPlaceholder ||
+    clientSecret.looksPlaceholder
+  ) {
     throw new Error("Tpay API credentials are missing.");
   }
 
   const endpoint = new URL("/oauth/auth", getTpayApiBaseUrl());
-  const response = await fetch(endpoint.toString(), {
+  const response = await fetchImpl(endpoint.toString(), {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -340,19 +629,33 @@ async function fetchTpayAccessToken() {
     const diagnostics: SafePaymentProviderDiagnostics = {
       provider: "tpay",
       operation: "oauth_token",
+      environment: getTpayEnvironment(),
+      baseUrl: getTpayApiBaseUrl(),
       endpointHost: endpoint.host,
       endpointPath: endpoint.pathname,
       httpStatus: response.status,
       apiKeyPresent: clientId.present,
       apiKeyLength: clientId.length,
       apiKeyHadNamePrefix: clientId.hadNamePrefix,
+      apiKeyHadAnyPrefix: clientId.hadAnyPrefix,
+      apiKeyHadQuotes: clientId.hadQuotes,
+      apiKeyHadWhitespace: clientId.hadWhitespace,
+      apiKeyHadNewline: clientId.hadNewline,
+      apiKeyLooksPlaceholder: clientId.looksPlaceholder,
       apiSecretPresent: clientSecret.present,
       apiSecretLength: clientSecret.length,
       apiSecretHadNamePrefix: clientSecret.hadNamePrefix,
+      apiSecretHadAnyPrefix: clientSecret.hadAnyPrefix,
+      apiSecretHadQuotes: clientSecret.hadQuotes,
+      apiSecretHadWhitespace: clientSecret.hadWhitespace,
+      apiSecretHadNewline: clientSecret.hadNewline,
+      apiSecretLooksPlaceholder: clientSecret.looksPlaceholder,
       errorBody: sanitizeTpayErrorPayload(payload),
     };
 
-    console.error("[payments:tpay] OAuth token request failed", diagnostics);
+    if (options.logFailure !== false) {
+      console.error("[payments:tpay] OAuth token request failed", diagnostics);
+    }
     throw new PaymentProviderRequestError(
       "Nie udało się pobrać tokenu OAuth Tpay.",
       diagnostics,
@@ -360,6 +663,102 @@ async function fetchTpayAccessToken() {
   }
 
   return accessToken;
+}
+
+export async function diagnoseTpayOAuthConfig(options: {
+  fetchImpl?: typeof fetch;
+} = {}): Promise<TpayOAuthDiagnosticResult> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const config = getTpayPublicConfigDiagnostics();
+  const endpoint = new URL("/oauth/auth", config.selectedBaseUrl);
+  const clientId = normalizeSecretEnvValue("TPAY_API_KEY");
+  const clientSecret = normalizeSecretEnvValue("TPAY_API_SECRET");
+  const baseResult = {
+    provider: "tpay" as const,
+    operation: "oauth_token" as const,
+    selectedEnvironment: config.selectedEnvironment,
+    baseUrl: config.selectedBaseUrl,
+    endpointHost: endpoint.host,
+    endpointPath: endpoint.pathname,
+    request: {
+      method: "POST" as const,
+      contentType: "application/x-www-form-urlencoded" as const,
+      authMethod: "client_id_client_secret_body" as const,
+    },
+    credentials: {
+      apiKeyPresent: clientId.present,
+      apiKeyLength: clientId.length,
+      apiKeyHadNamePrefix: clientId.hadNamePrefix,
+      apiKeyHadAnyPrefix: clientId.hadAnyPrefix,
+      apiKeyHadQuotes: clientId.hadQuotes,
+      apiKeyHadWhitespace: clientId.hadWhitespace,
+      apiKeyHadNewline: clientId.hadNewline,
+      apiKeyLooksPlaceholder: clientId.looksPlaceholder,
+      apiSecretPresent: clientSecret.present,
+      apiSecretLength: clientSecret.length,
+      apiSecretHadNamePrefix: clientSecret.hadNamePrefix,
+      apiSecretHadAnyPrefix: clientSecret.hadAnyPrefix,
+      apiSecretHadQuotes: clientSecret.hadQuotes,
+      apiSecretHadWhitespace: clientSecret.hadWhitespace,
+      apiSecretHadNewline: clientSecret.hadNewline,
+      apiSecretLooksPlaceholder: clientSecret.looksPlaceholder,
+      possibleCredentialSwap: config.possibleCredentialSwap,
+    },
+  };
+
+  if (
+    !clientId.present ||
+    !clientSecret.present ||
+    clientId.looksPlaceholder ||
+    clientSecret.looksPlaceholder
+  ) {
+    const errorCode = !clientId.present || !clientSecret.present
+      ? "missing_credentials"
+      : "placeholder_credentials";
+
+    return {
+      ...baseResult,
+      ok: false,
+      httpStatus: null,
+      errorCode,
+      errorDescription:
+        errorCode === "missing_credentials"
+          ? "TPAY_API_KEY or TPAY_API_SECRET is missing."
+          : "TPAY_API_KEY or TPAY_API_SECRET looks like a placeholder.",
+      errorBody: null,
+      hints: getTpayOAuthFailureHints(errorCode),
+    };
+  }
+
+  const response = await fetchImpl(endpoint.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: new URLSearchParams({
+      client_id: clientId.value,
+      client_secret: clientSecret.value,
+    }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as unknown;
+  const payloadObject =
+    typeof payload === "object" && payload !== null
+      ? (payload as Record<string, unknown>)
+      : {};
+  const accessToken = text(payloadObject.access_token);
+  const errorCode = getTpayErrorCode(payload);
+  const errorDescription = getTpayErrorDescription(payload);
+
+  return {
+    ...baseResult,
+    ok: response.ok && Boolean(accessToken),
+    httpStatus: response.status,
+    errorCode: response.ok && accessToken ? null : errorCode,
+    errorDescription: response.ok && accessToken ? null : errorDescription,
+    errorBody: response.ok && accessToken ? null : sanitizeTpayErrorPayload(payload),
+    hints: response.ok && accessToken ? [] : getTpayOAuthFailureHints(errorCode),
+  };
 }
 
 async function createTpayTransaction(input: {

@@ -31,6 +31,10 @@ import {
   getShippingProviderDiagnostics,
   refreshShipmentTracking,
 } from "@/lib/store/shipping";
+import {
+  diagnoseTpayOAuthConfig,
+  getTpayPublicConfigDiagnostics,
+} from "@/lib/store/payments";
 import type {
   Drop,
   DropStatus,
@@ -391,6 +395,7 @@ async function getTpaySandboxDiagnostics(input: {
   }
 
   const databaseChecks = await getDatabaseReadinessChecks(input);
+  const config = getTpayPublicConfigDiagnostics();
   const allChecks = [...envChecks, ...databaseChecks, ...warnings];
   const ready = allChecks.every((check) => check.status === "pass");
 
@@ -418,6 +423,23 @@ async function getTpaySandboxDiagnostics(input: {
       originalLength: siteUrl.originalLength,
       sanitized: siteUrl.value || null,
       strippedKeyPrefix: siteUrl.prefixed,
+    },
+    oauth: {
+      selectedEnvironment: config.selectedEnvironment,
+      selectedBaseUrl: config.selectedBaseUrl,
+      oauthEndpoint: config.oauthEndpoint,
+      transactionEndpoint: config.transactionEndpoint,
+      usesSandboxBaseUrl: config.usesSandboxBaseUrl,
+      usesProductionBaseUrl: config.usesProductionBaseUrl,
+      usesOriginApi: config.usesOriginApi,
+      paymentProvider: config.paymentProvider,
+      tpayEnv: config.tpayEnv,
+      merchantId: config.merchantId,
+      apiKey: config.apiKey,
+      apiSecret: config.apiSecret,
+      webhookSecret: config.webhookSecret,
+      possibleCredentialSwap: config.possibleCredentialSwap,
+      warnings: config.warnings,
     },
   };
 }
@@ -718,6 +740,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: true,
         message: "Tpay sandbox product reset to stockQuantity=1 and reservedQuantity=0.",
+        result,
+      });
+    }
+
+    if (body.action === "tpaySandbox.oauthDiagnostic") {
+      const result = await diagnoseTpayOAuthConfig();
+
+      return NextResponse.json({
+        ok: result.ok,
+        message: result.ok
+          ? "OAuth OK — sandbox credentials valid."
+          : "OAuth diagnostic failed. Review the sanitized Tpay result.",
         result,
       });
     }

@@ -205,6 +205,31 @@ type StoreSnapshot = {
         sanitized: string | null;
         strippedKeyPrefix: boolean;
       };
+      oauth: {
+        selectedEnvironment: "sandbox" | "production";
+        selectedBaseUrl: string;
+        oauthEndpoint: string;
+        transactionEndpoint: string;
+        usesSandboxBaseUrl: boolean;
+        usesProductionBaseUrl: boolean;
+        usesOriginApi: boolean;
+        paymentProvider: {
+          present: boolean;
+          value: string | null;
+          valid: boolean;
+        };
+        tpayEnv: {
+          present: boolean;
+          value: string | null;
+          valid: boolean;
+        };
+        merchantId: TpayEnvValueDiagnostics;
+        apiKey: TpayEnvValueDiagnostics;
+        apiSecret: TpayEnvValueDiagnostics;
+        webhookSecret: TpayEnvValueDiagnostics;
+        possibleCredentialSwap: boolean;
+        warnings: string[];
+      };
     };
     email: {
       config: {
@@ -246,7 +271,60 @@ type ReadinessCheck = {
   detail: string;
 };
 
+type TpayEnvValueDiagnostics = {
+  name: string;
+  present: boolean;
+  length: number;
+  rawLength: number;
+  hasWhitespaceIssue: boolean;
+  hasPrefixIssue: boolean;
+  hasOwnNamePrefix: boolean;
+  hasAnyAssignmentPrefix: boolean;
+  hasQuotes: boolean;
+  hasNewline: boolean;
+  looksPlaceholder: boolean;
+};
+
 type TpaySandboxDiagnostics = NonNullable<StoreSnapshot["diagnostics"]>["tpaySandbox"];
+
+type TpayOAuthDiagnosticResult = {
+  ok: boolean;
+  provider: "tpay";
+  operation: "oauth_token";
+  selectedEnvironment: "sandbox" | "production";
+  baseUrl: string;
+  endpointHost: string;
+  endpointPath: string;
+  httpStatus: number | null;
+  request: {
+    method: "POST";
+    contentType: "application/x-www-form-urlencoded";
+    authMethod: "client_id_client_secret_body";
+  };
+  credentials: {
+    apiKeyPresent: boolean;
+    apiKeyLength: number;
+    apiKeyHadNamePrefix: boolean;
+    apiKeyHadAnyPrefix: boolean;
+    apiKeyHadQuotes: boolean;
+    apiKeyHadWhitespace: boolean;
+    apiKeyHadNewline: boolean;
+    apiKeyLooksPlaceholder: boolean;
+    apiSecretPresent: boolean;
+    apiSecretLength: number;
+    apiSecretHadNamePrefix: boolean;
+    apiSecretHadAnyPrefix: boolean;
+    apiSecretHadQuotes: boolean;
+    apiSecretHadWhitespace: boolean;
+    apiSecretHadNewline: boolean;
+    apiSecretLooksPlaceholder: boolean;
+    possibleCredentialSwap: boolean;
+  };
+  errorCode: string | null;
+  errorDescription: string | null;
+  errorBody: unknown;
+  hints: string[];
+};
 
 const tabs = [
   "dashboard",
@@ -314,6 +392,8 @@ export function AdminStorePage() {
     html: string;
     text: string;
   } | null>(null);
+  const [tpayOauthDiagnostic, setTpayOauthDiagnostic] =
+    useState<TpayOAuthDiagnosticResult | null>(null);
   const [message, setMessage] = useState("");
 
   async function load() {
@@ -351,6 +431,30 @@ export function AdminStorePage() {
 
     setMessage(data.message ?? "Zapisano.");
     await load();
+  }
+
+  async function runTpayOAuthDiagnostic() {
+    setMessage("Running Tpay OAuth diagnostic...");
+    setTpayOauthDiagnostic(null);
+    const response = await fetch("/api/admin/store", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: "tpaySandbox.oauthDiagnostic" }),
+    });
+    const data = (await response.json()) as {
+      error?: string;
+      message?: string;
+      result?: TpayOAuthDiagnosticResult;
+    };
+
+    if (data.result) {
+      setTpayOauthDiagnostic(data.result);
+    }
+
+    setMessage(data.message ?? data.error ?? "Tpay OAuth diagnostic finished.");
   }
 
   async function previewEmail() {
@@ -543,10 +647,12 @@ export function AdminStorePage() {
 
         {snapshot ? (
           <>
-            <TpayDiagnostics
-              diagnostics={snapshot.diagnostics?.tpaySandbox}
-              onReset={() => action("tpaySandbox.reset", {})}
-            />
+              <TpayDiagnostics
+                diagnostics={snapshot.diagnostics?.tpaySandbox}
+                onReset={() => action("tpaySandbox.reset", {})}
+                onRunOAuthDiagnostic={runTpayOAuthDiagnostic}
+                oauthDiagnostic={tpayOauthDiagnostic}
+              />
 
             <nav className="mt-8 flex flex-wrap gap-2">
               {tabs.map((tab) => (
@@ -1892,9 +1998,13 @@ function ImageUploadForm({
 function TpayDiagnostics({
   diagnostics,
   onReset,
+  onRunOAuthDiagnostic,
+  oauthDiagnostic,
 }: {
   diagnostics: TpaySandboxDiagnostics | undefined;
   onReset: () => void;
+  onRunOAuthDiagnostic: () => void;
+  oauthDiagnostic: TpayOAuthDiagnosticResult | null;
 }) {
   if (!diagnostics) {
     return null;
@@ -1963,6 +2073,105 @@ function TpayDiagnostics({
         </p>
       </div>
 
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="border border-white/10 p-4">
+          <p className="text-xs uppercase tracking-[0.22em] text-white/38">
+            Tpay Open API selection
+          </p>
+          <div className="mt-4 space-y-1 text-xs text-white/55">
+            <p>Environment: {diagnostics.oauth.selectedEnvironment}</p>
+            <p className="break-all">Base URL: {diagnostics.oauth.selectedBaseUrl}</p>
+            <p className="break-all">OAuth: {diagnostics.oauth.oauthEndpoint}</p>
+            <p className="break-all">
+              Transactions: {diagnostics.oauth.transactionEndpoint}
+            </p>
+            <p>Sandbox base selected: {String(diagnostics.oauth.usesSandboxBaseUrl)}</p>
+            <p>Origin API selected: {String(diagnostics.oauth.usesOriginApi)}</p>
+            <p>Possible key/secret swap: {String(diagnostics.oauth.possibleCredentialSwap)}</p>
+          </div>
+          {diagnostics.oauth.warnings.length ? (
+            <div className="mt-4 space-y-1 text-xs text-yellow-100">
+              {diagnostics.oauth.warnings.map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="border border-white/10 p-4">
+          <p className="text-xs uppercase tracking-[0.22em] text-white/38">
+            Credential shape
+          </p>
+          <div className="mt-4 space-y-2">
+            <TpayEnvShapeRow label="TPAY_MERCHANT_ID" value={diagnostics.oauth.merchantId} />
+            <TpayEnvShapeRow label="TPAY_API_KEY" value={diagnostics.oauth.apiKey} />
+            <TpayEnvShapeRow label="TPAY_API_SECRET" value={diagnostics.oauth.apiSecret} />
+            <TpayEnvShapeRow label="TPAY_WEBHOOK_SECRET" value={diagnostics.oauth.webhookSecret} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 border border-white/10 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-white/38">
+              OAuth diagnostic
+            </p>
+            <p className="mt-2 text-xs text-white/45">
+              Admin-only token check. It only requests an OAuth token and never creates an order, reservation, transaction, webhook, or payment success state.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onRunOAuthDiagnostic}
+            className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white hover:border-white/45"
+          >
+            Run OAuth diagnostic
+          </button>
+        </div>
+        {oauthDiagnostic ? (
+          <div className="mt-4 space-y-2 text-xs text-white/55">
+            <p className={oauthDiagnostic.ok ? "text-emerald-200" : "text-red-200"}>
+              {oauthDiagnostic.ok
+                ? "OAuth OK — sandbox credentials valid"
+                : "OAuth failed"}
+            </p>
+            <p>Status: {oauthDiagnostic.httpStatus ?? "-"}</p>
+            <p>Environment: {oauthDiagnostic.selectedEnvironment}</p>
+            <p className="break-all">Base URL: {oauthDiagnostic.baseUrl}</p>
+            <p>
+              Request: {oauthDiagnostic.request.method} / {oauthDiagnostic.request.contentType} / {oauthDiagnostic.request.authMethod}
+            </p>
+            <p>Error code: {oauthDiagnostic.errorCode ?? "-"}</p>
+            <p>Error description: {oauthDiagnostic.errorDescription ?? "-"}</p>
+            <p>
+              Key length: {oauthDiagnostic.credentials.apiKeyLength} / Secret length:{" "}
+              {oauthDiagnostic.credentials.apiSecretLength}
+            </p>
+            <p>
+              Key prefix/quotes/whitespace/newline:{" "}
+              {String(oauthDiagnostic.credentials.apiKeyHadAnyPrefix)} /{" "}
+              {String(oauthDiagnostic.credentials.apiKeyHadQuotes)} /{" "}
+              {String(oauthDiagnostic.credentials.apiKeyHadWhitespace)} /{" "}
+              {String(oauthDiagnostic.credentials.apiKeyHadNewline)}
+            </p>
+            <p>
+              Secret prefix/quotes/whitespace/newline:{" "}
+              {String(oauthDiagnostic.credentials.apiSecretHadAnyPrefix)} /{" "}
+              {String(oauthDiagnostic.credentials.apiSecretHadQuotes)} /{" "}
+              {String(oauthDiagnostic.credentials.apiSecretHadWhitespace)} /{" "}
+              {String(oauthDiagnostic.credentials.apiSecretHadNewline)}
+            </p>
+            {oauthDiagnostic.hints.length ? (
+              <div className="space-y-1 text-yellow-100">
+                {oauthDiagnostic.hints.map((hint) => (
+                  <p key={hint}>{hint}</p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
       <div className="mt-5 flex flex-col gap-2 border-t border-white/10 pt-4 md:flex-row md:items-center md:justify-between">
         <p className="text-xs text-white/45">
           Reset only touches {`prod-tpay-sandbox-test`} / {`var-tpay-sandbox-test-one-size`} and refuses production.
@@ -1981,6 +2190,30 @@ function TpayDiagnostics({
         </button>
       </div>
     </section>
+  );
+}
+
+function TpayEnvShapeRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: TpayEnvValueDiagnostics;
+}) {
+  return (
+    <div className="text-xs text-white/55">
+      <p className="text-white/75">{label}</p>
+      <p>
+        present={String(value.present)} / length={value.length} / raw length=
+        {value.rawLength}
+      </p>
+      <p>
+        whitespace={String(value.hasWhitespaceIssue)} / prefix=
+        {String(value.hasPrefixIssue)} / quotes={String(value.hasQuotes)} /
+        newline={String(value.hasNewline)} / placeholder=
+        {String(value.looksPlaceholder)}
+      </p>
+    </div>
   );
 }
 

@@ -265,6 +265,9 @@ Tpay sandbox calls use:
 - Transaction creation: `POST https://openapi.sandbox.tpay.com/transactions`
 - Return URL: `${NEXT_PUBLIC_SITE_URL}/checkout/success?order_id=...`
 - Notification URL: `${NEXT_PUBLIC_SITE_URL}/api/payments/webhook/tpay`
+- Sandbox mode must never call the production base URL.
+- The legacy/Origin API credentials are not the same as the Open API Client ID
+  and Secret used by these endpoints.
 
 In the Tpay merchant panel, set the notification/webhook URL exactly to:
 
@@ -287,12 +290,39 @@ Current staging pause note:
   checkout reaches the Tpay OAuth step.
 - The live sandbox payment test is paused because Tpay OAuth currently returns
   `401 invalid_client` with `The client credentials are invalid`.
-- Likely cause: the current Tpay Open API Client ID / Secret are not valid for
-  `openapi.sandbox.tpay.com`.
-- Next external action: obtain sandbox Open API credentials from Tpay or ask Tpay
-  support to confirm the sandbox Client ID / Secret and account/API permissions.
+- Likely cause: the current Client ID / Secret are not sandbox Open API
+  credentials valid for `openapi.sandbox.tpay.com`. They may be production panel
+  credentials, Origin API credentials, swapped values, or values copied with
+  whitespace/prefixes.
+- Next retry before contacting support: log in to the Tpay Sandbox Merchant
+  Panel, open `Integracje → API`, and use the first Open API credentials
+  section. Copy Client ID to `TPAY_API_KEY`, Secret to `TPAY_API_SECRET`, and
+  keep the merchant/account ID only in `TPAY_MERCHANT_ID`.
+- In Vercel, paste only the raw value. Do not paste `TPAY_API_KEY=...`,
+  `TPAY_API_SECRET=...`, wrapping quotes, or trailing newlines as the value.
 - Do not switch to `TPAY_ENV=production` or the production endpoint just to test
   sandbox checkout.
+
+Admin-only OAuth diagnostic:
+
+- `/admin` includes a Tpay OAuth diagnostic action behind `ORDER_ADMIN_TOKEN`.
+- It only requests an OAuth token; it does not create an order, reserve stock,
+  create a Tpay transaction, or fake a webhook/payment success.
+- It displays only sanitized fields: selected environment, base URL, endpoint
+  host/path, HTTP status, error code/description, key length, secret length,
+  and prefix/quotes/whitespace flags. It never displays Client ID, Secret,
+  access token, webhook secret, or authorization headers.
+- Run this before the hidden-product checkout. Continue to checkout only when it
+  says `OAuth OK — sandbox credentials valid`.
+
+Local sanitized OAuth diagnostic:
+
+```bash
+tsx scripts/diagnose-tpay-oauth.ts
+```
+
+The script uses the same env vars, prints only sanitized diagnostics, and exits
+non-zero if OAuth fails.
 
 Prepare the database after the preview/staging deployment has the env vars:
 
@@ -346,10 +376,14 @@ Staging test checklist:
 
 Resume the paused sandbox test later:
 
-- get a sandbox Open API Client ID and Secret from Tpay
+- log in to the Tpay Sandbox Merchant Panel, not the production panel
+- go to `Integracje → API`
+- copy Open API Client ID to `TPAY_API_KEY`
+- copy Open API Secret to `TPAY_API_SECRET`
 - update `TPAY_API_KEY` and `TPAY_API_SECRET` in Vercel Preview only
 - redeploy Preview and keep `TPAY_ENV=sandbox`
 - confirm the readiness panel is green
+- run the admin OAuth diagnostic
 - reset the Tpay sandbox product to stock `1` and reserved `0`
 - run the hidden-product checkout command below
 - open the returned `paymentUrl`

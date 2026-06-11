@@ -2,8 +2,10 @@ import { createSign } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPaymentWebhookMatchesPayment,
+  diagnoseTpayOAuthConfig,
   getPaymentProviderAdapter,
   getSafePaymentErrorDiagnostics,
+  getTpayPublicConfigDiagnostics,
   verifyTpayJwsSignature,
 } from "../payments";
 import type { Order, PaymentTransaction } from "../types";
@@ -291,15 +293,18 @@ describe("Tpay adapter", () => {
     expect(caught).toMatchObject({
       message: "Nie udało się pobrać tokenu OAuth Tpay.",
     });
-    expect(getSafePaymentErrorDiagnostics(caught)).toEqual({
+    expect(getSafePaymentErrorDiagnostics(caught)).toMatchObject({
       provider: "tpay",
       operation: "oauth_token",
+      environment: "sandbox",
+      baseUrl: "https://openapi.sandbox.tpay.com",
       endpointHost: "openapi.sandbox.tpay.com",
       endpointPath: "/oauth/auth",
       httpStatus: 401,
       apiKeyPresent: true,
       apiKeyLength: 6,
       apiKeyHadNamePrefix: true,
+      apiKeyHadAnyPrefix: true,
       apiSecretPresent: true,
       apiSecretLength: 6,
       apiSecretHadNamePrefix: false,
@@ -310,6 +315,139 @@ describe("Tpay adapter", () => {
         client_secret: "[redacted]",
       },
     });
+  });
+
+  it("reports sandbox Open API endpoint selection in public diagnostics", () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "client");
+    vi.stubEnv("TPAY_API_SECRET", "secret");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    const diagnostics = getTpayPublicConfigDiagnostics();
+
+    expect(diagnostics.selectedEnvironment).toBe("sandbox");
+    expect(diagnostics.selectedBaseUrl).toBe("https://openapi.sandbox.tpay.com");
+    expect(diagnostics.oauthEndpoint).toBe(
+      "https://openapi.sandbox.tpay.com/oauth/auth",
+    );
+    expect(diagnostics.transactionEndpoint).toBe(
+      "https://openapi.sandbox.tpay.com/transactions",
+    );
+    expect(diagnostics.usesSandboxBaseUrl).toBe(true);
+    expect(diagnostics.usesProductionBaseUrl).toBe(false);
+    expect(diagnostics.usesOriginApi).toBe(false);
+  });
+
+  it("reports production Open API selection and warns when used on Preview", () => {
+    vi.stubEnv("TPAY_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "client");
+    vi.stubEnv("TPAY_API_SECRET", "secret");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    const diagnostics = getTpayPublicConfigDiagnostics();
+
+    expect(diagnostics.selectedEnvironment).toBe("production");
+    expect(diagnostics.selectedBaseUrl).toBe("https://api.tpay.com");
+    expect(diagnostics.usesProductionBaseUrl).toBe(true);
+    expect(diagnostics.warnings).toContain(
+      "TPAY_ENV=production must not be used on Vercel Preview.",
+    );
+  });
+
+  it("detects whitespace, quotes, prefixes, placeholders and possible swaps without leaking values", () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", " TPAY_API_KEY=abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz ");
+    vi.stubEnv("TPAY_API_SECRET", '"secret"');
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "placeholder");
+
+    const diagnostics = getTpayPublicConfigDiagnostics();
+    const serialized = JSON.stringify(diagnostics);
+
+    expect(diagnostics.apiKey).toMatchObject({
+      present: true,
+      length: 52,
+      hasWhitespaceIssue: true,
+      hasPrefixIssue: true,
+      hasOwnNamePrefix: true,
+    });
+    expect(diagnostics.apiSecret).toMatchObject({
+      present: true,
+      length: 6,
+      hasQuotes: true,
+    });
+    expect(diagnostics.webhookSecret.looksPlaceholder).toBe(true);
+    expect(diagnostics.possibleCredentialSwap).toBe(true);
+    expect(serialized).not.toContain("abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain('"secret"');
+  });
+
+  it("returns sanitized OAuth diagnostics and invalid_client hints", async () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "client");
+    vi.stubEnv("TPAY_API_SECRET", "secret");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    const result = await diagnoseTpayOAuthConfig({
+      fetchImpl: vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          error: "invalid_client",
+          error_description: "The client credentials are invalid",
+          access_token: "must-not-leak",
+          client_secret: "must-not-leak",
+        }),
+      }) as never,
+    });
+    const serialized = JSON.stringify(result);
+
+    expect(result).toMatchObject({
+      ok: false,
+      selectedEnvironment: "sandbox",
+      baseUrl: "https://openapi.sandbox.tpay.com",
+      endpointHost: "openapi.sandbox.tpay.com",
+      endpointPath: "/oauth/auth",
+      httpStatus: 401,
+      errorCode: "invalid_client",
+      errorDescription: "The client credentials are invalid",
+    });
+    expect(result.hints.join(" ")).toContain("production Tpay panel");
+    expect(serialized).not.toContain("must-not-leak");
+    expect(serialized).not.toContain('"client_secret":"must-not-leak"');
+  });
+
+  it("does not expose access tokens when OAuth succeeds", async () => {
+    vi.stubEnv("TPAY_ENV", "sandbox");
+    vi.stubEnv("PAYMENT_PROVIDER", "tpay");
+    vi.stubEnv("TPAY_MERCHANT_ID", "merchant");
+    vi.stubEnv("TPAY_API_KEY", "client");
+    vi.stubEnv("TPAY_API_SECRET", "secret");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+
+    const result = await diagnoseTpayOAuthConfig({
+      fetchImpl: vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          access_token: "must-not-leak",
+          token_type: "Bearer",
+        }),
+      }) as never,
+    });
+    const serialized = JSON.stringify(result);
+
+    expect(result.ok).toBe(true);
+    expect(result.errorBody).toBeNull();
+    expect(serialized).not.toContain("must-not-leak");
   });
 
   it("verifies a valid Tpay JWS webhook and maps paid status", async () => {
