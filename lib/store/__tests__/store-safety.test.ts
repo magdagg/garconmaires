@@ -28,6 +28,7 @@ import {
   getEmailConfigDiagnostics,
   renderStoreEmail,
   sendStoreEmail,
+  sendStoreEmailTest,
 } from "../email";
 import {
   releaseExpiredReservations,
@@ -594,12 +595,70 @@ describe("transactional email readiness", () => {
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("RESEND_FROM_EMAIL", "");
     vi.stubEnv("ORDER_EMAIL_FROM", "");
+    vi.stubEnv("VERCEL_ENV", "preview");
 
     const diagnostics = getEmailConfigDiagnostics();
 
     expect(diagnostics.resendApiKeyPresent).toBe(false);
     expect(diagnostics.resendFromEmailPresent).toBe(false);
+    expect(diagnostics.resendFromDomain).toBeNull();
     expect(diagnostics.warnings.join(" ")).toContain("RESEND_API_KEY missing");
+    expect(diagnostics.warnings.join(" ")).toContain("EMAIL_TEST_RECIPIENT");
+  });
+
+  it("renders payment confirmed email with order number, amount and legal links", () => {
+    const payload = createSyntheticEmailPayload("payment_confirmed");
+    const rendered = renderStoreEmail("payment_confirmed", payload);
+
+    expect(rendered.subject).toContain("GM-2026-0001");
+    expect(rendered.text).toContain("GM-2026-0001");
+    expect(rendered.text).toContain("473,99");
+    expect(rendered.text).toContain("Regulamin: https://garconmaires.com/regulamin");
+    expect(rendered.text).toContain("Polityka prywatności");
+    expect(rendered.html).toContain("https://garconmaires.com/zwroty-i-reklamacje");
+    expect(rendered.html).toContain("https://garconmaires.com/dostawa");
+  });
+
+  it("blocks arbitrary Preview test recipients when EMAIL_TEST_RECIPIENT is missing", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "");
+    vi.stubEnv("EMAIL_TEST_RECIPIENT", "");
+
+    await expect(
+      sendStoreEmailTest({
+        template: "order_created",
+        recipient: "customer@example.com",
+      }),
+    ).resolves.toMatchObject({
+      status: "skipped",
+      reason: "no_safe_test_recipient",
+    });
+  });
+
+  it("uses EMAIL_TEST_RECIPIENT for Preview test sends instead of requested recipients", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "Garçonmaires Studio <studio@garconmaires.com>");
+    vi.stubEnv("EMAIL_TEST_RECIPIENT", "safe-admin@example.test");
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await expect(
+      sendStoreEmailTest({
+        template: "order_created",
+        recipient: "customer@example.com",
+      }),
+    ).resolves.toMatchObject({
+      status: "skipped",
+      reason: "RESEND_API_KEY is not configured.",
+    });
+    expect(info).toHaveBeenCalledWith(
+      "[store-email] skipped; provider is not configured",
+      expect.objectContaining({
+        template: "order_created",
+        to: "safe-admin@example.test",
+      }),
+    );
   });
 
   it("renders shipped email with tracking URL", () => {

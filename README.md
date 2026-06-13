@@ -170,13 +170,19 @@ EMAIL_TEST_RECIPIENT=
 
 If `RESEND_API_KEY` or `RESEND_FROM_EMAIL` is missing, sending skips safely and
 records a sanitized email event. Admin email preview never sends. Preview test
-sends use `EMAIL_TEST_RECIPIENT` when configured, or an explicit
-admin-entered test address. Production test sends stay blocked unless
-`EMAIL_TEST_MODE=true` and `EMAIL_TEST_RECIPIENT` are configured.
+sends require `EMAIL_TEST_RECIPIENT` and never use an arbitrary typed customer
+address. Local/development test sends can use an explicit admin-entered address.
+Production test sends stay blocked unless `EMAIL_TEST_MODE=true` and
+`EMAIL_TEST_RECIPIENT` are configured.
 
 Email events store only operational metadata: recipient email, template type,
 provider, status, provider message id if available, a short error summary and
 timestamps. They do not store secrets, provider payloads, tokens or headers.
+
+Current stable Preview status: Resend env vars are not configured yet, so
+lifecycle emails skip safely and create sanitized `EmailEvent` records. Configure
+Resend only in Preview until the production launch rehearsal is explicitly
+approved.
 
 ## Delivery Readiness
 
@@ -528,6 +534,14 @@ checks are final.
 Do not send real customer emails until launch approval. In Preview/Staging,
 transactional email tests must be admin-only and routed to a test recipient.
 
+Current stable Preview status:
+
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`,
+  `EMAIL_TEST_MODE` and `EMAIL_TEST_RECIPIENT` are not configured in Preview.
+- Existing order lifecycle attempts are recorded as skipped email events because
+  `RESEND_API_KEY` is missing.
+- No real emails have been sent from Preview.
+
 Required Preview env vars:
 
 ```env
@@ -551,9 +565,10 @@ Garçonmaires-domain address. Setup checklist:
 - wait for domain verification
 - add the Preview env vars in Vercel
 - redeploy Preview
-- send only an admin/test email
+- send only to `EMAIL_TEST_RECIPIENT`
 - preview/test `order_created`, `payment_confirmed`, `order_shipped`,
-  `return_requested`, `complaint_submitted` and `newsletter_confirmation`
+  `payment_failed`, `return_requested`, `complaint_submitted`,
+  `newsletter_confirmation` and `early_access_invitation`
 - check `EmailEvent` logs in `/admin`
 
 Keep Production Resend envs unset until explicitly preparing the production

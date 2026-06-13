@@ -789,11 +789,15 @@ export async function POST(request: NextRequest) {
         "payment_failed",
         "order_shipped",
       ];
+      const latestPaidTestOrder =
+        database.orders.find((order) => order.orderNumber === "GM-2026-0003") ??
+        database.orders.find((order) => order.paymentStatus === "paid") ??
+        database.orders[0];
       const payload =
         sample === "latest_order" &&
         orderTemplates.includes(template) &&
-        database.orders[0]
-          ? { order: database.orders[0] }
+        latestPaidTestOrder
+          ? { order: latestPaidTestOrder }
           : createSyntheticEmailPayload(template);
       const preview = await previewStoreEmail(template, payload);
 

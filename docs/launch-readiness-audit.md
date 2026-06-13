@@ -34,7 +34,7 @@ Area scores:
 | Product content | 35 | Not launch-ready |
 | Payments | 82 | Sandbox passed, production live test pending |
 | Delivery | 76 | Provider architecture ready, InPost sandbox credentials/test pending |
-| Email | 72 | Templates/logging ready, provider config/test pending |
+| Email | 74 | Templates/logging ready, Preview provider config/test pending |
 | Legal/compliance | 35 | Draft only |
 | Frontend | 78 | Strong pre-launch, storefront launch polish pending |
 | SEO | 78 | Safe pre-launch |
@@ -84,7 +84,8 @@ Area scores:
 
 3. Email provider is not launch-ready until configured and tested.
    - `EmailEvent` exists and templates are implemented.
-   - Real sending still requires Resend API key, verified sender/domain, and admin-only test sends.
+   - Preview currently has no Resend env vars, so attempted lifecycle emails skip safely.
+   - Real sending still requires Resend API key, verified sender/domain, `EMAIL_TEST_RECIPIENT`, and admin-only test sends.
 
 4. Delivery is operationally incomplete.
    - InPost provider architecture, parcel locker search endpoint, shipment model and admin actions exist, but no live InPost sandbox credentials or label creation test are complete.
@@ -209,7 +210,7 @@ Current staging counts:
 | Deliveries | 2 |
 | Return requests | 0 |
 | Complaints | 0 |
-| Email events | 0 |
+| Email events | 2 |
 | Analytics events | 0 |
 | Legal consents | 2 |
 | Legal submissions | 0 |
@@ -500,9 +501,12 @@ Email readiness:
 - `EmailEvent` table exists.
 - Email logs can persist.
 - Resend integration exists.
+- Stable Preview currently has no Resend env vars configured.
+- Existing lifecycle email attempts are skipped safely because `RESEND_API_KEY` is missing.
 - Missing `RESEND_API_KEY` or `RESEND_FROM_EMAIL` skips safely.
 - Admin email preview exists.
 - Admin test send restrictions exist.
+- Preview test sends require `EMAIL_TEST_RECIPIENT` and do not use arbitrary typed recipients.
 - Dynamic content escaping exists.
 - Duplicate-send prevention exists for order lifecycle templates where implemented.
 - Legal footer/support copy exists in rendered emails.
@@ -670,7 +674,7 @@ Do not execute these phases until blockers are resolved.
 | Products | Not ready | High | Images missing, stock zero, specs placeholders. | Complete product content, images, specs, stock. | Brand/ops |
 | Stock/inventory | Staging verified | Medium | Sandbox stock commit passed; real product stock still must be finalized. | Set real launch stock and run final launch rehearsal. | Engineering/ops |
 | Delivery | Partial | Medium | InPost API architecture exists, but sandbox credentials and real label/tracking tests are pending; final details missing. | Decide manual vs InPost API, configure sandbox credentials, test labels/tracking, finalize prices/times/return address. | Ops |
-| Email | Partial | Medium | Resend config/domain/test sends pending. | Configure Resend, verify DNS, test admin-only sends. | Engineering/ops |
+| Email | Partial | Medium | Resend Preview envs/domain/test sends pending; current attempts skip safely. | Configure Resend, verify DNS, test admin-only sends to `EMAIL_TEST_RECIPIENT`. | Engineering/ops |
 | Legal | Draft | High | Seller/tax/address/GDPR/operator details incomplete. | Complete and legally review docs. | Owner/legal |
 | Frontend | Good pre-launch | Medium | Product launch UI not visually validated with real images/content. | QA product/detail/cart/checkout once content exists. | Design/engineering |
 | SEO | Safe pre-launch | Medium | Robots allows all public pages; product visibility gating currently protects hidden products. | Re-check noindex/indexing at launch transition. | Engineering |
@@ -700,7 +704,7 @@ Resend:
 - Configure Preview `EMAIL_TEST_MODE=true`.
 - Configure Preview `EMAIL_TEST_RECIPIENT` to an admin/test inbox.
 - Redeploy Preview.
-- Send only admin/test emails.
+- Send only admin/test emails to `EMAIL_TEST_RECIPIENT`.
 - Review order confirmation, payment confirmed, shipped, return received, complaint received and newsletter confirmation templates.
 - Check `EmailEvent` logs.
 
@@ -770,22 +774,17 @@ For each real product:
 
 ## Exact next actions
 
-1. Ask Tpay for sandbox Open API Client ID and Secret valid for `openapi.sandbox.tpay.com`.
-2. Ask Tpay to confirm sandbox OAuth and transaction creation are enabled.
-3. Update Vercel Preview `TPAY_API_KEY` and `TPAY_API_SECRET`.
-4. Redeploy Preview and confirm readiness panel is green.
-5. Reset the Tpay sandbox product.
-6. Run the hidden admin-token Tpay sandbox checkout.
-7. Complete payment manually in Tpay sandbox and verify signed webhook paid state.
-8. Configure Resend sender domain and envs in Preview.
-9. Send admin-only test emails and review all templates.
-10. Upload final product images and complete product specs/size guides.
-11. Finalize stock quantities and variant availability.
-12. Complete legal/seller/return/privacy data and get legal review.
-13. Decide manual fulfillment versus InPost API for DROP 01.
-14. Run full staging order lifecycle test: checkout, payment, packing, shipped, delivered, return, complaint.
-15. Prepare production env checklist and backup/export runbook.
-16. Only after staging success, plan controlled production launch.
+1. Preserve the passed Tpay sandbox audit order `GM-2026-0003` and keep the hidden sandbox product reset.
+2. Configure Resend sender domain and envs in Preview.
+3. Redeploy Preview and confirm email diagnostics show configured Preview values without exposing secrets.
+4. Send admin-only test emails to `EMAIL_TEST_RECIPIENT` and review all templates.
+5. Upload final product images and complete product specs/size guides.
+6. Finalize stock quantities and variant availability.
+7. Complete legal/seller/return/privacy data and get legal review.
+8. Decide manual fulfillment versus InPost API for DROP 01.
+9. Run full staging order lifecycle test: checkout, payment, packing, shipped, delivered, return, complaint.
+10. Prepare production env checklist and backup/export runbook.
+11. Only after staging success, plan controlled production launch.
 
 ## Verification commands
 

@@ -32,6 +32,9 @@ export type EmailConfigDiagnostics = {
   resendReplyToPresent: boolean;
   emailTestMode: boolean;
   emailTestRecipientPresent: boolean;
+  resendFromDomain: string | null;
+  resendReplyToDomain: string | null;
+  emailTestRecipientDomain: string | null;
   vercelEnv: string | null;
   nodeEnv: string | null;
   warnings: string[];
@@ -90,11 +93,20 @@ function emailTestMode() {
   return env("EMAIL_TEST_MODE") === "true";
 }
 
+function emailDomain(value: string) {
+  const match = value.match(/@([^>\s]+)>?$/);
+
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
 export function getEmailConfigDiagnostics(): EmailConfigDiagnostics {
   const warnings: string[] = [];
   const resendApiKeyPresent = Boolean(env("RESEND_API_KEY"));
-  const resendFromEmailPresent = Boolean(getFrom());
-  const emailTestRecipientPresent = Boolean(env("EMAIL_TEST_RECIPIENT"));
+  const from = getFrom();
+  const replyTo = getReplyTo() ?? "";
+  const testRecipient = env("EMAIL_TEST_RECIPIENT");
+  const resendFromEmailPresent = Boolean(from);
+  const emailTestRecipientPresent = Boolean(testRecipient);
 
   if (!resendApiKeyPresent) {
     warnings.push("RESEND_API_KEY missing; emails will be skipped.");
@@ -108,12 +120,19 @@ export function getEmailConfigDiagnostics(): EmailConfigDiagnostics {
     warnings.push("EMAIL_TEST_MODE=true in production requires EMAIL_TEST_RECIPIENT.");
   }
 
+  if (env("VERCEL_ENV") === "preview" && !emailTestRecipientPresent) {
+    warnings.push("Preview email test sends require EMAIL_TEST_RECIPIENT.");
+  }
+
   return {
     resendApiKeyPresent,
     resendFromEmailPresent,
     resendReplyToPresent: Boolean(getReplyTo()),
     emailTestMode: emailTestMode(),
     emailTestRecipientPresent,
+    resendFromDomain: emailDomain(from),
+    resendReplyToDomain: emailDomain(replyTo),
+    emailTestRecipientDomain: emailDomain(testRecipient),
     vercelEnv: env("VERCEL_ENV") || null,
     nodeEnv: env("NODE_ENV") || null,
     warnings,
@@ -223,7 +242,7 @@ function frameHtml({
         <p style="margin:0;font-size:15px;line-height:1.8;color:#ddd;">${escapeHtml(intro)}</p>
         ${sectionHtml}
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-top:1px solid #222;margin-top:32px;padding-top:20px;">
-          <tr><td style="font-size:12px;line-height:1.7;color:#888;">Garçonmaires Studio<br><a href="mailto:${escapeHtml(support)}" style="color:#fff;text-decoration:none;">${escapeHtml(support)}</a><br>Ta wiadomość dotyczy obsługi zamówienia lub zgłoszenia. Zachowaj ją dla własnych zapisów.</td></tr>
+          <tr><td style="font-size:12px;line-height:1.7;color:#888;">Garçonmaires Studio<br><a href="mailto:${escapeHtml(support)}" style="color:#fff;text-decoration:none;">${escapeHtml(support)}</a><br>Ta wiadomość dotyczy obsługi zamówienia lub zgłoszenia. Zachowaj ją dla własnych zapisów.<br><br><a href="https://garconmaires.com/regulamin" style="color:#fff;text-decoration:none;">Regulamin</a> · <a href="https://garconmaires.com/polityka-prywatnosci" style="color:#fff;text-decoration:none;">Polityka prywatności</a> · <a href="https://garconmaires.com/zwroty-i-reklamacje" style="color:#fff;text-decoration:none;">Zwroty i reklamacje</a> · <a href="https://garconmaires.com/dostawa" style="color:#fff;text-decoration:none;">Dostawa</a></td></tr>
         </table>
       </div>
     </div>
@@ -254,6 +273,10 @@ function plainText({
     ]),
     "Garçonmaires Studio",
     getSupportEmail(),
+    "Regulamin: https://garconmaires.com/regulamin",
+    "Polityka prywatności: https://garconmaires.com/polityka-prywatnosci",
+    "Zwroty i reklamacje: https://garconmaires.com/zwroty-i-reklamacje",
+    "Dostawa: https://garconmaires.com/dostawa",
   ].join("\n");
 }
 
@@ -797,9 +820,10 @@ export async function sendStoreEmailTest(input: {
 }) {
   const configuredRecipient = env("EMAIL_TEST_RECIPIENT");
   const requestedRecipient = input.recipient?.trim();
+  const previewDeployment = env("VERCEL_ENV") === "preview";
   const recipient =
     configuredRecipient ||
-    (!isProductionDeployment() && requestedRecipient ? requestedRecipient : "");
+    (!isProductionDeployment() && !previewDeployment && requestedRecipient ? requestedRecipient : "");
 
   if (!recipient) {
     await recordEmailEvent({
