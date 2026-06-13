@@ -1,4 +1,4 @@
-import { createSign } from "node:crypto";
+import { createHash, createSign } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPaymentWebhookMatchesPayment,
@@ -81,6 +81,20 @@ function signTpayBody(rawBody: string) {
   signer.end();
 
   return `${header}.${payload}.${base64Url(signer.sign(testPrivateKey))}`;
+}
+
+function signTpayClassicNotification(input: {
+  merchantId: string;
+  transactionTitle: string;
+  amount: string;
+  crc?: string;
+  securityCode: string;
+}) {
+  return createHash("md5")
+    .update(
+      `${input.merchantId}${input.transactionTitle}${input.amount}${input.crc ?? ""}${input.securityCode}`,
+    )
+    .digest("hex");
 }
 
 function makeOrder(): Order {
@@ -564,6 +578,79 @@ describe("Tpay adapter", () => {
         fetchCertificate: async () => testCertificate,
       }),
     ).rejects.toThrow("Invalid Tpay JWS signature");
+  });
+
+  it("verifies a valid Tpay classic form notification and maps paid status", async () => {
+    vi.stubEnv("TPAY_MERCHANT_ID", "1010");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+    const md5sum = signTpayClassicNotification({
+      merchantId: "1010",
+      transactionTitle: "TR-GM-TEST",
+      amount: "119.00",
+      crc: "ord_tpay_test",
+      securityCode: "security-code",
+    });
+    const rawBody = new URLSearchParams({
+      id: "1010",
+      tr_id: "TR-GM-TEST",
+      tr_amount: "119.00",
+      tr_paid: "119.00",
+      tr_crc: "ord_tpay_test",
+      tr_status: "TRUE",
+      md5sum,
+    }).toString();
+    const request = new Request("https://example.test", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: rawBody,
+    });
+
+    const notification = await getPaymentProviderAdapter("tpay").verifyWebhook(
+      request as never,
+      rawBody,
+    );
+
+    expect(notification).toMatchObject({
+      provider: "tpay",
+      providerEventId: "tpay_classic_TR-GM-TEST_ord_tpay_test_paid",
+      providerTransactionId: null,
+      providerPaymentId: "TR-GM-TEST",
+      orderId: "ord_tpay_test",
+      status: "paid",
+      amount: 11900,
+      currency: "PLN",
+    });
+    expect(notification.rawProviderPayload).toMatchObject({
+      format: "classic_form",
+      verification: "md5",
+      id: "1010",
+      tr_id: "TR-GM-TEST",
+      tr_crc: "ord_tpay_test",
+      md5sum: "[redacted]",
+    });
+    expect(JSON.stringify(notification.rawProviderPayload)).not.toContain(md5sum);
+  });
+
+  it("rejects a Tpay classic form notification with the wrong security hash", async () => {
+    vi.stubEnv("TPAY_MERCHANT_ID", "1010");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+    const rawBody = new URLSearchParams({
+      id: "1010",
+      tr_id: "TR-GM-TEST",
+      tr_amount: "119.00",
+      tr_crc: "ord_tpay_test",
+      tr_status: "TRUE",
+      md5sum: "wrong",
+    }).toString();
+    const request = new Request("https://example.test", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: rawBody,
+    });
+
+    await expect(
+      getPaymentProviderAdapter("tpay").verifyWebhook(request as never, rawBody),
+    ).rejects.toThrow("Unverified tpay payment callback");
   });
 
   it("rejects wrong amount and wrong currency before payment processing", () => {

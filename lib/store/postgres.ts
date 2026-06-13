@@ -1660,20 +1660,6 @@ export async function processPostgresPaymentWebhook(input: PaymentWebhookResult)
       });
 
       if (!payment) {
-        await tx.paymentWebhookEvent.create({
-          data: {
-            id: input.providerEventId,
-            provider: input.provider,
-            type: "payment_notification",
-            orderId: input.orderId,
-            providerTransactionId: input.providerTransactionId,
-            providerPaymentId: input.providerPaymentId,
-            status: input.status,
-            amount: input.amount,
-            currency: input.currency,
-            rawProviderPayload: input.rawProviderPayload as Prisma.InputJsonValue,
-          },
-        });
         return { duplicate: false, order: null as Order | null };
       }
 

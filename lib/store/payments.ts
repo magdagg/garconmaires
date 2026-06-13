@@ -298,6 +298,17 @@ function parseWebhookBody(rawBody: string) {
   }
 }
 
+function parseFormWebhookBody(rawBody: string) {
+  const params = new URLSearchParams(rawBody);
+  const payload: Record<string, string> = {};
+
+  for (const [key, value] of params.entries()) {
+    payload[key] = value;
+  }
+
+  return payload;
+}
+
 function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -540,6 +551,89 @@ function decimalAmountToCents(value: unknown) {
   const numeric = numberOrNull(value);
 
   return numeric === null ? null : Math.round(numeric * 100);
+}
+
+function isTpayClassicNotification(payload: Record<string, unknown>) {
+  return Boolean(
+    text(payload.id) &&
+      text(payload.tr_id) &&
+      text(payload.tr_amount) &&
+      text(payload.tr_status) &&
+      text(payload.md5sum),
+  );
+}
+
+function verifyTpayClassicMd5(payload: Record<string, unknown>) {
+  const merchantId = normalizeSecretEnvValue("TPAY_MERCHANT_ID").value;
+  const securityCode = normalizeSecretEnvValue("TPAY_WEBHOOK_SECRET").value;
+  const notificationMerchantId = text(payload.id);
+  const transactionTitle = text(payload.tr_id);
+  const amount = text(payload.tr_amount);
+  const crc = text(payload.tr_crc) ?? "";
+  const receivedHash = text(payload.md5sum)?.toLowerCase() ?? null;
+
+  if (!merchantId || !securityCode) {
+    throw new Error("Tpay webhook security code is not configured.");
+  }
+
+  if (!notificationMerchantId || notificationMerchantId !== merchantId) {
+    throw new Error("Invalid Tpay notification merchant id.");
+  }
+
+  if (!transactionTitle || !amount || !receivedHash) {
+    throw new Error("Invalid Tpay classic notification payload.");
+  }
+
+  const expectedHash = createHash("md5")
+    .update(`${merchantId}${transactionTitle}${amount}${crc}${securityCode}`)
+    .digest("hex");
+
+  assertWebhookVerified(
+    "tpay",
+    timingSafeEqualText(receivedHash, expectedHash),
+  );
+}
+
+function sanitizeTpayWebhookPayload(payload: Record<string, unknown>) {
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (/md5|hash|sign|signature|secret|token|authorization|password|credential/i.test(key)) {
+      sanitized[key] = "[redacted]";
+    } else {
+      sanitized[key] = sanitizeTpayErrorPayload(value);
+    }
+  }
+
+  return sanitized;
+}
+
+function mapTpayClassicNotification(payload: Record<string, unknown>): PaymentWebhookResult {
+  verifyTpayClassicMd5(payload);
+
+  const providerPaymentId = text(payload.tr_id);
+  const orderId = text(payload.tr_crc);
+  const rawStatus = text(payload.tr_status)?.toUpperCase();
+  const status = rawStatus === "TRUE" ? "paid" : normalizeStatus(rawStatus);
+  const amount = decimalAmountToCents(payload.tr_paid) ?? decimalAmountToCents(payload.tr_amount);
+
+  return {
+    provider: "tpay",
+    providerEventId:
+      `tpay_classic_${providerPaymentId ?? "unknown"}_${orderId ?? "no_crc"}_${status}`,
+    providerTransactionId: null,
+    providerPaymentId,
+    orderId,
+    status,
+    amount,
+    currency: "PLN",
+    rawProviderPayload: {
+      format: "classic_form",
+      verification: "md5",
+      ...sanitizeTpayWebhookPayload(payload),
+      md5sum: "[redacted]",
+    },
+  };
 }
 
 function getLocalePrefix(locale: "pl" | "en") {
@@ -1172,6 +1266,16 @@ function tpayAdapter(): PaymentProviderAdapter {
       };
     },
     async verifyWebhook(request, rawBody) {
+      const contentType = request.headers.get("content-type") ?? "";
+
+      if (contentType.includes("application/x-www-form-urlencoded")) {
+        const formPayload = parseFormWebhookBody(rawBody);
+
+        if (isTpayClassicNotification(formPayload)) {
+          return mapTpayClassicNotification(formPayload);
+        }
+      }
+
       await verifyTpayJwsSignature(
         rawBody,
         request.headers.get("x-jws-signature"),

@@ -26,6 +26,17 @@ type RouteContext = {
   params: Promise<{ provider: string }>;
 };
 
+function tpayResponse(accepted: boolean, init?: ResponseInit) {
+  return new Response(accepted ? "TRUE" : "FALSE", {
+    status: accepted ? 200 : 400,
+    ...init,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
 export async function POST(request: NextRequest, context: RouteContext) {
   const { provider: rawProvider } = await context.params;
   const provider = rawProvider as PaymentProvider;
@@ -61,6 +72,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         });
       }
 
+      if (!result.duplicate && !result.order) {
+        throw new Error("Payment webhook order or payment not found.");
+      }
+
       if (result.order) {
         emailTaskType =
           notification.status === "paid" ? "payment_confirmed" : "payment_failed";
@@ -82,12 +97,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
         });
 
         if (!order) {
-          database.processedWebhookEvents.push(notification.providerEventId);
           console.warn("[payment-webhook] order not found", {
             provider,
             providerEventId: notification.providerEventId,
           });
-          return;
+          throw new Error("Payment webhook order or payment not found.");
         }
 
         const payment = database.payments.find((item) => item.orderId === order.id);
@@ -151,12 +165,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     return provider === "tpay"
-      ? NextResponse.json({ result: true })
+      ? tpayResponse(true)
       : NextResponse.json({ received: true });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Payment webhook verification error.";
 
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.warn("[payment-webhook] rejected", { provider, reason: message });
+
+    return provider === "tpay"
+      ? tpayResponse(false)
+      : NextResponse.json({ error: message }, { status: 400 });
   }
 }
