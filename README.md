@@ -279,25 +279,30 @@ Do not use localhost as the Tpay webhook URL. Use the Vercel Preview/Staging
 domain or a secure tunnel. `NEXT_PUBLIC_SITE_URL` must match that public
 staging origin.
 
-Current staging pause note:
+Current staging status:
 
 - Stable admin URL: `https://garconmaires-tpay-staging.vercel.app/admin`
 - Stable checkout URL: `https://garconmaires-tpay-staging.vercel.app/api/checkout`
 - Stable webhook URL:
   `https://garconmaires-tpay-staging.vercel.app/api/payments/webhook/tpay`
-- Tpay sandbox readiness is technically prepared: Postgres works, migrations are
-  applied, store settings exist, the hidden sandbox product is seeded, and
-  checkout reaches the Tpay OAuth step.
-- The live sandbox payment test is paused because Tpay OAuth currently returns
-  `401 invalid_client` with `The client credentials are invalid`.
-- Likely cause: the current Client ID / Secret are not sandbox Open API
-  credentials valid for `openapi.sandbox.tpay.com`. They may be production panel
-  credentials, Origin API credentials, swapped values, or values copied with
-  whitespace/prefixes.
-- Next retry before contacting support: log in to the Tpay Sandbox Merchant
-  Panel, open `Integracje → API`, and use the first Open API credentials
-  section. Copy Client ID to `TPAY_API_KEY`, Secret to `TPAY_API_SECRET`, and
-  keep the merchant/account ID only in `TPAY_MERCHANT_ID`.
+- Detailed success record:
+  [docs/tpay-sandbox-test.md](/Users/magdalenagrabowska/garconmaires/docs/tpay-sandbox-test.md)
+- Tpay sandbox end-to-end payment passed on staging on 2026-06-13.
+- OAuth diagnostic succeeded with the Open API form-body variant:
+  `client_id` + `client_secret`.
+- Hidden-product checkout created a Tpay sandbox transaction and returned a
+  `paymentUrl`.
+- The Tpay sandbox payment was completed in the Tpay panel.
+- Tpay delivered the classic form transaction notification to the app.
+- Webhook verification succeeded after fixing sandbox Open API credentials,
+  `TPAY_MERCHANT_ID`, classic notification handling and the plain text `TRUE`
+  response required by Tpay.
+- Audit order `GM-2026-0003` / `TR-528F-F004PX` became `paid`, moved to
+  `fulfillmentStatus=packing`, and has `paidAt` filled.
+- Stock was committed correctly for the hidden sandbox variant: stock moved from
+  `1` to `0`, reserved moved from `1` to `0`, and the reservation was committed.
+- The sandbox fixture was reset afterward for future tests: hidden product,
+  `stockQuantity=1`, `reservedQuantity=0`. The paid audit order was preserved.
 - In Vercel, paste only the raw value. Do not paste `TPAY_API_KEY=...`,
   `TPAY_API_SECRET=...`, wrapping quotes, or trailing newlines as the value.
 - Do not switch to `TPAY_ENV=production` or the production endpoint just to test
@@ -398,12 +403,14 @@ Staging test checklist:
 - confirm `providerPaymentId` is filled if Tpay returns it
 - confirm duplicate webhook does not double-commit stock
 
-Resume the paused sandbox test later:
+Repeat the sandbox test later:
 
 - log in to the Tpay Sandbox Merchant Panel, not the production panel
 - go to `Integracje → API`
 - copy Open API Client ID to `TPAY_API_KEY`
 - copy Open API Secret to `TPAY_API_SECRET`
+- set `TPAY_MERCHANT_ID` to the sandbox merchant/account id
+- set `TPAY_WEBHOOK_SECRET` to the sandbox `Kod bezpieczeństwa`
 - update `TPAY_API_KEY` and `TPAY_API_SECRET` in Vercel Preview only
 - redeploy Preview and keep `TPAY_ENV=sandbox`
 - confirm the readiness panel is green
@@ -511,6 +518,47 @@ Before switching to `TPAY_ENV=production`:
 - Keep `STORE_STORAGE=postgres`; do not use JSON or Vercel Blob for real
   inventory, orders or payments.
 
+Tpay production remains untested. Before launch, configure production
+credentials only in the Production environment and run one controlled low-value
+live payment after products, legal details, stock, delivery and operational
+checks are final.
+
+### Resend transactional email testing
+
+Do not send real customer emails until launch approval. In Preview/Staging,
+transactional email tests must be admin-only and routed to a test recipient.
+
+Required Preview env vars:
+
+```env
+RESEND_API_KEY=...
+RESEND_FROM_EMAIL=Garçonmaires Studio <studio@garconmaires.com>
+EMAIL_TEST_MODE=true
+EMAIL_TEST_RECIPIENT=admin-or-test@example.com
+```
+
+Optional Preview env:
+
+```env
+RESEND_REPLY_TO=studio@garconmaires.com
+```
+
+Recommended sender: `studio@garconmaires.com` or another verified
+Garçonmaires-domain address. Setup checklist:
+
+- add `garconmaires.com` in Resend
+- add the required Resend DNS records
+- wait for domain verification
+- add the Preview env vars in Vercel
+- redeploy Preview
+- send only an admin/test email
+- preview/test `order_created`, `payment_confirmed`, `order_shipped`,
+  `return_requested`, `complaint_submitted` and `newsletter_confirmation`
+- check `EmailEvent` logs in `/admin`
+
+Keep Production Resend envs unset until explicitly preparing the production
+launch rehearsal.
+
 ## Launch Checklist
 
 - Create a hidden product in `/admin`.
@@ -579,6 +627,7 @@ The newsletter flow:
 
 Full setup instructions are in [docs/newsletter-setup.md](/Users/magdalenagrabowska/garconmaires/docs/newsletter-setup.md).
 Resend domain-specific notes are in [docs/resend-domain-setup.md](/Users/magdalenagrabowska/garconmaires/docs/resend-domain-setup.md).
+Transactional email test notes are in [docs/resend-transactional-email-testing.md](/Users/magdalenagrabowska/garconmaires/docs/resend-transactional-email-testing.md).
 
 Available setup commands:
 

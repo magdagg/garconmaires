@@ -1,22 +1,27 @@
 # Garconmaires launch readiness audit
 
-Audit date: 2026-06-09  
+Audit date: 2026-06-13  
 Stable staging: https://garconmaires-tpay-staging.vercel.app  
 Admin: https://garconmaires-tpay-staging.vercel.app/admin
 
+Supporting notes:
+
+- Tpay sandbox record: [docs/tpay-sandbox-test.md](/Users/magdalenagrabowska/garconmaires/docs/tpay-sandbox-test.md)
+- Resend transactional testing: [docs/resend-transactional-email-testing.md](/Users/magdalenagrabowska/garconmaires/docs/resend-transactional-email-testing.md)
+
 ## Executive summary
 
-Garconmaires is technically close to a controlled staging launch flow, but it is not ready for real sales yet.
+Garconmaires has completed the controlled Tpay sandbox staging payment flow, but it is not ready for real sales yet.
 
 The backend foundation is in place: Postgres storage, Prisma migrations, hidden/draft product data, inventory reservations, order/payment/delivery/returns/complaints models, EmailEvent logging, admin diagnostics, gated public catalog, and Tpay integration are implemented. Staging remains safe: `shopEnabled=false`, `shopMode=PRE_LAUNCH`, visible products are `0`, DROP 01 is draft, and all real products are hidden/draft.
 
-The main blocker is external provider readiness. Tpay sandbox checkout reaches OAuth, but current sandbox credentials return `401 invalid_client`. Real payment testing must remain paused until Tpay provides valid sandbox Open API Client ID and Secret for `openapi.sandbox.tpay.com`.
+Tpay sandbox is now staging-ready: OAuth, checkout transaction creation, payment completion, classic form webhook delivery, webhook verification, paid order update and stock commit have all passed on Preview/Staging. Tpay production credentials and one controlled low-value live payment test remain pending for the launch rehearsal.
 
 The second launch blocker is commercial content/legal readiness. Product images are missing, real products have zero stock, specs and size guides still contain placeholders, and legal pages still require final seller, tax, address, delivery, payment, return, complaint, privacy, and GDPR details.
 
 ## Readiness score
 
-Overall launch readiness: 62/100.
+Overall launch readiness: 70/100.
 
 Area scores:
 
@@ -27,7 +32,7 @@ Area scores:
 | Admin and operations | 82 | Mostly ready |
 | Product catalog safety | 90 | Safe pre-launch |
 | Product content | 35 | Not launch-ready |
-| Payments | 55 | Implemented, externally blocked |
+| Payments | 82 | Sandbox passed, production live test pending |
 | Delivery | 76 | Provider architecture ready, InPost sandbox credentials/test pending |
 | Email | 72 | Templates/logging ready, provider config/test pending |
 | Legal/compliance | 35 | Draft only |
@@ -60,36 +65,33 @@ Area scores:
 - Visible product count remains `0`.
 - Real products remain draft/hidden.
 - Tpay sandbox product remains hidden and separate.
+- Tpay sandbox checkout/webhook test passed end-to-end on Preview/Staging.
+- Audit order `GM-2026-0003` remains paid/packing as evidence.
+- Sandbox fixture was reset to hidden `stockQuantity=1`, `reservedQuantity=0`.
 - No production deploy was performed during this audit.
-- No Tpay payment tests were run during this audit.
 - No real customer emails were sent during this audit.
 
 ## Blockers
 
-1. Tpay sandbox credentials are invalid for the sandbox Open API.
-   - Observed known result: `401 invalid_client`.
-   - Likely cause: current Client ID / Secret are not valid for `openapi.sandbox.tpay.com` or sandbox Open API access is not activated.
-
-2. Real products are not launch-ready.
+1. Real products are not launch-ready.
    - No product images are attached.
    - Stock is `0` for all real variants.
    - Variants are not available.
    - Specs, materials, dimensions, care, model sizing, and size guides still contain placeholders.
 
-3. Legal documents are draft only.
+2. Legal documents are draft only.
    - Seller legal name, NIP, REGON, registered address, return address, complaint contact, payment operator details, delivery operator details, privacy/GDPR legal bases, retention periods, and final return/complaint rules must be completed and reviewed.
 
-4. Email provider is not launch-ready until configured and tested.
+3. Email provider is not launch-ready until configured and tested.
    - `EmailEvent` exists and templates are implemented.
    - Real sending still requires Resend API key, verified sender/domain, and admin-only test sends.
 
-5. Delivery is operationally incomplete.
+4. Delivery is operationally incomplete.
    - InPost provider architecture, parcel locker search endpoint, shipment model and admin actions exist, but no live InPost sandbox credentials or label creation test are complete.
    - Manual fulfillment decision, final prices/times, and return address must be finalized.
 
 ## Must-fix before launch
 
-- Obtain valid Tpay sandbox Open API credentials and complete a real sandbox checkout/webhook test.
 - Finish product images for each launch product and set primary images with useful alt text.
 - Finalize all product specs, material/composition, fit, color, care instructions, measurements, weights, packaging contents, and country of manufacture.
 - Set final stock quantities and availability for launch variants.
@@ -97,8 +99,8 @@ Area scores:
 - Configure Resend sender domain and run admin-only transactional email tests.
 - Decide InPost API versus manual first-drop fulfillment.
 - Confirm final delivery prices, estimated delivery windows, and return address.
-- Run a full hidden-product staging checkout test after Tpay sandbox credentials are fixed.
-- Only after successful sandbox test, prepare production envs and a low-value live payment test.
+- Prepare Tpay production envs only after legal/products/stock are ready.
+- Run one controlled low-value live payment test before public launch.
 
 ## Should-fix before launch
 
@@ -413,6 +415,8 @@ Payment state:
 - Tpay secure/certificate base is `https://secure.sandbox.tpay.com`.
 - Webhook route exists at `/api/payments/webhook/[provider]`.
 - Tpay webhook verification uses JWS signature validation and certificate/root verification.
+- Tpay classic form transaction notifications are supported for sandbox payment notifications.
+- Tpay success responses use plain text `TRUE`, as required by the sandbox panel.
 - Webhook certificate URL origin is checked against the expected Tpay secure origin.
 - Unsupported JWS algorithm is rejected.
 - Amount and currency validation exist before committing payment state.
@@ -422,30 +426,24 @@ Payment state:
 - Failed/cancelled/expired webhook releases active reservations.
 - Payment provider creation happens after DB checkout creation; if provider creation fails, checkout code releases reservations.
 
-Known blocker:
+Sandbox evidence:
 
-- Tpay OAuth returns `401 invalid_client`.
-- Current Client ID / Secret appear invalid for `openapi.sandbox.tpay.com` or sandbox API access is not activated.
+- OAuth diagnostic succeeded with form-body `client_id` + `client_secret`.
+- Hidden sandbox checkout returned a Tpay `paymentUrl`.
+- Tpay sandbox panel marked transaction `TR-528F-F004PX` as paid/correct.
+- Tpay delivered a classic form webhook for order `GM-2026-0003`.
+- Webhook verification accepted the notification after sandbox credential, merchant id and classic response-format fixes.
+- Order `GM-2026-0003` is `paymentStatus=paid`, `fulfillmentStatus=packing`, and has `paidAt` filled.
+- The paid webhook committed the hidden sandbox variant exactly once: stock moved from `1` to `0`, reserved moved from `1` to `0`.
+- Tpay received plain text `TRUE`.
+- The paid test order is preserved as audit evidence. The sandbox fixture was reset afterward to hidden `stockQuantity=1`, `reservedQuantity=0`.
 
-Required Tpay action:
+Remaining Tpay action:
 
-1. Contact Tpay and ask for sandbox Open API Client ID and Secret.
-2. Ask Tpay to confirm sandbox account/API activation.
-3. Ask Tpay to confirm permissions for OAuth token creation and transaction creation on `openapi.sandbox.tpay.com`.
-4. Update Vercel Preview only:
-   - `TPAY_API_KEY`
-   - `TPAY_API_SECRET`
-5. Keep `TPAY_ENV=sandbox`.
-6. Redeploy Preview.
-7. Confirm readiness panel is green.
-8. Reset the sandbox product.
-9. Run hidden admin-token checkout.
-10. Open returned `paymentUrl`.
-11. Complete sandbox payment.
-12. Verify signed webhook marks order paid and inventory committed.
-13. Only after sandbox success consider a low-value live payment test.
-
-No payment tests were run during this audit.
+1. Keep Preview on `TPAY_ENV=sandbox`.
+2. Do not configure production Tpay until product/legal/stock readiness is complete.
+3. Configure production credentials only in Production during launch rehearsal.
+4. Run one controlled low-value live payment and webhook replay before public launch.
 
 ## Part 6: Delivery readiness audit
 
@@ -501,7 +499,6 @@ Email readiness:
 
 - `EmailEvent` table exists.
 - Email logs can persist.
-- Current staging email event count is `0`.
 - Resend integration exists.
 - Missing `RESEND_API_KEY` or `RESEND_FROM_EMAIL` skips safely.
 - Admin email preview exists.
@@ -513,11 +510,13 @@ Email readiness:
 
 Remaining before launch:
 
-- Configure `RESEND_API_KEY`.
-- Configure `RESEND_FROM_EMAIL`.
-- Configure `RESEND_REPLY_TO` if needed.
-- Verify sender domain DNS in Resend.
-- Send test emails to admin-only/test recipient.
+- Configure Preview `RESEND_API_KEY`.
+- Configure Preview `RESEND_FROM_EMAIL`, ideally `Garçonmaires Studio <studio@garconmaires.com>` after domain verification.
+- Configure Preview `RESEND_REPLY_TO` if needed.
+- Set Preview `EMAIL_TEST_MODE=true`.
+- Set Preview `EMAIL_TEST_RECIPIENT` to an admin/test inbox.
+- Add and verify sender domain DNS in Resend.
+- Send test emails only to the admin/test recipient.
 - Visually review every template.
 - Verify order lifecycle emails in staging.
 - Consider Resend idempotency headers/webhook delivery tracking later.
@@ -615,8 +614,8 @@ Risks/recommendations:
 
 ### Phase 2: Provider setup
 
-- Obtain Tpay sandbox credentials.
-- Complete Tpay sandbox OAuth/transaction test.
+- Tpay sandbox OAuth/transaction/webhook test is complete.
+- Preserve `GM-2026-0003` as paid sandbox audit evidence.
 - Configure Resend sender domain.
 - Send admin-only test emails.
 - Decide InPost API versus manual fulfillment for DROP 01.
@@ -631,6 +630,7 @@ Risks/recommendations:
 - Verify `paymentStatus=paid`.
 - Verify `fulfillmentStatus=packing`.
 - Verify stock/reserved stock commit.
+- Reset only the hidden sandbox fixture between future tests; do not alter the paid audit order.
 - Test shipped email with tracking number.
 - Test return request.
 - Test complaint request.
@@ -664,11 +664,11 @@ Do not execute these phases until blockers are resolved.
 
 | Area | Status | Risk | Issue | Recommended fix | Owner/action |
 | --- | --- | --- | --- | --- | --- |
-| Payments | Blocked | Blocker | Tpay OAuth returns `401 invalid_client`. | Get valid sandbox Open API Client ID/Secret and API activation from Tpay. | Tpay/support + site owner |
+| Payments | Sandbox passed | Medium | Production Tpay credentials and live low-value test are not configured/tested. | Configure production only during launch rehearsal and run one controlled low-value live payment. | Tpay/support + site owner |
 | Database | Ready | Low | Migrations applied; no pending migrations. | Continue migration discipline before production. | Engineering |
 | Admin | Mostly ready | Medium | Token auth is simple; no full admin identity/audit trail. | Keep long token, rotate before launch, consider stronger auth/audit trail. | Engineering |
 | Products | Not ready | High | Images missing, stock zero, specs placeholders. | Complete product content, images, specs, stock. | Brand/ops |
-| Stock/inventory | Ready in code | Medium | Needs real concurrent staging checkout after Tpay works. | Run sandbox checkout and webhook test. | Engineering |
+| Stock/inventory | Staging verified | Medium | Sandbox stock commit passed; real product stock still must be finalized. | Set real launch stock and run final launch rehearsal. | Engineering/ops |
 | Delivery | Partial | Medium | InPost API architecture exists, but sandbox credentials and real label/tracking tests are pending; final details missing. | Decide manual vs InPost API, configure sandbox credentials, test labels/tracking, finalize prices/times/return address. | Ops |
 | Email | Partial | Medium | Resend config/domain/test sends pending. | Configure Resend, verify DNS, test admin-only sends. | Engineering/ops |
 | Legal | Draft | High | Seller/tax/address/GDPR/operator details incomplete. | Complete and legally review docs. | Owner/legal |
@@ -681,27 +681,28 @@ Do not execute these phases until blockers are resolved.
 
 Tpay:
 
-- Get sandbox Open API Client ID.
-- Get sandbox Open API Secret.
-- Confirm sandbox merchant/account ID.
-- Confirm sandbox account/API activation.
-- Confirm OAuth permission for `openapi.sandbox.tpay.com`.
-- Confirm transaction creation permission for `openapi.sandbox.tpay.com`.
-- Update Vercel Preview `TPAY_API_KEY`.
-- Update Vercel Preview `TPAY_API_SECRET`.
-- Keep `TPAY_ENV=sandbox`.
-- Redeploy Preview.
-- Run real sandbox checkout and webhook test.
-- Only after sandbox success, prepare production credentials and low-value live test.
+- Sandbox Open API Client ID/Secret were configured in Preview.
+- Sandbox merchant/account ID was configured in Preview.
+- Sandbox security code was configured in Preview.
+- OAuth on `openapi.sandbox.tpay.com` passed.
+- Transaction creation on `openapi.sandbox.tpay.com` passed.
+- Classic Tpay form webhook passed and returned `TRUE`.
+- Audit order `GM-2026-0003` proves sandbox checkout/payment/webhook/stock commit.
+- Next: only after product/legal/stock readiness, prepare production credentials and low-value live test.
 
 Resend:
 
-- Configure `RESEND_API_KEY`.
-- Configure `RESEND_FROM_EMAIL`.
-- Configure `RESEND_REPLY_TO`.
-- Verify sender domain DNS.
-- Send admin-only test email.
-- Review template rendering.
+- Add domain to Resend.
+- Add DNS records and wait for verification.
+- Configure Preview `RESEND_API_KEY`.
+- Configure Preview `RESEND_FROM_EMAIL`.
+- Configure Preview `RESEND_REPLY_TO` if needed.
+- Configure Preview `EMAIL_TEST_MODE=true`.
+- Configure Preview `EMAIL_TEST_RECIPIENT` to an admin/test inbox.
+- Redeploy Preview.
+- Send only admin/test emails.
+- Review order confirmation, payment confirmed, shipped, return received, complaint received and newsletter confirmation templates.
+- Check `EmailEvent` logs.
 
 Delivery/InPost:
 
