@@ -601,11 +601,11 @@ async function recordEmailEvent(event: Omit<EmailEvent, "id" | "createdAt">) {
   const record: EmailEvent = { id, createdAt, ...event };
 
   if (getConfiguredStoreStorageDriver() === "postgres") {
-    try {
-      await getPrisma().emailEvent.create({
+    const createPostgresEmailEvent = (orderId: string | null) =>
+      getPrisma().emailEvent.create({
         data: {
           id,
-          orderId: record.orderId ?? null,
+          orderId,
           recipientEmail: record.recipientEmail,
           template: record.template,
           provider: record.provider,
@@ -616,12 +616,25 @@ async function recordEmailEvent(event: Omit<EmailEvent, "id" | "createdAt">) {
           sentAt: record.sentAt ? new Date(record.sentAt) : null,
         },
       });
+
+    try {
+      await createPostgresEmailEvent(record.orderId ?? null);
       return record;
     } catch (error) {
+      if (record.orderId && isEmailEventOrderForeignKeyError(error)) {
+        await createPostgresEmailEvent(null);
+        console.warn("[store-email] event order link skipped", {
+          template: record.template,
+          status: record.status,
+          reason: "order_not_found",
+        });
+        return { ...record, orderId: null };
+      }
+
       console.warn("[store-email] event log skipped", {
         template: record.template,
         status: record.status,
-        error: error instanceof Error ? error.message : "unknown",
+        error: safeErrorSummary(error),
       });
       return record;
     }
@@ -680,6 +693,13 @@ function safeErrorSummary(error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown email provider error.";
 
   return message.slice(0, 240);
+}
+
+function isEmailEventOrderForeignKeyError(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.includes("EmailEvent_orderId_fkey")
+  );
 }
 
 async function sendRenderedEmail({

@@ -126,6 +126,50 @@ function getAdminAuthDiagnostics() {
   };
 }
 
+function safeAdminActionError(error: unknown) {
+  const name = error instanceof Error ? error.name : "Error";
+  const message = error instanceof Error ? error.message : "Unknown admin action error.";
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+      ? error.code
+      : null;
+
+  return {
+    name,
+    code,
+    message: message.slice(0, 240),
+  };
+}
+
+function latestOrderEmailPayload(
+  database: StoreDatabase,
+  template: StoreEmailTemplate,
+) {
+  const orderTemplates: StoreEmailTemplate[] = [
+    "order_created",
+    "payment_pending",
+    "payment_confirmed",
+    "payment_failed",
+    "order_shipped",
+  ];
+
+  if (!orderTemplates.includes(template)) {
+    return createSyntheticEmailPayload(template);
+  }
+
+  const latestPaidTestOrder =
+    database.orders.find((order) => order.orderNumber === "GM-2026-0003") ??
+    database.orders.find((order) => order.paymentStatus === "paid") ??
+    database.orders[0];
+
+  return latestPaidTestOrder
+    ? { order: latestPaidTestOrder }
+    : createSyntheticEmailPayload(template);
+}
+
 function readinessCheck(
   label: string,
   status: ReadinessStatus,
@@ -782,22 +826,9 @@ export async function POST(request: NextRequest) {
       const template = String(body.payload?.template ?? "order_created") as StoreEmailTemplate;
       const sample = String(body.payload?.sample ?? "synthetic");
       const database = await readStoreDatabase();
-      const orderTemplates: StoreEmailTemplate[] = [
-        "order_created",
-        "payment_pending",
-        "payment_confirmed",
-        "payment_failed",
-        "order_shipped",
-      ];
-      const latestPaidTestOrder =
-        database.orders.find((order) => order.orderNumber === "GM-2026-0003") ??
-        database.orders.find((order) => order.paymentStatus === "paid") ??
-        database.orders[0];
       const payload =
-        sample === "latest_order" &&
-        orderTemplates.includes(template) &&
-        latestPaidTestOrder
-          ? { order: latestPaidTestOrder }
+        sample === "latest_order"
+          ? latestOrderEmailPayload(database, template)
           : createSyntheticEmailPayload(template);
       const preview = await previewStoreEmail(template, payload);
 
@@ -808,20 +839,37 @@ export async function POST(request: NextRequest) {
       const template = String(body.payload?.template ?? "order_created") as StoreEmailTemplate;
       const recipient =
         typeof body.payload?.recipient === "string" ? body.payload.recipient : null;
-      const result = await sendStoreEmailTest({
-        template,
-        recipient,
-        payload: createSyntheticEmailPayload(template),
-      });
+      const database = await readStoreDatabase();
 
-      return NextResponse.json({
-        ok: true,
-        message:
-          result.status === "sent" || result.status === "queued"
-            ? "Test email queued."
-            : "Test email skipped.",
-        result,
-      });
+      try {
+        const result = await sendStoreEmailTest({
+          template,
+          recipient,
+          payload: latestOrderEmailPayload(database, template),
+        });
+
+        return NextResponse.json({
+          ok: true,
+          message:
+            result.status === "sent" || result.status === "queued"
+              ? "Test email queued."
+              : "Test email skipped.",
+          result,
+        });
+      } catch (error) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "Email test send failed.",
+            diagnostics: {
+              action: "email.testSend",
+              template,
+              ...safeAdminActionError(error),
+            },
+          },
+          { status: 500 },
+        );
+      }
     }
 
     if (body.action?.startsWith("shipment.")) {
