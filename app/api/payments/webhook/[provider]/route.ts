@@ -8,9 +8,13 @@ import {
 import {
   assertPaymentWebhookMatchesPayment,
   getPaymentProviderAdapter,
+  summarizePaymentWebhookAttempt,
 } from "@/lib/store/payments";
 import { trackAnalyticsEvent } from "@/lib/store/operations";
-import { processPostgresPaymentWebhook } from "@/lib/store/postgres";
+import {
+  processPostgresPaymentWebhook,
+  recordPostgresPaymentWebhookAttempt,
+} from "@/lib/store/postgres";
 import {
   getConfiguredStoreStorageDriver,
   readStoreDatabase,
@@ -40,6 +44,7 @@ function tpayResponse(accepted: boolean, init?: ResponseInit) {
 export async function POST(request: NextRequest, context: RouteContext) {
   const { provider: rawProvider } = await context.params;
   const provider = rawProvider as PaymentProvider;
+  let rawBody = "";
 
   if (!knownProviders.has(provider)) {
     console.warn("[payment-webhook] unknown provider ignored", { provider: rawProvider });
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   try {
     const adapter = getPaymentProviderAdapter(provider);
-    const rawBody = await request.text();
+    rawBody = await request.text();
     const notification = await adapter.verifyWebhook(request, rawBody);
     let emailTaskType: "payment_confirmed" | "payment_failed" | null = null;
     let emailTaskOrderId: string | null = null;
@@ -172,6 +177,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
       error instanceof Error ? error.message : "Payment webhook verification error.";
 
     console.warn("[payment-webhook] rejected", { provider, reason: message });
+
+    if (rawBody && getConfiguredStoreStorageDriver() === "postgres") {
+      await recordPostgresPaymentWebhookAttempt(
+        summarizePaymentWebhookAttempt({
+          provider,
+          request,
+          rawBody,
+          result: "rejected",
+          responseBody: provider === "tpay" ? "FALSE" : "FALSE",
+          failureReason: message,
+        }),
+      ).catch((attemptError) => {
+        console.warn("[payment-webhook] failed to record rejected attempt", {
+          provider,
+          reason:
+            attemptError instanceof Error
+              ? attemptError.message
+              : "Unknown attempt logging error",
+        });
+      });
+    }
 
     return provider === "tpay"
       ? tpayResponse(false)

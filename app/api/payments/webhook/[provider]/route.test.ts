@@ -3,7 +3,9 @@ import type { PaymentWebhookResult } from "@/lib/store/payments";
 
 const mocks = vi.hoisted(() => ({
   verifyWebhook: vi.fn(),
+  summarizePaymentWebhookAttempt: vi.fn(),
   processPostgresPaymentWebhook: vi.fn(),
+  recordPostgresPaymentWebhookAttempt: vi.fn(),
   sendStoreEmail: vi.fn(),
   readStoreDatabase: vi.fn(),
 }));
@@ -11,10 +13,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/store/payments", () => ({
   getPaymentProviderAdapter: () => ({ verifyWebhook: mocks.verifyWebhook }),
   assertPaymentWebhookMatchesPayment: vi.fn(),
+  summarizePaymentWebhookAttempt: mocks.summarizePaymentWebhookAttempt,
 }));
 
 vi.mock("@/lib/store/postgres", () => ({
   processPostgresPaymentWebhook: mocks.processPostgresPaymentWebhook,
+  recordPostgresPaymentWebhookAttempt: mocks.recordPostgresPaymentWebhookAttempt,
 }));
 
 vi.mock("@/lib/store/storage", () => ({
@@ -58,6 +62,22 @@ describe("Tpay webhook route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.readStoreDatabase.mockResolvedValue({ orders: [{ id: "ord_tpay_test" }] });
+    mocks.recordPostgresPaymentWebhookAttempt.mockResolvedValue(undefined);
+    mocks.summarizePaymentWebhookAttempt.mockReturnValue({
+      provider: "tpay",
+      providerTransactionId: null,
+      providerPaymentId: null,
+      orderId: null,
+      status: null,
+      amount: null,
+      currency: null,
+      rawProviderPayload: {
+        result: "rejected",
+        responseBody: "FALSE",
+        failureReason: "Invalid Tpay notification merchant id.",
+        rawBodyLength: 8,
+      },
+    });
   });
 
   it("returns plain text TRUE for an accepted Tpay notification", async () => {
@@ -117,6 +137,17 @@ describe("Tpay webhook route", () => {
     expect(response.status).toBe(400);
     expect(response.headers.get("content-type")).toContain("text/plain");
     await expect(response.text()).resolves.toBe("FALSE");
+    expect(mocks.recordPostgresPaymentWebhookAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "tpay",
+        rawProviderPayload: expect.objectContaining({
+          result: "rejected",
+          responseBody: "FALSE",
+          failureReason: "Invalid Tpay notification merchant id.",
+          rawBodyLength: expect.any(Number),
+        }),
+      }),
+    );
   });
 
   it("rejects a valid but unknown Tpay notification instead of returning TRUE", async () => {

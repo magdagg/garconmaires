@@ -631,6 +631,44 @@ describe("Tpay adapter", () => {
     expect(JSON.stringify(notification.rawProviderPayload)).not.toContain(md5sum);
   });
 
+  it("detects a Tpay classic form notification even without a content type", async () => {
+    vi.stubEnv("TPAY_MERCHANT_ID", "1010");
+    vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");
+    const md5sum = signTpayClassicNotification({
+      merchantId: "1010",
+      transactionTitle: "TR-GM-TEST",
+      amount: "18.99",
+      crc: "ord_tpay_test",
+      securityCode: "security-code",
+    });
+    const rawBody = new URLSearchParams({
+      id: "1010",
+      tr_id: "TR-GM-TEST",
+      tr_amount: "18.99",
+      tr_paid: "18.99",
+      tr_crc: "ord_tpay_test",
+      tr_status: "TRUE",
+      md5sum,
+    }).toString();
+    const request = new Request("https://example.test", {
+      method: "POST",
+      body: rawBody,
+    });
+
+    const notification = await getPaymentProviderAdapter("tpay").verifyWebhook(
+      request as never,
+      rawBody,
+    );
+
+    expect(notification).toMatchObject({
+      providerPaymentId: "TR-GM-TEST",
+      orderId: "ord_tpay_test",
+      status: "paid",
+      amount: 1899,
+      currency: "PLN",
+    });
+  });
+
   it("rejects a Tpay classic form notification with the wrong security hash", async () => {
     vi.stubEnv("TPAY_MERCHANT_ID", "1010");
     vi.stubEnv("TPAY_WEBHOOK_SECRET", "security-code");

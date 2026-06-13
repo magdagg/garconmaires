@@ -12,7 +12,11 @@ import {
   assertPaymentWebhookMatchesPayment,
   getDefaultPaymentProvider,
 } from "./payments";
-import type { PaymentCreation, PaymentWebhookResult } from "./payments";
+import type {
+  PaymentCreation,
+  PaymentWebhookAttemptSummary,
+  PaymentWebhookResult,
+} from "./payments";
 import type {
   Cart,
   CartItem,
@@ -1789,6 +1793,27 @@ export async function processPostgresPaymentWebhook(input: PaymentWebhookResult)
     },
     { isolationLevel: "Serializable" },
   );
+}
+
+export async function recordPostgresPaymentWebhookAttempt(
+  input: PaymentWebhookAttemptSummary,
+) {
+  const prisma = getPrisma();
+
+  await prisma.paymentWebhookEvent.create({
+    data: {
+      id: createId("wh_attempt"),
+      provider: input.provider,
+      type: "payment_notification_attempt",
+      orderId: input.orderId,
+      providerTransactionId: input.providerTransactionId,
+      providerPaymentId: input.providerPaymentId,
+      status: input.status,
+      amount: input.amount,
+      currency: input.currency,
+      rawProviderPayload: input.rawProviderPayload as Prisma.InputJsonValue,
+    },
+  });
 }
 
 async function releaseReservationsInTx(tx: Db, orderId: string, status: "failed" | "cancelled" | "expired") {

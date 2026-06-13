@@ -53,6 +53,17 @@ export type PaymentWebhookResult = {
   rawProviderPayload: Record<string, unknown>;
 };
 
+export type PaymentWebhookAttemptSummary = {
+  provider: PaymentProvider;
+  providerTransactionId: string | null;
+  providerPaymentId: string | null;
+  orderId: string | null;
+  status: PaymentWebhookResult["status"] | null;
+  amount: number | null;
+  currency: "PLN" | null;
+  rawProviderPayload: Record<string, unknown>;
+};
+
 export type PaymentProviderAdapter = {
   provider: PaymentProvider;
   displayName: string;
@@ -563,6 +574,12 @@ function isTpayClassicNotification(payload: Record<string, unknown>) {
   );
 }
 
+function parseTpayClassicNotification(rawBody: string) {
+  const payload = parseFormWebhookBody(rawBody);
+
+  return isTpayClassicNotification(payload) ? payload : null;
+}
+
 function verifyTpayClassicMd5(payload: Record<string, unknown>) {
   const merchantId = normalizeSecretEnvValue("TPAY_MERCHANT_ID").value;
   const securityCode = normalizeSecretEnvValue("TPAY_WEBHOOK_SECRET").value;
@@ -634,6 +651,119 @@ function mapTpayClassicNotification(payload: Record<string, unknown>): PaymentWe
       md5sum: "[redacted]",
     },
   };
+}
+
+export function summarizePaymentWebhookAttempt(input: {
+  provider: PaymentProvider;
+  request: NextRequest;
+  rawBody: string;
+  result: "accepted" | "rejected";
+  responseBody: "TRUE" | "FALSE";
+  failureReason?: string;
+}): PaymentWebhookAttemptSummary {
+  const contentType = input.request.headers.get("content-type") ?? "";
+  const basePayload = {
+    result: input.result,
+    responseBody: input.responseBody,
+    failureReason: input.failureReason ?? null,
+    contentType: contentType ? contentType.slice(0, 120) : null,
+  };
+
+  if (input.provider === "tpay") {
+    const classicPayload = parseTpayClassicNotification(input.rawBody);
+
+    if (classicPayload) {
+      const rawStatus = text(classicPayload.tr_status)?.toUpperCase() ?? null;
+
+      return {
+        provider: input.provider,
+        providerTransactionId: null,
+        providerPaymentId: text(classicPayload.tr_id),
+        orderId: text(classicPayload.tr_crc),
+        status: rawStatus === "TRUE" ? "paid" : rawStatus ? normalizeStatus(rawStatus) : null,
+        amount:
+          decimalAmountToCents(classicPayload.tr_paid) ??
+          decimalAmountToCents(classicPayload.tr_amount),
+        currency: "PLN",
+        rawProviderPayload: {
+          ...basePayload,
+          payloadFormat: "classic_form",
+          sanitizedKeys: Object.keys(classicPayload).sort(),
+          providerPaymentId: text(classicPayload.tr_id),
+          orderId: text(classicPayload.tr_crc),
+          status: rawStatus,
+          amount: text(classicPayload.tr_paid) ?? text(classicPayload.tr_amount),
+          currency: "PLN",
+          hasMd5sum: Boolean(text(classicPayload.md5sum)),
+        },
+      };
+    }
+  }
+
+  try {
+    const payload = parseWebhookBody(input.rawBody);
+    const data =
+      typeof payload.data === "object" && payload.data !== null
+        ? (payload.data as Record<string, unknown>)
+        : payload;
+    const providerTransactionId = text(data.transactionId) ?? text(payload.transactionId);
+    const providerPaymentId =
+      text(data.transactionTitle) ??
+      text(payload.tr_id) ??
+      text(payload.transactionTitle);
+    const orderId =
+      text(data.transactionHiddenDescription) ??
+      text(payload.tr_crc) ??
+      text(payload.orderId);
+    const rawStatus =
+      text(data.transactionStatus) ??
+      text(payload.tr_status) ??
+      text(payload.status);
+
+    return {
+      provider: input.provider,
+      providerTransactionId,
+      providerPaymentId,
+      orderId,
+      status: rawStatus ? normalizeStatus(rawStatus) : null,
+      amount:
+        decimalAmountToCents(data.transactionAmount) ??
+        decimalAmountToCents(payload.tr_amount) ??
+        decimalAmountToCents(payload.amount),
+      currency: text(payload.currency) === "PLN" || input.provider === "tpay" ? "PLN" : null,
+      rawProviderPayload: {
+        ...basePayload,
+        payloadFormat: "jws_json",
+        sanitizedKeys: Object.keys(payload).sort(),
+        dataKeys: Object.keys(data).sort(),
+        providerTransactionIdPresent: Boolean(providerTransactionId),
+        providerPaymentId,
+        orderId,
+        status: rawStatus ?? null,
+        amount:
+          text(data.transactionAmount) ??
+          text(payload.tr_amount) ??
+          text(payload.amount),
+        currency: text(payload.currency) ?? (input.provider === "tpay" ? "PLN" : null),
+      },
+    };
+  } catch {
+    return {
+      provider: input.provider,
+      providerTransactionId: null,
+      providerPaymentId: null,
+      orderId: null,
+      status: null,
+      amount: null,
+      currency: null,
+      rawProviderPayload: {
+        ...basePayload,
+        payloadFormat: "unknown",
+        sanitizedKeys: [],
+        rawBodyLength: input.rawBody.length,
+      },
+    };
+  }
 }
 
 function getLocalePrefix(locale: "pl" | "en") {
@@ -1266,14 +1396,10 @@ function tpayAdapter(): PaymentProviderAdapter {
       };
     },
     async verifyWebhook(request, rawBody) {
-      const contentType = request.headers.get("content-type") ?? "";
+      const formPayload = parseTpayClassicNotification(rawBody);
 
-      if (contentType.includes("application/x-www-form-urlencoded")) {
-        const formPayload = parseFormWebhookBody(rawBody);
-
-        if (isTpayClassicNotification(formPayload)) {
-          return mapTpayClassicNotification(formPayload);
-        }
+      if (formPayload) {
+        return mapTpayClassicNotification(formPayload);
       }
 
       await verifyTpayJwsSignature(
