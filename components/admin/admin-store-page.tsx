@@ -236,6 +236,17 @@ type StoreSnapshot = {
         warnings: string[];
       };
     };
+    legalReadiness: {
+      sellerDataStatus: "pending";
+      legalStatus: "pending";
+      businessRegistrationStatus: "pending";
+      readyForPublicCheckout: boolean;
+      blocker: string;
+      reason: string;
+      requiredBusinessFormDecision: string[];
+      sellerFields: ReadinessCheck[];
+      legalPages: ReadinessCheck[];
+    };
     email: {
       config: {
         resendApiKeyPresent: boolean;
@@ -292,6 +303,8 @@ type TpayEnvValueDiagnostics = {
 };
 
 type TpaySandboxDiagnostics = NonNullable<StoreSnapshot["diagnostics"]>["tpaySandbox"];
+type LegalReadinessDiagnostics =
+  NonNullable<StoreSnapshot["diagnostics"]>["legalReadiness"];
 
 type TpayOAuthDiagnosticResult = {
   ok: boolean;
@@ -681,6 +694,7 @@ export function AdminStorePage() {
                 onRunOAuthDiagnostic={runTpayOAuthDiagnostic}
                 oauthDiagnostic={tpayOauthDiagnostic}
               />
+              <LegalReadinessPanel diagnostics={snapshot.diagnostics?.legalReadiness} />
 
             <nav className="mt-8 flex flex-wrap gap-2">
               {tabs.map((tab) => (
@@ -1107,6 +1121,10 @@ export function AdminStorePage() {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
+                  <SettingsReadOnly label="seller data status" value={snapshot.diagnostics?.legalReadiness.sellerDataStatus ?? "pending"} />
+                  <SettingsReadOnly label="legal status" value={snapshot.diagnostics?.legalReadiness.legalStatus ?? "pending"} />
+                  <SettingsReadOnly label="business registration status" value={snapshot.diagnostics?.legalReadiness.businessRegistrationStatus ?? "pending"} />
+                  <SettingsReadOnly label="public checkout legal readiness" value={snapshot.diagnostics?.legalReadiness.readyForPublicCheckout ? "ready" : "blocked"} />
                   <SettingsField label="seller legal name" value={snapshot.settings.sellerName} onSave={(value) => action("settings.update", { sellerName: value })} />
                   <SettingsField label="seller address" value={snapshot.settings.sellerAddress} onSave={(value) => action("settings.update", { sellerAddress: value })} />
                   <SettingsField label="seller email" value={snapshot.settings.contactEmail} onSave={(value) => action("settings.update", { contactEmail: value })} />
@@ -2246,6 +2264,48 @@ function TpayDiagnostics({
         >
           Reset test product
         </button>
+      </div>
+    </section>
+  );
+}
+
+function LegalReadinessPanel({
+  diagnostics,
+}: {
+  diagnostics: LegalReadinessDiagnostics | undefined;
+}) {
+  if (!diagnostics) {
+    return null;
+  }
+
+  return (
+    <section className="mt-8 border border-red-400/50 bg-red-950/15 p-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.24em] text-red-100/70">
+            Legal and seller readiness
+          </p>
+          <p className="mt-2 text-sm text-red-100">{diagnostics.blocker}</p>
+          <p className="mt-2 max-w-3xl text-xs leading-6 text-white/55">
+            {diagnostics.reason}
+          </p>
+        </div>
+        <div className="text-xs text-white/45 md:text-right">
+          <p>sellerDataStatus={diagnostics.sellerDataStatus}</p>
+          <p>legalStatus={diagnostics.legalStatus}</p>
+          <p>businessRegistrationStatus={diagnostics.businessRegistrationStatus}</p>
+          <p>readyForPublicCheckout={String(diagnostics.readyForPublicCheckout)}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <ReadinessGroup title="Seller data" checks={diagnostics.sellerFields} />
+        <ReadinessGroup title="Draft legal pages" checks={diagnostics.legalPages} />
+      </div>
+
+      <div className="mt-4 text-xs text-white/45">
+        Business form decision required:{" "}
+        {diagnostics.requiredBusinessFormDecision.join(" or ")}.
       </div>
     </section>
   );

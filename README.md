@@ -116,6 +116,22 @@ pre-launch until `shopEnabled` and the relevant drop status are changed.
 the request also includes a valid admin token and `x-checkout-test-mode: true`.
 Public customers cannot bypass `shopEnabled=false`.
 
+## Legal/Seller Readiness
+
+Garçonmaires must remain pre-launch until the business form and seller details
+are confirmed. Current Preview readiness status is:
+
+```text
+sellerDataStatus=pending
+legalStatus=pending
+businessRegistrationStatus=pending
+```
+
+Do not invent or publish seller name, NIP, REGON, registered address, return
+address or tax details. Public checkout must stay blocked until the business
+form is chosen (`dzialalnosc nierejestrowana` or `JDG`) and final seller/legal
+details are completed and reviewed.
+
 ## Polish Payment Providers
 
 Set `PAYMENT_PROVIDER` to one of:
@@ -179,10 +195,11 @@ Email events store only operational metadata: recipient email, template type,
 provider, status, provider message id if available, a short error summary and
 timestamps. They do not store secrets, provider payloads, tokens or headers.
 
-Current stable Preview status: Resend env vars are not configured yet, so
-lifecycle emails skip safely and create sanitized `EmailEvent` records. Configure
-Resend only in Preview until the production launch rehearsal is explicitly
-approved.
+Current stable Preview status: Resend env vars are configured in Preview and
+admin-only test sends to `EMAIL_TEST_RECIPIENT` have passed for
+`order_created`, `payment_confirmed`, `order_shipped` and
+`newsletter_confirmation`. Configure Resend only in Preview until the production
+launch rehearsal is explicitly approved.
 
 ## Delivery Readiness
 
@@ -537,10 +554,14 @@ transactional email tests must be admin-only and routed to a test recipient.
 Current stable Preview status:
 
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`,
-  `EMAIL_TEST_MODE` and `EMAIL_TEST_RECIPIENT` are not configured in Preview.
-- Existing order lifecycle attempts are recorded as skipped email events because
-  `RESEND_API_KEY` is missing.
-- No real emails have been sent from Preview.
+  `EMAIL_TEST_MODE` and `EMAIL_TEST_RECIPIENT` are configured in Preview.
+- Admin-only test sends passed through Resend for `order_created`,
+  `payment_confirmed`, `order_shipped` and `newsletter_confirmation`.
+- New `EmailEvent` rows were recorded with status `sent`, provider `resend`,
+  provider message id present, `sentAt` present and `errorSummary=null`.
+- Order-related test sends are linked to the paid audit order `GM-2026-0003`;
+  `newsletter_confirmation` has no order link.
+- No production emails and no real customer emails have been sent.
 
 Required Preview env vars:
 
@@ -567,8 +588,8 @@ Garçonmaires-domain address. Setup checklist:
 - redeploy Preview
 - send only to `EMAIL_TEST_RECIPIENT`
 - preview/test `order_created`, `payment_confirmed`, `order_shipped`,
-  `payment_failed`, `return_requested`, `complaint_submitted`,
-  `newsletter_confirmation` and `early_access_invitation`
+  `newsletter_confirmation`, `payment_failed`, `return_requested`,
+  `complaint_submitted` and `early_access_invitation`
 - check `EmailEvent` logs in `/admin`
 
 Keep Production Resend envs unset until explicitly preparing the production

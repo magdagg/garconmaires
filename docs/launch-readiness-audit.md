@@ -17,7 +17,7 @@ The backend foundation is in place: Postgres storage, Prisma migrations, hidden/
 
 Tpay sandbox is now staging-ready: OAuth, checkout transaction creation, payment completion, classic form webhook delivery, webhook verification, paid order update and stock commit have all passed on Preview/Staging. Tpay production credentials and one controlled low-value live payment test remain pending for the launch rehearsal.
 
-The second launch blocker is commercial content/legal readiness. Product images are missing, real products have zero stock, specs and size guides still contain placeholders, and legal pages still require final seller, tax, address, delivery, payment, return, complaint, privacy, and GDPR details.
+The second launch blocker is commercial content/legal readiness. Product images are missing, real products have zero stock, specs and size guides still contain placeholders, and legal pages still require final seller, tax, address, delivery, payment, return, complaint, privacy, and GDPR details. Seller/legal data is explicitly pending because the business/JDG is not registered yet.
 
 ## Readiness score
 
@@ -34,8 +34,8 @@ Area scores:
 | Product content | 35 | Not launch-ready |
 | Payments | 82 | Sandbox passed, production live test pending |
 | Delivery | 76 | Provider architecture ready, InPost sandbox credentials/test pending |
-| Email | 74 | Templates/logging ready, Preview provider config/test pending |
-| Legal/compliance | 35 | Draft only |
+| Email | 84 | Preview test-send passed, production launch setup pending |
+| Legal/compliance | 25 | Business registration and seller data pending |
 | Frontend | 78 | Strong pre-launch, storefront launch polish pending |
 | SEO | 78 | Safe pre-launch |
 | Security/privacy | 80 | Good baseline, some hardening remains |
@@ -68,6 +68,11 @@ Area scores:
 - Tpay sandbox checkout/webhook test passed end-to-end on Preview/Staging.
 - Audit order `GM-2026-0003` remains paid/packing as evidence.
 - Sandbox fixture was reset to hidden `stockQuantity=1`, `reservedQuantity=0`.
+- Resend Preview envs are configured.
+- Admin-only Resend test sends passed for `order_created`,
+  `payment_confirmed`, `order_shipped` and `newsletter_confirmation`.
+- New `EmailEvent` rows record sent status, provider `resend`, provider message
+  id present and `sentAt` present without raw provider payloads or secrets.
 - No production deploy was performed during this audit.
 - No real customer emails were sent during this audit.
 
@@ -80,14 +85,11 @@ Area scores:
    - Specs, materials, dimensions, care, model sizing, and size guides still contain placeholders.
 
 2. Legal documents are draft only.
+   - Business registration status is pending because the business/JDG is not registered yet.
+   - Launch is blocked until the business form is chosen: działalność nierejestrowana or JDG.
    - Seller legal name, NIP, REGON, registered address, return address, complaint contact, payment operator details, delivery operator details, privacy/GDPR legal bases, retention periods, and final return/complaint rules must be completed and reviewed.
 
-3. Email provider is not launch-ready until configured and tested.
-   - `EmailEvent` exists and templates are implemented.
-   - Preview currently has no Resend env vars, so attempted lifecycle emails skip safely.
-   - Real sending still requires Resend API key, verified sender/domain, `EMAIL_TEST_RECIPIENT`, and admin-only test sends.
-
-4. Delivery is operationally incomplete.
+3. Delivery is operationally incomplete.
    - InPost provider architecture, parcel locker search endpoint, shipment model and admin actions exist, but no live InPost sandbox credentials or label creation test are complete.
    - Manual fulfillment decision, final prices/times, and return address must be finalized.
 
@@ -97,7 +99,8 @@ Area scores:
 - Finalize all product specs, material/composition, fit, color, care instructions, measurements, weights, packaging contents, and country of manufacture.
 - Set final stock quantities and availability for launch variants.
 - Complete and legally review Polish and English legal pages.
-- Configure Resend sender domain and run admin-only transactional email tests.
+- Prepare Production Resend envs only during the approved launch rehearsal and
+  run one final controlled email check.
 - Decide InPost API versus manual first-drop fulfillment.
 - Confirm final delivery prices, estimated delivery windows, and return address.
 - Prepare Tpay production envs only after legal/products/stock are ready.
@@ -210,7 +213,7 @@ Current staging counts:
 | Deliveries | 2 |
 | Return requests | 0 |
 | Complaints | 0 |
-| Email events | 2 |
+| Email events | 9 |
 | Analytics events | 0 |
 | Legal consents | 2 |
 | Legal submissions | 0 |
@@ -501,31 +504,47 @@ Email readiness:
 - `EmailEvent` table exists.
 - Email logs can persist.
 - Resend integration exists.
-- Stable Preview currently has no Resend env vars configured.
-- Existing lifecycle email attempts are skipped safely because `RESEND_API_KEY` is missing.
+- Stable Preview has Resend env vars configured:
+  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`,
+  `EMAIL_TEST_MODE` and `EMAIL_TEST_RECIPIENT`.
 - Missing `RESEND_API_KEY` or `RESEND_FROM_EMAIL` skips safely.
 - Admin email preview exists.
 - Admin test send restrictions exist.
 - Preview test sends require `EMAIL_TEST_RECIPIENT` and do not use arbitrary typed recipients.
+- Preview admin-only test sends passed through Resend for `order_created`,
+  `payment_confirmed`, `order_shipped` and `newsletter_confirmation`.
+- Passed test sends created `EmailEvent` rows with status `sent`, provider
+  `resend`, masked recipient, provider message id present, `sentAt` present and
+  `errorSummary=null`.
+- Order-related test sends are linked to the real paid audit order
+  `GM-2026-0003`; `newsletter_confirmation` has `orderId=null`.
 - Dynamic content escaping exists.
 - Duplicate-send prevention exists for order lifecycle templates where implemented.
 - Legal footer/support copy exists in rendered emails.
-- No real emails were sent during this audit.
+- No raw provider payloads, secrets, tokens or headers are stored in
+  `EmailEvent`.
+- No real customer emails were sent during this audit.
 
 Remaining before launch:
 
-- Configure Preview `RESEND_API_KEY`.
-- Configure Preview `RESEND_FROM_EMAIL`, ideally `Garçonmaires Studio <studio@garconmaires.com>` after domain verification.
-- Configure Preview `RESEND_REPLY_TO` if needed.
-- Set Preview `EMAIL_TEST_MODE=true`.
-- Set Preview `EMAIL_TEST_RECIPIENT` to an admin/test inbox.
-- Add and verify sender domain DNS in Resend.
-- Send test emails only to the admin/test recipient.
-- Visually review every template.
+- Keep Preview test sends routed only to `EMAIL_TEST_RECIPIENT`.
+- Confirm/maintain sender domain DNS verification in Resend.
+- Visually review every remaining template not included in the passed send set.
 - Verify order lifecycle emails in staging.
+- Configure Production Resend envs only during the approved production launch
+  rehearsal.
 - Consider Resend idempotency headers/webhook delivery tracking later.
 
 ## Part 8: Legal and compliance readiness audit
+
+Readiness status:
+
+- `sellerDataStatus=pending`
+- `legalStatus=pending`
+- `businessRegistrationStatus=pending`
+- Seller/legal data is not ready because the business/JDG is not registered yet.
+- Public checkout must not launch until the business form and seller details are confirmed.
+- Business form decision required before launch: działalność nierejestrowana or JDG.
 
 Checked pages:
 
@@ -543,8 +562,9 @@ Checked pages:
 Current status:
 
 - Pages exist and return `200`.
-- They are explicitly draft/pre-launch documents.
+- They are explicitly draft/pre-launch/pending documents.
 - They contain required topic coverage, but not final legal data.
+- They now include a draft/pending notice where applicable.
 
 Placeholders still requiring final data:
 
@@ -572,6 +592,7 @@ Placeholders still requiring final data:
 - Lowest price in last 30 days process for promotions.
 
 Do not treat legal documents as final until reviewed.
+Do not add fake seller data or publish final legal/seller claims before business registration and seller details are confirmed.
 
 ## Part 9: Security and privacy audit
 
@@ -674,7 +695,7 @@ Do not execute these phases until blockers are resolved.
 | Products | Not ready | High | Images missing, stock zero, specs placeholders. | Complete product content, images, specs, stock. | Brand/ops |
 | Stock/inventory | Staging verified | Medium | Sandbox stock commit passed; real product stock still must be finalized. | Set real launch stock and run final launch rehearsal. | Engineering/ops |
 | Delivery | Partial | Medium | InPost API architecture exists, but sandbox credentials and real label/tracking tests are pending; final details missing. | Decide manual vs InPost API, configure sandbox credentials, test labels/tracking, finalize prices/times/return address. | Ops |
-| Email | Partial | Medium | Resend Preview envs/domain/test sends pending; current attempts skip safely. | Configure Resend, verify DNS, test admin-only sends to `EMAIL_TEST_RECIPIENT`. | Engineering/ops |
+| Email | Staging passed | Low | Preview test sends passed; Production envs and final launch rehearsal remain pending. | Configure Production Resend only during approved launch rehearsal and run final controlled email check. | Engineering/ops |
 | Legal | Draft | High | Seller/tax/address/GDPR/operator details incomplete. | Complete and legally review docs. | Owner/legal |
 | Frontend | Good pre-launch | Medium | Product launch UI not visually validated with real images/content. | QA product/detail/cart/checkout once content exists. | Design/engineering |
 | SEO | Safe pre-launch | Medium | Robots allows all public pages; product visibility gating currently protects hidden products. | Re-check noindex/indexing at launch transition. | Engineering |
@@ -696,17 +717,17 @@ Tpay:
 
 Resend:
 
-- Add domain to Resend.
-- Add DNS records and wait for verification.
-- Configure Preview `RESEND_API_KEY`.
-- Configure Preview `RESEND_FROM_EMAIL`.
-- Configure Preview `RESEND_REPLY_TO` if needed.
-- Configure Preview `EMAIL_TEST_MODE=true`.
-- Configure Preview `EMAIL_TEST_RECIPIENT` to an admin/test inbox.
-- Redeploy Preview.
-- Send only admin/test emails to `EMAIL_TEST_RECIPIENT`.
-- Review order confirmation, payment confirmed, shipped, return received, complaint received and newsletter confirmation templates.
-- Check `EmailEvent` logs.
+- Preview envs are configured: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`,
+  `RESEND_REPLY_TO`, `EMAIL_TEST_MODE` and `EMAIL_TEST_RECIPIENT`.
+- Admin-only Preview test sends passed for `order_created`,
+  `payment_confirmed`, `order_shipped` and `newsletter_confirmation`.
+- Passed sends are recorded in `EmailEvent` with status `sent`, provider
+  `resend`, provider message id present, `sentAt` present and no error summary.
+- Order-related test events link to `GM-2026-0003`; newsletter confirmation has
+  no order link.
+- Continue sending Preview tests only to `EMAIL_TEST_RECIPIENT`.
+- Before production launch, configure Production Resend envs only during the
+  approved launch rehearsal and run one controlled final email check.
 
 Delivery/InPost:
 
@@ -775,16 +796,15 @@ For each real product:
 ## Exact next actions
 
 1. Preserve the passed Tpay sandbox audit order `GM-2026-0003` and keep the hidden sandbox product reset.
-2. Configure Resend sender domain and envs in Preview.
-3. Redeploy Preview and confirm email diagnostics show configured Preview values without exposing secrets.
-4. Send admin-only test emails to `EMAIL_TEST_RECIPIENT` and review all templates.
-5. Upload final product images and complete product specs/size guides.
-6. Finalize stock quantities and variant availability.
-7. Complete legal/seller/return/privacy data and get legal review.
-8. Decide manual fulfillment versus InPost API for DROP 01.
-9. Run full staging order lifecycle test: checkout, payment, packing, shipped, delivered, return, complaint.
-10. Prepare production env checklist and backup/export runbook.
-11. Only after staging success, plan controlled production launch.
+2. Keep Preview Resend test sends limited to `EMAIL_TEST_RECIPIENT`.
+3. Visually review remaining email templates not included in the passed send set.
+4. Upload final product images and complete product specs/size guides.
+5. Finalize stock quantities and variant availability.
+6. Complete legal/seller/return/privacy data and get legal review.
+7. Decide manual fulfillment versus InPost API for DROP 01.
+8. Run full staging order lifecycle test: checkout, payment, packing, shipped, delivered, return, complaint.
+9. Prepare production env checklist and backup/export runbook, including Production Resend envs.
+10. Only after staging success, plan controlled production launch.
 
 ## Verification commands
 
@@ -810,12 +830,15 @@ Results:
 
 ## Final audit conclusion
 
-Garconmaires is safe in pre-launch and ready for continued staging work. It is not ready for real sales until payment credentials, product content/images/stock, legal documents, email provider setup, and delivery operations are completed and verified.
+Garconmaires is safe in pre-launch and ready for continued staging work. It is not ready for real sales until product content/images/stock, legal documents, business registration/seller data, production provider setup, and delivery operations are completed and verified.
 
 Keep the current safe state until then:
 
 - `shopEnabled=false`
 - `shopMode=PRE_LAUNCH`
+- `sellerDataStatus=pending`
+- `legalStatus=pending`
+- `businessRegistrationStatus=pending`
 - real products hidden/draft
 - visible products `0`
 - no production payment tests

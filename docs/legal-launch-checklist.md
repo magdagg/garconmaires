@@ -6,6 +6,11 @@ a Polish ecommerce/GDPR specialist before public sales.
 
 ## Seller and business details
 
+- Business registration status: pending.
+- Choose the launch business form before public sales: działalność
+  nierejestrowana or JDG.
+- Do not invent or publish seller name, NIP, REGON, legal address, return
+  address or tax details before the business form and seller data are confirmed.
 - Legal seller name completed.
 - NIP completed.
 - REGON completed if applicable.
@@ -55,6 +60,9 @@ a Polish ecommerce/GDPR specialist before public sales.
 
 - `shopEnabled=false` until launch approval.
 - `shopMode=PRE_LAUNCH` until launch approval.
+- `sellerDataStatus=pending` until seller details are confirmed.
+- `legalStatus=pending` until legal pages are completed and reviewed.
+- `businessRegistrationStatus=pending` until business form is chosen and confirmed.
 - Products remain hidden/draft until launch approval.
 - `CHECKOUT_TEST_MODE=true` only in Preview/local.
 - `CHECKOUT_TEST_MODE=false` in Production.

@@ -24,6 +24,24 @@ export type InfoPageKey =
   | "privacy"
   | "cookies";
 
+const plLegalPendingSection: InfoSection = {
+  title: "Status prawny: wersja robocza / pending",
+  bullets: [
+    "Dane sprzedawcy i forma prowadzenia działalności nie są jeszcze potwierdzone.",
+    "Przed startem sprzedaży trzeba wybrać działalność nierejestrowaną albo JDG i uzupełnić finalne dane sprzedawcy.",
+    "Nie traktuj tej strony jako finalnego regulaminu, polityki lub informacji handlowej.",
+  ],
+};
+
+const enLegalPendingSection: InfoSection = {
+  title: "Legal status: draft / pending",
+  bullets: [
+    "Seller details and business form are not confirmed yet.",
+    "Before public sales, the business form must be chosen and final seller details must be completed.",
+    "Do not treat this page as final legal, seller, or commercial information.",
+  ],
+};
+
 export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = {
   pl: {
     shipping: {
@@ -34,6 +52,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "Każde zamówienie pakujemy starannie i wysyłamy z jasną informacją o statusie. Poniżej znajdziesz najważniejsze zasady dostawy.",
       sections: [
+        plLegalPendingSection,
         {
           title: "Metody dostawy przygotowane do launchu",
           bullets: [
@@ -84,6 +103,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "To robocza strona informacyjna. Przed startem sprzedaży wymaga uzupełnienia o finalny adres zwrotu, kontakt reklamacyjny i weryfikację prawną.",
       sections: [
+        plLegalPendingSection,
         {
           title: "Dane do uzupełnienia przed startem",
           bullets: [
@@ -227,6 +247,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "To robocza struktura regulaminu sklepu. Przed uruchomieniem sprzedaży uzupełnimy ją o pełne dane sprzedawcy i weryfikację prawną.",
       sections: [
+        plLegalPendingSection,
         {
           title: "Dane sprzedawcy do uzupełnienia",
           bullets: [
@@ -276,6 +297,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "To roboczy zakres polityki prywatności. Przed publikacją sklepu uzupełnimy go o pełne dane administratora i podstawy prawne przetwarzania.",
       sections: [
+        plLegalPendingSection,
         {
           title: "Administrator danych do uzupełnienia",
           bullets: [
@@ -344,6 +366,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "Garçonmaires orders are prepared with careful packaging, clear communication, and a calm premium checkout experience in mind.",
       sections: [
+        enLegalPendingSection,
         {
           title: "Processing time",
           bullets: [
@@ -376,6 +399,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "This is draft launch content. It must be completed with final seller, return address, and complaint contact details before public sales.",
       sections: [
+        enLegalPendingSection,
         {
           title: "Launch placeholders",
           bullets: [
@@ -515,6 +539,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "This page is a working store structure and should be completed with full seller information and reviewed legally before commercial launch.",
       sections: [
+        enLegalPendingSection,
         {
           title: "Seller details to complete",
           bullets: [
@@ -563,6 +588,7 @@ export const storePages: Record<Locale, Record<InfoPageKey, InfoPageContent>> = 
       intro:
         "This page outlines the working privacy structure. Before launch, it should be completed with full controller details and the exact legal bases for processing.",
       sections: [
+        enLegalPendingSection,
         {
           title: "Controller details to complete",
           bullets: [

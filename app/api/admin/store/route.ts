@@ -73,6 +73,18 @@ type AdminWebhookEvent = {
   createdAt: Date | string | null;
 };
 
+type LegalReadinessDiagnostics = {
+  sellerDataStatus: "pending";
+  legalStatus: "pending";
+  businessRegistrationStatus: "pending";
+  readyForPublicCheckout: boolean;
+  blocker: string;
+  reason: string;
+  requiredBusinessFormDecision: string[];
+  sellerFields: ReadinessCheck[];
+  legalPages: ReadinessCheck[];
+};
+
 type StoreTransactionClient = Parameters<
   Parameters<ReturnType<typeof getPrisma>["$transaction"]>[0]
 >[0];
@@ -168,6 +180,43 @@ function latestOrderEmailPayload(
   return latestPaidTestOrder
     ? { order: latestPaidTestOrder }
     : createSyntheticEmailPayload(template);
+}
+
+function getLegalReadinessDiagnostics(database: StoreDatabase): LegalReadinessDiagnostics {
+  const sellerFields: Array<[string, string]> = [
+    ["sellerName", database.settings.sellerName],
+    ["sellerAddress", database.settings.sellerAddress],
+    ["nip", database.settings.nip],
+    ["regon", database.settings.regon],
+    ["returnAddress", database.settings.returnAddress],
+  ];
+  const legalPages = [
+    "terms/regulamin",
+    "privacy policy",
+    "returns and complaints",
+    "delivery",
+    "contact",
+  ];
+
+  return {
+    sellerDataStatus: "pending",
+    legalStatus: "pending",
+    businessRegistrationStatus: "pending",
+    readyForPublicCheckout: false,
+    blocker:
+      "Seller/legal data pending — do not launch checkout until business form and seller details are confirmed.",
+    reason: "Business registration is not complete yet; do not invent or publish seller, NIP, address, return address, or tax details.",
+    requiredBusinessFormDecision: [
+      "dzialalnosc nierejestrowana",
+      "JDG",
+    ],
+    sellerFields: sellerFields.map(([label, value]) =>
+      readinessCheck(label, value.trim() ? "warn" : "fail", value.trim() ? "filled but must be verified before launch" : "pending"),
+    ),
+    legalPages: legalPages.map((label) =>
+      readinessCheck(label, "warn", "draft/pending; not final legal copy"),
+    ),
+  };
 }
 
 function readinessCheck(
@@ -695,6 +744,7 @@ export async function GET(request: NextRequest) {
     diagnostics: {
       adminAuth: getAdminAuthDiagnostics(),
       tpaySandbox: await getTpaySandboxDiagnostics({ database, readError }),
+      legalReadiness: getLegalReadinessDiagnostics(database),
       email: {
         config: getEmailConfigDiagnostics(),
         templates: getAvailableEmailTemplates(),

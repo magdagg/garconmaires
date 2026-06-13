@@ -342,7 +342,7 @@ export const copy = {
       eyebrow: "Kontakt",
       heroTitle: "Kontakt ze studiem.",
       heroBody:
-        "Napisz do nas w sprawie kolekcji, prasy, współpracy albo zamówienia. Odpowiadamy bezpośrednio ze studia Garçonmaires.",
+        "Napisz do nas w sprawie kolekcji, prasy albo współpracy. Dane sprzedawcy i forma działalności są jeszcze w statusie pending, więc strona kontaktowa nie jest finalną informacją handlową.",
       email: "E-mail",
       base: "Miasto",
       name: "Imię i nazwisko",
@@ -565,7 +565,7 @@ export const copy = {
       eyebrow: "Contact",
       heroTitle: "Studio access.",
       heroBody:
-        "For press, wholesale, and collection inquiries, contact the Garçonmaires studio directly.",
+        "For press, wholesale, and collection inquiries, contact the Garçonmaires studio directly. Seller details and business form are still pending, so this contact page is not final commercial information.",
       email: "Email",
       base: "Base",
       name: "Name",

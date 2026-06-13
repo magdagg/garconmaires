@@ -1,15 +1,24 @@
 # Resend transactional email testing
 
-Status: prepared for Preview/Staging setup. Do not send real customer emails
-yet.
+Status: Preview/Staging admin-only test-send passed. Do not send real customer
+emails yet.
 
 Current stable Preview status:
 
 - Stable staging admin: https://garconmaires-tpay-staging.vercel.app/admin
-- Resend Preview env vars are not configured yet.
-- Existing lifecycle attempts are logged as skipped `EmailEvent` records because
-  `RESEND_API_KEY` is missing.
-- No real emails have been sent from Preview.
+- Resend Preview env vars are configured:
+  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`,
+  `EMAIL_TEST_MODE` and `EMAIL_TEST_RECIPIENT`.
+- Admin-only test sends passed through Resend for:
+  `order_created`, `payment_confirmed`, `order_shipped` and
+  `newsletter_confirmation`.
+- New `EmailEvent` rows were recorded with status `sent`, provider `resend`,
+  provider message id present, `sentAt` present and `errorSummary=null`.
+- Order-related templates are linked to the paid sandbox audit order
+  `GM-2026-0003`.
+- `newsletter_confirmation` is recorded with `orderId=null`.
+- No production emails and no real customer emails have been sent.
+- No Production deploy was performed for the Preview/Staging email test.
 - Preview test sends require `EMAIL_TEST_RECIPIENT`; arbitrary typed recipients
   are blocked in Preview.
 
@@ -48,15 +57,28 @@ verification is required for outbound transactional email.
 6. Send an admin-only test email to `EMAIL_TEST_RECIPIENT`.
 7. Preview and test these templates:
    - `order_created`
-   - `payment_pending`
    - `payment_confirmed`
-   - `payment_failed`
    - `order_shipped`
+   - `newsletter_confirmation`
+   - `payment_pending`
+   - `payment_failed`
    - `return_requested`
    - `complaint_submitted`
-   - `newsletter_confirmation`
    - `early_access_invitation`
 8. Check `EmailEvent` logs in `/admin`.
+
+Passed Preview test-send results:
+
+| Template | Status | Provider | Order link |
+| --- | --- | --- | --- |
+| `order_created` | `sent` | `resend` | `GM-2026-0003` |
+| `payment_confirmed` | `sent` | `resend` | `GM-2026-0003` |
+| `order_shipped` | `sent` | `resend` | `GM-2026-0003` |
+| `newsletter_confirmation` | `sent` | `resend` | none |
+
+For each passed send, `EmailEvent.providerMessageId` and `EmailEvent.sentAt`
+are present, `errorSummary` is null, and no raw provider payloads, secrets,
+tokens or headers are stored.
 
 ## Admin-only testing flow
 
