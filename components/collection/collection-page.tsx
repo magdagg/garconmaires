@@ -1,9 +1,7 @@
+import Image from "next/image";
 import { Space_Grotesk } from "next/font/google";
-import Link from "next/link";
 import { NewsletterForm } from "@/components/newsletter/newsletter-form";
-import { copy, type Locale } from "@/lib/i18n";
-import type { PublicProduct } from "@/lib/store/public-catalog";
-import { formatPrice } from "@/lib/utils";
+import { type Locale } from "@/lib/i18n";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -11,244 +9,274 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
 });
 
-function HeroVisual() {
-  return (
-    <div className="relative min-h-[32rem] overflow-hidden bg-black md:min-h-[calc(100svh-72px)]">
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,#111_0%,#020202_58%,#080808_100%)]" />
-      <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:72px_72px]" />
-      <div className="absolute inset-x-[10%] top-[18%] h-px bg-white/12" />
-      <div className="absolute inset-y-[18%] right-[18%] w-px bg-white/10" />
-      <div className="absolute right-[12%] bottom-[18%] max-w-[18rem] text-right">
-        <p className="mt-4 text-5xl leading-none font-medium text-white/70 md:text-7xl">
-          DROP 01
-        </p>
-      </div>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.76)_34%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.58)_100%)]" />
-    </div>
-  );
-}
-
-function EditorialPlaceholder({ label }: { label: string }) {
-  return (
-    <div className="relative aspect-[4/5] overflow-hidden bg-black">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,#101010_0%,#000000_100%)]" />
-      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.09)_1px,transparent_1px)] [background-size:48px_48px]" />
-      <div className="absolute inset-x-8 top-8 h-px bg-white/12" />
-      <div className="absolute inset-y-8 left-8 w-px bg-white/10" />
-      <div className="absolute right-8 bottom-8 left-8">
-        <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
-          {label}
-        </p>
-        <p className="mt-4 text-4xl leading-none font-medium text-white/70">
-          Garçonmaires
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function DirectionCopyBlock({
-  label,
-  title,
-  body,
-}: {
+type TeaserPiece = {
+  name: string;
   label: string;
-  title: string;
   body: string;
+};
+
+const teaserCopy = {
+  pl: {
+    eyebrow: "DROP 01 / PRIVATE LIST",
+    title: "Pierwsza odsłona odzieżowa.",
+    lead:
+      "DROP 01 pokazuje wyłącznie ubrania: hoodie, t-shirt i zip hoodie. Każdy element zaczyna się od przedniego logo Garçonmaires i wspólnego graficznego nadruku z tyłu.",
+    status: "COMING SOON",
+    city: "Warszawa / garments only / black base",
+    heroAlt: "Trzy czarne produkty Garçonmaires DROP 01: hoodie, t-shirt i zip hoodie",
+    lineupTitle: "Hoodie / T-shirt / Zip hoodie",
+    lineupNote:
+      "To zapowiedź zakresu dropu, nie katalog sprzedażowy. Sprzedaż pozostaje zamknięta do publicznego launchu.",
+    backPrintLabel: "Wspólny tylny nadruk",
+    backPrintTitle: "Jeden motyw łączy trzy formy.",
+    backPrintBody:
+      "Tylny nadruk jest wspólnym znakiem DROP 01. Na tym etapie pokazujemy go jako preview motywu, bez cen, wariantów i obietnicy konkretnej daty premiery.",
+    backPrintAlt: "Graficzny motyw tylnego nadruku Garçonmaires DROP 01",
+    privateList: "Prywatna lista",
+    privateTitle: "Wejdź wcześniej niż publiczny launch.",
+    privateBody:
+      "Zapisz się, jeśli chcesz dostać pierwszy sygnał o odzieżowym DROP 01. Bez publicznego checkoutu, bez otwartej sprzedaży, tylko wcześniejszy dostęp do informacji.",
+    submit: "Dołącz do listy",
+    success: "Jesteś na liście DROP 01.",
+    pieces: [
+      {
+        name: "Hoodie",
+        label: "01 / volume",
+        body:
+          "Czarna bluza z kapturem jako najmocniejsza sylwetka dropu: ciężar, cień i frontowy znak Garçonmaires.",
+      },
+      {
+        name: "T-shirt",
+        label: "02 / base layer",
+        body:
+          "Czarna baza pierwszej odsłony: prosta forma, wyraźny logotyp z przodu i ten sam tylny motyw co na bluzach.",
+      },
+      {
+        name: "Zip hoodie",
+        label: "03 / split front",
+        body:
+          "Rozpinana bluza domyka odzieżowy zakres dropu: ta sama czarna baza, frontowe logo i wspólny nadruk z tyłu.",
+      },
+    ],
+  },
+  en: {
+    eyebrow: "DROP 01 / PRIVATE LIST",
+    title: "The first garment-only release.",
+    lead:
+      "DROP 01 now focuses only on garments: hoodie, T-shirt, and zip hoodie. Each piece carries the Garçonmaires logo on the front and a shared graphic print on the back.",
+    status: "COMING SOON",
+    city: "Warsaw / garments only / black base",
+    heroAlt: "Three black Garçonmaires DROP 01 garments: hoodie, T-shirt, and zip hoodie",
+    lineupTitle: "Hoodie / T-shirt / Zip hoodie",
+    lineupNote:
+      "This is a pre-launch scope preview, not a sales catalogue. Sales stay closed until the public launch.",
+    backPrintLabel: "Shared back print",
+    backPrintTitle: "One graphic motif across the full drop.",
+    backPrintBody:
+      "The back print is the visual link between the three pieces. For now it is shown as a motif preview, without prices, variants, or a promised release date.",
+    backPrintAlt: "Garçonmaires DROP 01 shared back print graphic motif",
+    privateList: "Private list",
+    privateTitle: "Enter before the public launch.",
+    privateBody:
+      "Join for the first signal on the garment-only DROP 01. No public checkout, no open sale, just early access to release information.",
+    submit: "Join the list",
+    success: "You are on the DROP 01 list.",
+    pieces: [
+      {
+        name: "Hoodie",
+        label: "01 / volume",
+        body:
+          "The strongest silhouette in the drop: black volume, shadow, and the Garçonmaires logo placed on the front.",
+      },
+      {
+        name: "T-shirt",
+        label: "02 / base layer",
+        body:
+          "The clean black base of the first release, carrying the front logo and the same back motif as the hoodies.",
+      },
+      {
+        name: "Zip hoodie",
+        label: "03 / split front",
+        body:
+          "A zip-front layer that completes the garment scope: black base, front logo, and shared back print.",
+      },
+    ],
+  },
+} satisfies Record<
+  Locale,
+  {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    status: string;
+    city: string;
+    heroAlt: string;
+    lineupTitle: string;
+    lineupNote: string;
+    backPrintLabel: string;
+    backPrintTitle: string;
+    backPrintBody: string;
+    backPrintAlt: string;
+    privateList: string;
+    privateTitle: string;
+    privateBody: string;
+    submit: string;
+    success: string;
+    pieces: TeaserPiece[];
+  }
+>;
+
+function CategoryTeaser({
+  piece,
+  index,
+  status,
+}: {
+  piece: TeaserPiece;
+  index: number;
+  status: string;
 }) {
   return (
-    <div className="flex h-full flex-col justify-end gap-5 border-t border-white/10 pt-5 md:border-t-0 md:pt-0">
-      <div className="space-y-3">
-        <p className="font-label text-[10px] tracking-[0.3em] text-white/38 uppercase">
-          {label}
-        </p>
-        <div className="flex flex-wrap items-end gap-4">
-          <h2 className="font-display text-3xl leading-none text-white sm:text-4xl">
-            {title}
-          </h2>
-        </div>
-        <p className="max-w-md text-sm leading-7 text-white/56">{body}</p>
+    <article className="group border-t border-white/12 pt-5">
+      <div className="mb-9 flex items-start justify-between gap-4">
+        <span className="font-label text-[10px] tracking-[0.24em] text-white/36 uppercase">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <span className="font-label text-right text-[10px] tracking-[0.24em] text-white/34 uppercase">
+          {status}
+        </span>
       </div>
-    </div>
+      <p className="font-label text-[10px] tracking-[0.28em] text-white/34 uppercase">
+        {piece.label}
+      </p>
+      <h2 className="mt-3 font-display text-3xl leading-none text-white transition duration-300 group-hover:text-white/72 sm:text-4xl">
+        {piece.name}
+      </h2>
+      <p className="mt-5 max-w-sm text-sm leading-7 text-white/54">{piece.body}</p>
+    </article>
   );
 }
 
-function productPath(product: PublicProduct, locale: Locale) {
-  return locale === "en"
-    ? `/en/product/${product.slug}`
-    : `/produkt/${product.slug}`;
-}
-
-function PublicProductTile({
-  product,
-  locale,
-}: {
-  product: PublicProduct;
-  locale: Locale;
-}) {
-  const image = product.images.find((item) => item.isPrimary) ?? product.images[0];
-
-  return (
-    <Link href={productPath(product, locale)} className="group block">
-      <div className="relative aspect-[4/5] overflow-hidden bg-neutral-950">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image.url}
-            alt={image.alt}
-            className="h-full w-full object-cover opacity-90 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-100"
-          />
-        ) : (
-          <EditorialPlaceholder label={product.dropName ?? "DROP 01"} />
-        )}
-      </div>
-      <div className="mt-5 grid gap-3 border-t border-white/10 pt-5">
-        <div className="flex items-start justify-between gap-6">
-          <p className="font-label text-[10px] tracking-[0.28em] text-white/35 uppercase">
-            {product.categoryName ?? product.dropName ?? "Garçonmaires"}
-          </p>
-          <p className="text-sm tracking-[0.14em] text-white/68">
-            {formatPrice(product.price / 100, locale)}
-          </p>
-        </div>
-        <h2 className="text-lg tracking-[0.04em] text-white group-hover:text-white/76">
-          {product.name}
-        </h2>
-        <p className="max-w-sm text-sm leading-6 text-white/46">
-          {product.shortDescription}
-        </p>
-      </div>
-    </Link>
-  );
-}
-
-export function CollectionPage({
-  locale = "pl",
-  products = [],
-  storefrontLive = false,
-}: {
-  locale?: Locale;
-  products?: PublicProduct[];
-  storefrontLive?: boolean;
-}) {
-  const t = copy[locale].collectionPage;
-  const newsletter = copy[locale].home;
-  const showProducts = storefrontLive && products.length > 0;
+export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
+  const t = teaserCopy[locale];
 
   return (
     <div className="bg-black text-white">
-      <section className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-hidden border-b border-white/10">
-        <HeroVisual />
+      <section className="relative left-1/2 right-1/2 min-h-[calc(100svh-72px)] w-screen -translate-x-1/2 overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0">
+          <Image
+            src="/collection/drop-01-garments-preview.png"
+            alt={t.heroAlt}
+            fill
+            priority
+            sizes="100vw"
+            className="hero-reveal object-contain opacity-[0.86] saturate-[0.86] md:object-cover"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.72)_36%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.42)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.04),transparent_24%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,#000_100%)]" />
+        </div>
 
-        <div className="pointer-events-none absolute inset-0 flex items-end">
-          <div className="site-shell w-full px-4 pb-10 pt-24 md:px-6 md:pb-14 md:pt-28">
-            <div className="max-w-xl">
-              <h1
-                className={`${spaceGrotesk.className} hero-reveal font-bold text-[4.5rem] leading-[0.82] tracking-normal text-white sm:text-[6.5rem] md:text-[8.5rem]`}
-              >
-                {t.title}
-              </h1>
-              <div className="hero-reveal-delay mt-8 max-w-sm space-y-4 border-l border-white/16 pl-5">
-                <p className="font-label text-[10px] tracking-[0.28em] text-white/40 uppercase">
-                  {t.leadCategory}
-                </p>
-                <h2 className="font-display text-2xl leading-tight text-white sm:text-3xl">
-                  {t.leadName}
+        <div className="site-shell relative flex min-h-[calc(100svh-72px)] items-end px-4 py-10 md:px-6 md:py-14">
+          <div className="max-w-4xl">
+            <p className="font-label text-[10px] tracking-[0.34em] text-white/48 uppercase">
+              {t.eyebrow}
+            </p>
+            <h1
+              className={`${spaceGrotesk.className} mt-6 max-w-[52rem] text-[4rem] leading-[0.84] font-bold tracking-normal text-white sm:text-[6rem] md:text-[8rem]`}
+            >
+              DROP 01
+            </h1>
+            <div className="mt-8 grid gap-6 md:grid-cols-[minmax(0,31rem)_auto] md:items-end">
+              <div className="space-y-4 border-l border-white/18 pl-5">
+                <h2 className="font-display text-2xl leading-tight text-white sm:text-4xl">
+                  {t.title}
                 </h2>
-                <p className="text-sm leading-7 text-white/62">{t.leadDescription}</p>
+                <p className="max-w-xl text-sm leading-7 text-white/68 sm:text-base sm:leading-8">
+                  {t.lead}
+                </p>
               </div>
+              <p className="font-label text-[10px] tracking-[0.24em] text-white/44 uppercase md:text-right">
+                {t.city}
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="site-shell px-4 py-10 md:px-6 md:py-16">
-        {showProducts ? (
-          <div>
-            <div className="mb-10 flex flex-col justify-between gap-4 border-t border-white/10 pt-8 md:flex-row md:items-end">
-              <div>
-                <p className="font-label text-[10px] tracking-[0.3em] text-white/38 uppercase">
-                  {t.availability}
-                </p>
-                <h2 className="mt-3 font-display text-4xl leading-tight text-white sm:text-5xl">
-                  {t.title}
-                </h2>
-              </div>
-              <p className="max-w-sm text-sm leading-7 text-white/52">
-                {products.length} {locale === "pl" ? "publiczne modele" : "public pieces"}
-              </p>
-            </div>
-            <div className="grid gap-12 md:grid-cols-2 xl:grid-cols-3">
-              {products.map((product) => (
-                <PublicProductTile key={product.id} product={product} locale={locale} />
-              ))}
-            </div>
+      <section className="site-shell px-4 py-12 md:px-6 md:py-18">
+        <div className="mb-10 flex flex-col justify-between gap-5 border-t border-white/10 pt-8 md:flex-row md:items-end">
+          <div className="space-y-3">
+            <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
+              {t.status}
+            </p>
+            <h2 className="font-display max-w-xl text-4xl leading-tight text-white sm:text-5xl">
+              {t.lineupTitle}
+            </h2>
           </div>
-        ) : (
-          <>
-            <div className="grid gap-px bg-white/8 md:grid-cols-[1.15fr_0.85fr]">
-              <div className="bg-black px-0 py-0">
-                <EditorialPlaceholder label="01 / black base" />
-              </div>
-              <div className="bg-black px-6 py-6 md:px-8 md:py-8">
-                <DirectionCopyBlock
-                  label={t.conceptLabel}
-                  title={t.leadName}
-                  body={t.leadDescription}
-                />
-              </div>
-            </div>
+          <p className="max-w-sm text-sm leading-7 text-white/50">
+            {t.lineupNote}
+          </p>
+        </div>
 
-            <div className="mt-10 border-t border-white/10 pt-10">
-              <div className="mb-8 space-y-4">
-                <p className="font-label text-[10px] tracking-[0.3em] text-white/38 uppercase">
-                  02 / Atmosphere
-                </p>
-                <h2 className="font-display max-w-lg text-3xl leading-tight text-white sm:text-4xl">
-                  {t.moodTitle}
-                </h2>
-                <p className="max-w-2xl text-sm leading-7 text-white/56">{t.moodBody}</p>
-              </div>
-
-              <div className="grid gap-px bg-white/8 md:grid-cols-[0.85fr_1.15fr]">
-                <div className="bg-black px-6 py-6 md:px-8 md:py-8">
-              <DirectionCopyBlock
-                label={t.availability}
-                title="Garçonmaires"
-                body={t.description}
-              />
-              {t.footerNote ? (
-                <p className="mt-10 font-label text-[10px] tracking-[0.28em] text-white/34 uppercase">
-                  {t.footerNote}
-                </p>
-              ) : null}
-                </div>
-                <div className="bg-black">
-                  <div className="overflow-hidden">
-                    <EditorialPlaceholder label="02 / graphic mark" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+        <div className="grid gap-10 md:grid-cols-3">
+          {t.pieces.map((piece, index) => (
+            <CategoryTeaser
+              key={piece.name}
+              piece={piece}
+              index={index}
+              status={t.status}
+            />
+          ))}
+        </div>
       </section>
 
-      <section className="border-t border-white/10 bg-[linear-gradient(180deg,#050505_0%,#010101_100%)]">
-        <div className="site-shell grid gap-10 px-4 py-14 md:grid-cols-[0.88fr_1.12fr] md:px-6 md:py-18">
-          <div className="space-y-4">
+      <section className="border-t border-white/10 bg-black">
+        <div className="site-shell grid gap-10 px-4 py-14 md:grid-cols-[0.92fr_1.08fr] md:px-6 md:py-20">
+          <div className="flex flex-col justify-end border-t border-white/10 pt-6 md:border-t-0 md:pt-0">
             <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
-              {newsletter.newsletterEyebrow}
+              {t.backPrintLabel}
             </p>
-            <h2 className="font-display max-w-xl text-3xl leading-tight text-white sm:text-5xl">
-              {newsletter.newsletterTitle}
+            <h2 className="mt-4 max-w-xl font-display text-3xl leading-tight text-white sm:text-5xl">
+              {t.backPrintTitle}
             </h2>
-            <p className="max-w-xl text-sm leading-8 text-white/60 sm:text-base">
-              {newsletter.newsletterDescription}
+            <p className="mt-6 max-w-xl text-sm leading-8 text-white/58 sm:text-base">
+              {t.backPrintBody}
             </p>
           </div>
-          <div className="md:pt-3">
-            <NewsletterForm source="collection" language={locale} variant="section" />
+          <div className="group relative min-h-[28rem] overflow-hidden bg-black md:min-h-[40rem]">
+            <Image
+              src="/collection/drop-01-back-print-preview.png"
+              alt={t.backPrintAlt}
+              fill
+              sizes="(max-width: 768px) 100vw, 54vw"
+              className="object-contain opacity-90 saturate-[0.88] transition duration-700 group-hover:scale-[1.018] group-hover:opacity-100"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0)_42%,rgba(0,0,0,0.18)_100%)]" />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-white/10 bg-[#050505]">
+        <div className="site-shell grid gap-10 px-4 py-14 md:grid-cols-[0.86fr_1.14fr] md:px-6 md:py-20">
+          <div className="space-y-4">
+            <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
+              {t.privateList}
+            </p>
+            <h2 className="font-display max-w-xl text-3xl leading-tight text-white sm:text-5xl">
+              {t.privateTitle}
+            </h2>
+            <p className="max-w-xl text-sm leading-8 text-white/60 sm:text-base">
+              {t.privateBody}
+            </p>
+          </div>
+          <div className="border-t border-white/10 pt-6 md:border-t-0 md:pt-3">
+            <NewsletterForm
+              source="collection-private-list"
+              language={locale}
+              variant="section"
+              submitLabel={t.submit}
+              successMessage={t.success}
+            />
           </div>
         </div>
       </section>

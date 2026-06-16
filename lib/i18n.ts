@@ -232,7 +232,7 @@ export const copy = {
       eyebrow: "Drop 01",
       title: "DROP 01",
       description:
-        "Pierwszy drop zostaje na razie w formie języka: czerń, ciężar, kontrast i prosty znak Garçonmaires.",
+        "Pre-launch DROP 01 pokazuje wyłącznie odzież: hoodie, t-shirt i zip hoodie ze wspólnym tylnym nadrukiem.",
       leadLabel: "Kierunek",
       leadName: "Czerń / znak / krótka seria",
       leadCategory: "DROP 01",
@@ -455,7 +455,7 @@ export const copy = {
       eyebrow: "Drop 01",
       title: "DROP 01",
       description:
-        "For now, the first drop stays in the language of the brand: black, weight, contrast, and the Garçonmaires mark.",
+        "The pre-launch DROP 01 preview focuses on garments only: hoodie, T-shirt, and zip hoodie with a shared back print.",
       leadLabel: "Direction",
       leadName: "Black / mark / short run",
       leadCategory: "DROP 01",

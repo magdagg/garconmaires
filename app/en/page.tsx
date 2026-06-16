@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: homepageOgImage,
-        alt: "Garçonmaires eyewear from the first collection",
+        alt: "Garçonmaires DROP 01 garment preview",
       },
     ],
   },
