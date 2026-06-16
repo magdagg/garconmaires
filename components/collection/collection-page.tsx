@@ -169,24 +169,25 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
             fill
             priority
             sizes="100vw"
-            className="hero-reveal object-contain opacity-[0.86] saturate-[0.86] md:object-cover"
+            className="hero-reveal object-contain object-center opacity-[0.82] saturate-[0.88]"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.72)_36%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.42)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.04),transparent_24%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,#000_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.9)_0%,rgba(0,0,0,0.68)_34%,rgba(0,0,0,0.2)_68%,rgba(0,0,0,0.46)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.055),transparent_24%)]" />
+          <div className="absolute inset-x-0 top-0 h-28 bg-[linear-gradient(180deg,#000_0%,rgba(0,0,0,0)_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,#000_100%)]" />
         </div>
 
-        <div className="site-shell relative flex min-h-[calc(100svh-72px)] items-end px-4 py-10 md:px-6 md:py-14">
-          <div className="max-w-4xl">
+        <div className="site-shell relative flex min-h-[calc(100svh-72px)] items-end px-4 py-12 md:px-6 md:py-16">
+          <div className="max-w-3xl">
             <p className="font-label text-[10px] tracking-[0.34em] text-white/48 uppercase">
               {t.eyebrow}
             </p>
             <h1
-              className={`${spaceGrotesk.className} mt-6 max-w-[52rem] text-[4rem] leading-[0.84] font-bold tracking-normal text-white sm:text-[6rem] md:text-[8rem]`}
+              className={`${spaceGrotesk.className} mt-6 max-w-[46rem] text-[3.75rem] leading-[0.84] font-bold tracking-normal text-white sm:text-[6rem] md:text-[7.5rem]`}
             >
               DROP 01
             </h1>
-            <div className="mt-8 grid gap-6 md:grid-cols-[minmax(0,31rem)_auto] md:items-end">
+            <div className="mt-8 grid gap-6 md:grid-cols-[minmax(0,30rem)_auto] md:items-end">
               <div className="space-y-4 border-l border-white/18 pl-5">
                 <h2 className="font-display text-2xl leading-tight text-white sm:text-4xl">
                   {t.title}
@@ -203,7 +204,7 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
         </div>
       </section>
 
-      <section className="site-shell px-4 py-12 md:px-6 md:py-18">
+      <section className="site-shell px-4 py-14 md:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-5 border-t border-white/10 pt-8 md:flex-row md:items-end">
           <div className="space-y-3">
             <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
@@ -218,7 +219,7 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
           </p>
         </div>
 
-        <div className="grid gap-10 md:grid-cols-3">
+        <div className="grid gap-12 md:grid-cols-3">
           {t.pieces.map((piece, index) => (
             <CategoryTeaser
               key={piece.name}
@@ -231,8 +232,8 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
       </section>
 
       <section className="border-t border-white/10 bg-black">
-        <div className="site-shell grid gap-10 px-4 py-14 md:grid-cols-[0.92fr_1.08fr] md:px-6 md:py-20">
-          <div className="flex flex-col justify-end border-t border-white/10 pt-6 md:border-t-0 md:pt-0">
+        <div className="site-shell grid gap-12 px-4 py-16 md:grid-cols-[0.95fr_1.05fr] md:px-6 md:py-24">
+          <div className="flex flex-col justify-center border-t border-white/10 pt-6 md:border-t-0 md:pt-0">
             <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
               {t.backPrintLabel}
             </p>
@@ -243,21 +244,21 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
               {t.backPrintBody}
             </p>
           </div>
-          <div className="group relative min-h-[28rem] overflow-hidden bg-black md:min-h-[40rem]">
+          <div className="group relative min-h-[24rem] overflow-hidden bg-black md:min-h-[34rem]">
             <Image
               src="/collection/drop-01-back-print-preview.png"
               alt={t.backPrintAlt}
               fill
               sizes="(max-width: 768px) 100vw, 54vw"
-              className="object-contain opacity-90 saturate-[0.88] transition duration-700 group-hover:scale-[1.018] group-hover:opacity-100"
+              className="object-contain opacity-[0.68] saturate-[0.82] transition duration-700 group-hover:scale-[1.012] group-hover:opacity-80"
             />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0)_42%,rgba(0,0,0,0.18)_100%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(0,0,0,0)_0%,rgba(0,0,0,0.08)_44%,rgba(0,0,0,0.5)_100%)]" />
           </div>
         </div>
       </section>
 
-      <section className="border-t border-white/10 bg-[#050505]">
-        <div className="site-shell grid gap-10 px-4 py-14 md:grid-cols-[0.86fr_1.14fr] md:px-6 md:py-20">
+      <section className="border-y border-white/10 bg-[#050505]">
+        <div className="site-shell grid gap-10 px-4 py-16 md:grid-cols-[0.78fr_1.22fr] md:px-6 md:py-24">
           <div className="space-y-4">
             <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
               {t.privateList}
@@ -269,7 +270,7 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
               {t.privateBody}
             </p>
           </div>
-          <div className="border-t border-white/10 pt-6 md:border-t-0 md:pt-3">
+          <div className="border-t border-white/10 pt-7 md:border-t-0 md:border-l md:border-white/10 md:pt-1 md:pl-10">
             <NewsletterForm
               source="collection-private-list"
               language={locale}
