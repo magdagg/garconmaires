@@ -14,40 +14,44 @@ type ProductDetailProps = {
 function copy(locale: Locale) {
   if (locale === "en") {
     return {
-      adminSafe: "Public product page",
+      adminSafe: "Product showroom",
       size: "Size",
       available: "Available",
       soldOut: "Unavailable",
       addToCart: "Add to cart",
       previewPrice: "Preview price",
-      gated: "Purchasing will open when DROP 01 is live.",
+      gated: "Purchasing stays locked until DROP 01 is opened separately.",
       materials: "Materials and care",
       specs: "Specifications",
       sizeGuide: "Size guide",
       delivery: "Delivery",
       returns: "Returns",
+      visualLabel: "Garment preview",
+      thumbLabel: "Visual study",
       deliveryBody:
-        "Delivery options will be confirmed at checkout. InPost and courier flows are prepared for launch.",
+        "Delivery methods will be confirmed for the public launch. The preview flow shows the order layout only.",
       returnsBody:
         "Returns and complaints follow the published legal terms for Poland and the EU.",
     };
   }
 
   return {
-    adminSafe: "Publiczna karta produktu",
+    adminSafe: "Showroom produktu",
     size: "Rozmiar",
     available: "Dostępne",
     soldOut: "Niedostępne",
     addToCart: "Dodaj do koszyka",
     previewPrice: "Cena testowa",
-    gated: "Zakup zostanie odblokowany dopiero po uruchomieniu DROP 01.",
+    gated: "Zakup pozostaje zablokowany do osobnej decyzji o otwarciu DROP 01.",
     materials: "Materiały i pielęgnacja",
     specs: "Specyfikacja",
     sizeGuide: "Tabela rozmiarów",
     delivery: "Dostawa",
     returns: "Zwroty",
+    visualLabel: "Preview produktu",
+    thumbLabel: "Studium wizualne",
     deliveryBody:
-      "Opcje dostawy zostaną potwierdzone przy zamówieniu. Przepływy InPost i kurierskie są przygotowane do launchu.",
+      "Metody dostawy zostaną potwierdzone przy publicznym launchu. Preview pokazuje wyłącznie układ zamówienia.",
     returnsBody:
       "Zwroty i reklamacje działają zgodnie z opublikowanymi dokumentami prawnymi dla Polski i UE.",
   };
@@ -77,12 +81,17 @@ export function ProductDetail({
 
   return (
     <main className="bg-black text-white">
-      <section className="site-shell grid gap-10 px-4 py-12 md:px-6 md:py-16 lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="site-shell grid gap-10 px-4 py-12 md:px-6 md:py-16 lg:grid-cols-[1.08fr_0.92fr]">
         <div className="space-y-4">
-          <div className="relative aspect-[4/5] overflow-hidden bg-neutral-950">
+          <div className="grain relative aspect-[4/5] min-h-[34rem] overflow-hidden border border-white/10 bg-[#030303] md:min-h-[44rem]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.085),transparent_27%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent_32%)]" />
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={image.url} alt={image.alt} className="h-full w-full object-contain p-8" />
+              <img
+                src={image.url}
+                alt={image.alt}
+                className="absolute inset-0 h-full w-full object-contain p-6 md:p-10"
+              />
             ) : (
               <div className="flex h-full items-end justify-between border border-white/10 p-8">
                 <p className="font-label text-[10px] tracking-[0.3em] text-white/35 uppercase">
@@ -93,13 +102,32 @@ export function ProductDetail({
                 </p>
               </div>
             )}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black via-black/58 to-transparent" />
+            <div className="absolute inset-x-6 top-6 flex items-center justify-between gap-4 border-t border-white/12 pt-4">
+              <p className="font-label text-[10px] tracking-[0.28em] text-white/38 uppercase">
+                {t.visualLabel}
+              </p>
+              <p className="font-label text-right text-[10px] tracking-[0.24em] text-white/34 uppercase">
+                {product.dropName ?? "DROP 01"}
+              </p>
+            </div>
           </div>
           {product.images.length > 1 ? (
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {product.images.slice(0, 4).map((item) => (
-                <div key={item.id} className="aspect-[4/5] overflow-hidden bg-neutral-950">
+                <div
+                  key={item.id}
+                  className="group relative aspect-[4/5] overflow-hidden border border-white/8 bg-[#030303]"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.url} alt={item.alt} className="h-full w-full object-cover" />
+                  <img
+                    src={item.url}
+                    alt={item.alt}
+                    className="h-full w-full object-contain p-3 opacity-[0.82] transition duration-500 group-hover:scale-[1.02] group-hover:opacity-100"
+                  />
+                  <p className="absolute inset-x-3 bottom-3 font-label text-[8px] tracking-[0.2em] text-white/30 uppercase">
+                    {t.thumbLabel}
+                  </p>
                 </div>
               ))}
             </div>
@@ -129,26 +157,26 @@ export function ProductDetail({
 
           {!demoEnabled ? (
             <div className="space-y-4">
-            <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
-              {t.size}
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {variants.map((variant) => (
-                <span
-                  key={variant.id}
-                  className={
-                    variant.isAvailable
-                      ? "border border-white/28 px-4 py-3 text-xs tracking-[0.22em] uppercase text-white"
-                      : "border border-white/10 px-4 py-3 text-xs tracking-[0.22em] uppercase text-white/35"
-                  }
-                >
-                  {variant.size}
-                </span>
-              ))}
-            </div>
-            <p className="text-xs leading-6 text-white/45">
-              {hasAvailableVariant ? t.available : t.soldOut}
-            </p>
+              <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+                {t.size}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {variants.map((variant) => (
+                  <span
+                    key={variant.id}
+                    className={
+                      variant.isAvailable
+                        ? "border border-white/28 px-4 py-3 text-xs tracking-[0.22em] text-white uppercase"
+                        : "border border-white/10 px-4 py-3 text-xs tracking-[0.22em] text-white/35 uppercase"
+                    }
+                  >
+                    {variant.size}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs leading-6 text-white/45">
+                {hasAvailableVariant ? t.available : t.soldOut}
+              </p>
             </div>
           ) : null}
 

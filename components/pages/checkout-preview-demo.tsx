@@ -14,14 +14,15 @@ type CheckoutPreviewDemoProps = {
 const copy = {
   pl: {
     eyebrow: "Checkout preview",
-    title: "Testowy checkout bez płatności",
+    title: "Checkout DROP 01",
     body:
-      "Ten flow pokazuje układ checkoutu dla DROP 01 na local/staging. Nie tworzy zamówienia, nie kontaktuje Tpay i nie odblokowuje publicznej sprzedaży.",
+      "Podgląd checkoutu dla local/staging. Formularz pokazuje układ zamówienia, ale nie tworzy płatności ani publicznej sprzedaży.",
     contact: "Kontakt",
     shipping: "Adres dostawy",
+    order: "Zamówienie",
     payment: "Płatność",
     paymentBody:
-      "Płatność jest symulowana. Prawdziwy checkout pozostaje zablokowany do osobnej decyzji o publicznym launchu.",
+      "Płatność jest wyłączona w preview. Tpay nie jest wywoływany, a prawdziwy checkout pozostaje zablokowany do osobnej decyzji o launchu.",
     firstName: "Imię",
     lastName: "Nazwisko",
     email: "E-mail",
@@ -38,6 +39,7 @@ const copy = {
     collection: "Kolekcja",
     freeShipping: "Darmowa dostawa od",
     empty: "Koszyk preview jest pusty. Dodaj produkt z kolekcji przed checkoutem.",
+    emptyOrder: "Brak produktów w koszyku preview.",
     summary: {
       title: "Checkout preview",
       subtotal: "Suma produktów",
@@ -48,14 +50,15 @@ const copy = {
   },
   en: {
     eyebrow: "Checkout preview",
-    title: "Test checkout without payment",
+    title: "DROP 01 checkout",
     body:
-      "This flow shows the DROP 01 checkout layout on local/staging. It does not create an order, contact Tpay, or open public sales.",
+      "A local/staging checkout preview. The form shows the order layout, but it does not create payment or open public sales.",
     contact: "Contact",
     shipping: "Shipping address",
+    order: "Order",
     payment: "Payment",
     paymentBody:
-      "Payment is simulated. The real checkout remains locked until a separate public launch decision.",
+      "Payment is disabled in preview. Tpay is not called, and the real checkout remains locked until a separate launch decision.",
     firstName: "First name",
     lastName: "Last name",
     email: "Email",
@@ -72,6 +75,7 @@ const copy = {
     collection: "Collection",
     freeShipping: "Free shipping from",
     empty: "Your preview cart is empty. Add a product from the collection before checkout.",
+    emptyOrder: "No products in the preview cart.",
     summary: {
       title: "Checkout preview",
       subtotal: "Subtotal",
@@ -137,9 +141,14 @@ export function CheckoutPreviewDemo({
             </div>
 
             <section className="space-y-4">
-              <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
-                {t.contact}
-              </h2>
+              <div className="flex items-center gap-4 border-b border-white/10 pb-3">
+                <span className="font-label text-[10px] tracking-[0.22em] text-white/30 uppercase">
+                  01
+                </span>
+                <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
+                  {t.contact}
+                </h2>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <TextField label={t.firstName} />
                 <TextField label={t.lastName} />
@@ -149,9 +158,14 @@ export function CheckoutPreviewDemo({
             </section>
 
             <section className="space-y-4">
-              <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
-                {t.shipping}
-              </h2>
+              <div className="flex items-center gap-4 border-b border-white/10 pb-3">
+                <span className="font-label text-[10px] tracking-[0.22em] text-white/30 uppercase">
+                  02
+                </span>
+                <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
+                  {t.shipping}
+                </h2>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <TextField label={t.address} />
                 <TextField label={t.postalCode} />
@@ -167,6 +181,50 @@ export function CheckoutPreviewDemo({
               }).format(freeShippingThreshold / 100)}
               .
             </p>
+
+            <section className="space-y-4 border-t border-white/10 pt-6">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-3">
+                <span className="font-label text-[10px] tracking-[0.22em] text-white/30 uppercase">
+                  03
+                </span>
+                <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
+                  {t.order}
+                </h2>
+              </div>
+              {hasItems ? (
+                <div className="grid gap-px bg-white/8">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="grid gap-4 bg-black p-4 sm:grid-cols-[72px_1fr_auto] sm:items-center"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.product.imageUrl}
+                        alt={item.product.imageAlt}
+                        className="aspect-[4/5] w-[72px] border border-white/8 bg-white/[0.03] object-contain p-2"
+                      />
+                      <div>
+                        <p className="text-sm tracking-[0.08em] text-white uppercase">
+                          {item.product.name}
+                        </p>
+                        <p className="mt-1 text-xs tracking-[0.16em] text-white/40 uppercase">
+                          {item.size} / x{item.quantity}
+                        </p>
+                      </div>
+                      <p className="text-sm tracking-[0.1em] text-white/68">
+                        {new Intl.NumberFormat(locale === "pl" ? "pl-PL" : "en-GB", {
+                          style: "currency",
+                          currency: "PLN",
+                        }).format(item.product.price * item.quantity)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm leading-7 text-white/50">{t.emptyOrder}</p>
+              )}
+            </section>
 
             <section className="space-y-3 text-sm leading-6 text-white/58">
               <label className="flex gap-3">
@@ -184,9 +242,14 @@ export function CheckoutPreviewDemo({
             </section>
 
             <section className="space-y-3 border-t border-white/10 pt-6">
-              <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
-                {t.payment}
-              </h2>
+              <div className="flex items-center gap-4 border-b border-white/10 pb-3">
+                <span className="font-label text-[10px] tracking-[0.22em] text-white/30 uppercase">
+                  04
+                </span>
+                <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
+                  {t.payment}
+                </h2>
+              </div>
               <p className="max-w-2xl text-sm leading-7 text-white/54">
                 {t.paymentBody}
               </p>

@@ -10,22 +10,22 @@ const copy = {
   pl: {
     size: "Rozmiar",
     quantity: "Ilość",
-    add: "Dodaj do koszyka",
+    add: "Dodaj do koszyka preview",
     added: "Dodano do koszyka preview.",
     cart: "Koszyk",
     checkout: "Checkout preview",
     demo:
-      "Tryb preview/local. Koszyk działa lokalnie, ale nie uruchamia publicznej sprzedaży ani realnej płatności.",
+      "Ten panel pokazuje działanie flow na local/staging. Publiczna sprzedaż i realna płatność pozostają zablokowane.",
   },
   en: {
     size: "Size",
     quantity: "Quantity",
-    add: "Add to cart",
+    add: "Add to preview cart",
     added: "Added to preview cart.",
     cart: "Cart",
     checkout: "Checkout preview",
     demo:
-      "Preview/local mode. The cart works locally, but it does not open public sales or create a real payment.",
+      "This panel shows the local/staging flow. Public sales and real payment remain locked.",
   },
 };
 
@@ -48,48 +48,50 @@ export function ProductPurchasePanel({
   const quantities = useMemo(() => [1, 2, 3], []);
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-3">
-        <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
-          {t.size}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {product.sizes.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setSize(item)}
-              className={
-                item === size
-                  ? "border border-white bg-white px-4 py-3 text-xs tracking-[0.22em] text-black uppercase"
-                  : "border border-white/16 px-4 py-3 text-xs tracking-[0.22em] text-white/62 uppercase hover:border-white/40"
-              }
-            >
-              {item}
-            </button>
-          ))}
+    <div className="space-y-6 border-y border-white/10 py-6">
+      <div className="grid gap-6 md:grid-cols-[1fr_0.56fr]">
+        <div className="space-y-3">
+          <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+            {t.size}
+          </p>
+          <div className="grid grid-cols-5 gap-2">
+            {product.sizes.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setSize(item)}
+                className={
+                  item === size
+                    ? "h-12 border border-white bg-white text-xs tracking-[0.22em] text-black uppercase"
+                    : "h-12 border border-white/16 text-xs tracking-[0.22em] text-white/62 uppercase hover:border-white/40"
+                }
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
-          {t.quantity}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {quantities.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setQuantity(item)}
-              className={
-                item === quantity
-                  ? "h-11 w-11 border border-white bg-white text-xs tracking-[0.18em] text-black"
-                  : "h-11 w-11 border border-white/16 text-xs tracking-[0.18em] text-white/62 hover:border-white/40"
-              }
-            >
-              {item}
-            </button>
-          ))}
+        <div className="space-y-3">
+          <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
+            {t.quantity}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {quantities.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setQuantity(item)}
+                className={
+                  item === quantity
+                    ? "h-12 border border-white bg-white text-xs tracking-[0.18em] text-black"
+                    : "h-12 border border-white/16 text-xs tracking-[0.18em] text-white/62 hover:border-white/40"
+                }
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -100,7 +102,7 @@ export function ProductPurchasePanel({
             addItem(product, size, quantity);
             setMessage(t.added);
           }}
-          className="w-full bg-white px-6 py-4 text-xs tracking-[0.28em] text-black uppercase hover:bg-white/90"
+          className="w-full bg-white px-6 py-4 text-xs tracking-[0.26em] text-black uppercase hover:bg-white/90"
         >
           {t.add}
         </button>

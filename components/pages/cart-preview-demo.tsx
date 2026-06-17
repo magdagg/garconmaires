@@ -13,17 +13,20 @@ type CartPreviewDemoProps = {
 const copy = {
   pl: {
     eyebrow: "Koszyk preview",
-    title: "Koszyk działa w trybie testowym",
+    title: "Koszyk DROP 01",
     body:
-      "To lokalny/staging flow dla DROP 01. Pozycje są zapisywane w tej przeglądarce i nie uruchamiają publicznej sprzedaży.",
+      "Podgląd koszyka dla local/staging. Produkty zostają w tej przeglądarce, a publiczna sprzedaż pozostaje zamknięta.",
     emptyTitle: "Koszyk jest pusty",
-    emptyBody: "Dodaj Hoodie, T-shirt albo Zip hoodie z kolekcji, żeby zobaczyć flow.",
+    emptyBody: "Dodaj Hoodie, T-shirt albo Zip hoodie z kolekcji, żeby przejść przez preview flow.",
     collection: "Wróć do kolekcji",
     checkout: "Przejdź do checkout preview",
     remove: "Usuń",
     decrease: "Zmniejsz",
     increase: "Zwiększ",
     preview: "Preview / pre-launch",
+    item: "Produkt",
+    qty: "Ilość",
+    line: "Suma",
     summary: {
       title: "Podsumowanie preview",
       subtotal: "Suma produktów",
@@ -34,17 +37,20 @@ const copy = {
   },
   en: {
     eyebrow: "Preview cart",
-    title: "The cart works in test mode",
+    title: "DROP 01 cart",
     body:
-      "This is a local/staging flow for DROP 01. Items are stored in this browser and do not open public sales.",
+      "A local/staging cart preview. Items stay in this browser and public sales remain closed.",
     emptyTitle: "Your cart is empty",
-    emptyBody: "Add Hoodie, T-shirt, or Zip hoodie from the collection to see the flow.",
+    emptyBody: "Add Hoodie, T-shirt, or Zip hoodie from the collection to move through the preview flow.",
     collection: "Back to collection",
     checkout: "Continue to checkout preview",
     remove: "Remove",
     decrease: "Decrease",
     increase: "Increase",
     preview: "Preview / pre-launch",
+    item: "Item",
+    qty: "Qty",
+    line: "Line total",
     summary: {
       title: "Preview summary",
       subtotal: "Subtotal",
@@ -81,16 +87,21 @@ export function CartPreviewDemo({ locale, delivery }: CartPreviewDemoProps) {
 
             {hasItems ? (
               <div className="space-y-4">
+                <div className="hidden border-b border-white/10 pb-3 font-label text-[9px] tracking-[0.22em] text-white/28 uppercase md:grid md:grid-cols-[148px_1fr_168px]">
+                  <span>{t.item}</span>
+                  <span>{t.preview}</span>
+                  <span className="text-right">{t.line}</span>
+                </div>
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="grid gap-5 border-b border-white/10 py-5 md:grid-cols-[120px_1fr_150px] md:items-center"
+                    className="grid gap-5 border-b border-white/10 py-5 md:grid-cols-[148px_1fr_168px] md:items-center"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.product.imageUrl}
                       alt={item.product.imageAlt}
-                      className="aspect-[4/5] w-full bg-white/[0.03] object-contain p-3"
+                      className="aspect-[4/5] w-full border border-white/8 bg-white/[0.03] object-contain p-3"
                     />
                     <div className="space-y-2">
                       <p className="font-label text-[10px] tracking-[0.24em] text-white/34 uppercase">
@@ -111,6 +122,9 @@ export function CartPreviewDemo({ locale, delivery }: CartPreviewDemoProps) {
                       </button>
                     </div>
                     <div className="space-y-4 md:text-right">
+                      <p className="font-label text-[9px] tracking-[0.18em] text-white/28 uppercase md:hidden">
+                        {t.qty}
+                      </p>
                       <p className="text-sm tracking-[0.12em] text-white/72">
                         {formatPrice(item.product.price * item.quantity, locale)}
                       </p>

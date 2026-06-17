@@ -29,10 +29,10 @@ const teaserCopy = {
     lineupTitle: "Hoodie / T-shirt / Zip hoodie",
     lineupNote:
       "To zapowiedź zakresu dropu, nie katalog sprzedażowy. Sprzedaż pozostaje zamknięta do publicznego launchu.",
-    productEyebrow: "Preview produktów",
-    productTitle: "Przejdź przez flow sklepu bez uruchamiania sprzedaży.",
+    productEyebrow: "Showroom preview",
+    productTitle: "Trzy formy. Jeden czarny drop.",
     productBody:
-      "Karty poniżej pokazują lokalny/staging preview: rozmiar, koszyk i checkout testowy. Nie tworzą publicznej sprzedaży ani realnej płatności.",
+      "Podejrzyj karty produktów, wybierz rozmiar i przejdź przez koszyk oraz checkout preview. Sprzedaż publiczna i realna płatność pozostają zablokowane.",
     backPrintLabel: "Wspólny tylny nadruk",
     backPrintTitle: "Jeden motyw łączy trzy formy.",
     backPrintBody:
@@ -76,10 +76,10 @@ const teaserCopy = {
     lineupTitle: "Hoodie / T-shirt / Zip hoodie",
     lineupNote:
       "This is a pre-launch scope preview, not a sales catalogue. Sales stay closed until the public launch.",
-    productEyebrow: "Product preview",
-    productTitle: "Walk the store flow without opening sales.",
+    productEyebrow: "Showroom preview",
+    productTitle: "Three forms. One black drop.",
     productBody:
-      "The cards below expose the local/staging preview: size selection, cart, and checkout test. They do not open public sales or create a real payment.",
+      "Open the product cards, select a size, and move through cart and checkout preview. Public sales and real payment remain locked.",
     backPrintLabel: "Shared back print",
     backPrintTitle: "One graphic motif across the full drop.",
     backPrintBody:
@@ -251,17 +251,27 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
             <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
               {t.productEyebrow}
             </p>
-            <h2 className="font-display max-w-xl text-4xl leading-tight text-white sm:text-5xl">
+            <h2 className="font-display max-w-2xl text-4xl leading-tight text-white sm:text-6xl">
               {t.productTitle}
             </h2>
           </div>
-          <p className="max-w-xl text-sm leading-8 text-white/54 md:justify-self-end">
+          <p className="max-w-xl border-t border-white/10 pt-5 text-sm leading-8 text-white/58 md:justify-self-end">
             {t.productBody}
           </p>
         </div>
-        <div className="grid gap-12 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} locale={locale} />
+          ))}
+        </div>
+        <div className="mt-12 grid gap-px bg-white/8 md:grid-cols-3">
+          {t.pieces.map((piece) => (
+            <div key={piece.name} className="bg-black p-5">
+              <p className="font-label text-[10px] tracking-[0.24em] text-white/32 uppercase">
+                {piece.label}
+              </p>
+              <p className="mt-3 text-sm leading-7 text-white/58">{piece.body}</p>
+            </div>
           ))}
         </div>
       </section>
