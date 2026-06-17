@@ -6,6 +6,10 @@ export const defaultLocale: Locale = "pl";
 export const locales: Locale[] = ["pl", "en"];
 
 const localizedPathnames: Record<string, Record<Locale, string>> = {
+  "/shop": {
+    pl: "/kolekcja",
+    en: "/collection",
+  },
   "/collection": {
     pl: "/kolekcja",
     en: "/collection",

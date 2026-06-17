@@ -63,7 +63,7 @@ export function CartDrawer() {
                 {t.drawerEmptyBody}
               </p>
               <Link
-                href={withLocalePath("/shop", locale)}
+                href={withLocalePath("/collection", locale)}
                 onClick={closeCart}
                 className="inline-flex border border-white/20 px-5 py-3 text-xs tracking-[0.24em] uppercase text-white hover:bg-white hover:text-black"
               >

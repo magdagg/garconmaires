@@ -41,7 +41,7 @@ export async function CheckoutSuccessPage({
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link
-            href={withLocalePath("/shop", locale)}
+            href={withLocalePath("/collection", locale)}
             className="inline-flex items-center justify-center bg-white px-7 py-4 text-xs tracking-[0.28em] uppercase text-black hover:opacity-85"
           >
             {t.continueShopping}

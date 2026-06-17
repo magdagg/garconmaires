@@ -661,7 +661,7 @@ export const footerGroups: Record<
 > = {
   pl: {
     navigation: [
-      { href: "/shop", label: "Sklep" },
+      { href: "/collection", label: "Kolekcja" },
       { href: "/kontakt", label: "Kontakt" },
     ],
     help: [
@@ -680,7 +680,7 @@ export const footerGroups: Record<
   },
   en: {
     navigation: [
-      { href: "/shop", label: "Shop" },
+      { href: "/collection", label: "Collection" },
       { href: "/contact", label: "Contact" },
     ],
     help: [

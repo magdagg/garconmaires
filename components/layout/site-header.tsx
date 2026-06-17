@@ -26,6 +26,13 @@ export function SiteHeader({ locale }: SiteHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const links = [
     {
+      href: withLocalePath("/collection", resolvedLocale),
+      label: t.shop,
+      mobileLabel: t.shop,
+      ariaLabel: t.shop,
+      isSymbol: false,
+    },
+    {
       href: withLocalePath("/play", resolvedLocale),
       label: "♠",
       mobileLabel: t.play,
