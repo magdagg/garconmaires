@@ -4,11 +4,13 @@ import { CartRow } from "@/components/commerce/cart-row";
 import { CheckoutSummary } from "@/components/commerce/checkout-summary";
 import { QuantitySelector } from "@/components/commerce/quantity-selector";
 import { SizeSelector } from "@/components/commerce/size-selector";
+import { CartPreviewDemo } from "@/components/pages/cart-preview-demo";
 import type { CartCheckoutGateState } from "@/lib/store/cart-checkout-gate";
 
 type CartPageProps = {
   locale: "pl" | "en";
   gate: CartCheckoutGateState;
+  previewDemo?: boolean;
 };
 
 const copy = {
@@ -66,7 +68,16 @@ const copy = {
   },
 };
 
-export function CartPage({ locale, gate }: CartPageProps) {
+export function CartPage({ locale, gate, previewDemo = false }: CartPageProps) {
+  if (previewDemo && !gate.storefrontLive) {
+    return (
+      <CartPreviewDemo
+        locale={locale}
+        delivery={gate.defaultDeliveryPrice}
+      />
+    );
+  }
+
   const t = copy[locale];
   const collectionHref = locale === "pl" ? "/kolekcja" : "/en/collection";
   const checkoutHref = locale === "pl" ? "/checkout" : "/en/checkout";

@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { Space_Grotesk } from "next/font/google";
 import { NewsletterForm } from "@/components/newsletter/newsletter-form";
+import { ProductCard } from "@/components/ui/product-card";
 import { type Locale } from "@/lib/i18n";
+import { getPreviewProducts } from "@/lib/preview-shop";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -27,6 +29,10 @@ const teaserCopy = {
     lineupTitle: "Hoodie / T-shirt / Zip hoodie",
     lineupNote:
       "To zapowiedź zakresu dropu, nie katalog sprzedażowy. Sprzedaż pozostaje zamknięta do publicznego launchu.",
+    productEyebrow: "Preview produktów",
+    productTitle: "Przejdź przez flow sklepu bez uruchamiania sprzedaży.",
+    productBody:
+      "Karty poniżej pokazują lokalny/staging preview: rozmiar, koszyk i checkout testowy. Nie tworzą publicznej sprzedaży ani realnej płatności.",
     backPrintLabel: "Wspólny tylny nadruk",
     backPrintTitle: "Jeden motyw łączy trzy formy.",
     backPrintBody:
@@ -70,6 +76,10 @@ const teaserCopy = {
     lineupTitle: "Hoodie / T-shirt / Zip hoodie",
     lineupNote:
       "This is a pre-launch scope preview, not a sales catalogue. Sales stay closed until the public launch.",
+    productEyebrow: "Product preview",
+    productTitle: "Walk the store flow without opening sales.",
+    productBody:
+      "The cards below expose the local/staging preview: size selection, cart, and checkout test. They do not open public sales or create a real payment.",
     backPrintLabel: "Shared back print",
     backPrintTitle: "One graphic motif across the full drop.",
     backPrintBody:
@@ -113,6 +123,9 @@ const teaserCopy = {
     heroAlt: string;
     lineupTitle: string;
     lineupNote: string;
+    productEyebrow: string;
+    productTitle: string;
+    productBody: string;
     backPrintLabel: string;
     backPrintTitle: string;
     backPrintBody: string;
@@ -158,6 +171,7 @@ function CategoryTeaser({
 
 export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
   const t = teaserCopy[locale];
+  const products = getPreviewProducts();
 
   return (
     <div className="bg-black text-white">
@@ -227,6 +241,27 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
               index={index}
               status={t.status}
             />
+          ))}
+        </div>
+      </section>
+
+      <section className="site-shell border-t border-white/10 px-4 py-16 md:px-6 md:py-24">
+        <div className="mb-12 grid gap-5 md:grid-cols-[0.72fr_1fr] md:items-end">
+          <div className="space-y-3">
+            <p className="font-label text-[10px] tracking-[0.3em] text-white/36 uppercase">
+              {t.productEyebrow}
+            </p>
+            <h2 className="font-display max-w-xl text-4xl leading-tight text-white sm:text-5xl">
+              {t.productTitle}
+            </h2>
+          </div>
+          <p className="max-w-xl text-sm leading-8 text-white/54 md:justify-self-end">
+            {t.productBody}
+          </p>
+        </div>
+        <div className="grid gap-12 md:grid-cols-3">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} locale={locale} />
           ))}
         </div>
       </section>

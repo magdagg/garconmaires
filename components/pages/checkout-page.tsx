@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { CheckoutSummary } from "@/components/commerce/checkout-summary";
 import { DeliverySelector } from "@/components/commerce/delivery-selector";
+import { CheckoutPreviewDemo } from "@/components/pages/checkout-preview-demo";
 import type { CartCheckoutGateState } from "@/lib/store/cart-checkout-gate";
 
 type CheckoutPageProps = {
   locale: "pl" | "en";
   gate: CartCheckoutGateState;
+  previewDemo?: boolean;
 };
 
 const copy = {
@@ -116,7 +118,21 @@ function TextField({
   );
 }
 
-export function CheckoutPage({ locale, gate }: CheckoutPageProps) {
+export function CheckoutPage({
+  locale,
+  gate,
+  previewDemo = false,
+}: CheckoutPageProps) {
+  if (previewDemo && !gate.storefrontLive) {
+    return (
+      <CheckoutPreviewDemo
+        locale={locale}
+        delivery={gate.defaultDeliveryPrice}
+        freeShippingThreshold={gate.freeShippingThreshold}
+      />
+    );
+  }
+
   const t = copy[locale];
   const disabled = !gate.storefrontLive;
   const cartHref = locale === "pl" ? "/koszyk" : "/en/cart";

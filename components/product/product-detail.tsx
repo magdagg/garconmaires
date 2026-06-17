@@ -1,9 +1,12 @@
 import type { Locale } from "@/lib/i18n";
+import type { Product } from "@/lib/data/products";
 import type { PublicProduct } from "@/lib/store/public-catalog";
 import { formatPrice } from "@/lib/utils";
+import { ProductPurchasePanel } from "@/components/product/product-purchase-panel";
 
 type ProductDetailProps = {
   product: PublicProduct;
+  demoProduct?: Product | null;
   locale?: Locale;
   storefrontLive: boolean;
 };
@@ -16,6 +19,7 @@ function copy(locale: Locale) {
       available: "Available",
       soldOut: "Unavailable",
       addToCart: "Add to cart",
+      previewPrice: "Preview price",
       gated: "Purchasing will open when DROP 01 is live.",
       materials: "Materials and care",
       specs: "Specifications",
@@ -35,6 +39,7 @@ function copy(locale: Locale) {
     available: "Dostępne",
     soldOut: "Niedostępne",
     addToCart: "Dodaj do koszyka",
+    previewPrice: "Cena testowa",
     gated: "Zakup zostanie odblokowany dopiero po uruchomieniu DROP 01.",
     materials: "Materiały i pielęgnacja",
     specs: "Specyfikacja",
@@ -58,6 +63,7 @@ function specificationRows(product: PublicProduct) {
 
 export function ProductDetail({
   product,
+  demoProduct = null,
   locale = "pl",
   storefrontLive,
 }: ProductDetailProps) {
@@ -66,6 +72,7 @@ export function ProductDetail({
   const variants = product.variants;
   const hasAvailableVariant = variants.some((variant) => variant.isAvailable);
   const canPurchase = storefrontLive && hasAvailableVariant;
+  const demoEnabled = Boolean(demoProduct);
   const specRows = specificationRows(product);
 
   return (
@@ -75,11 +82,7 @@ export function ProductDetail({
           <div className="relative aspect-[4/5] overflow-hidden bg-neutral-950">
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={image.url}
-                alt={image.alt}
-                className="h-full w-full object-cover"
-              />
+              <img src={image.url} alt={image.alt} className="h-full w-full object-contain p-8" />
             ) : (
               <div className="flex h-full items-end justify-between border border-white/10 p-8">
                 <p className="font-label text-[10px] tracking-[0.3em] text-white/35 uppercase">
@@ -111,15 +114,21 @@ export function ProductDetail({
             <h1 className="font-display text-5xl leading-none sm:text-6xl">
               {product.name}
             </h1>
-            <p className="text-lg tracking-[0.14em] text-white/76">
-              {formatPrice(product.price / 100, locale)}
-            </p>
+            <div className="space-y-1">
+              <p className="font-label text-[9px] tracking-[0.22em] text-white/32 uppercase">
+                {demoEnabled ? t.previewPrice : "Price"}
+              </p>
+              <p className="text-lg tracking-[0.14em] text-white/76">
+                {formatPrice(product.price / 100, locale)}
+              </p>
+            </div>
             <p className="max-w-xl text-sm leading-8 text-white/62 sm:text-base">
               {product.shortDescription}
             </p>
           </div>
 
-          <div className="space-y-4">
+          {!demoEnabled ? (
+            <div className="space-y-4">
             <p className="font-label text-[10px] tracking-[0.28em] text-white/36 uppercase">
               {t.size}
             </p>
@@ -140,24 +149,29 @@ export function ProductDetail({
             <p className="text-xs leading-6 text-white/45">
               {hasAvailableVariant ? t.available : t.soldOut}
             </p>
-          </div>
+            </div>
+          ) : null}
 
-          <div className="space-y-3">
-            <button
-              type="button"
-              disabled={!canPurchase}
-              className={
-                canPurchase
-                  ? "w-full bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black"
-                  : "w-full border border-white/12 px-6 py-4 text-xs tracking-[0.28em] uppercase text-white/35"
-              }
-            >
-              {t.addToCart}
-            </button>
-            {!canPurchase ? (
-              <p className="text-xs leading-6 text-white/45">{t.gated}</p>
-            ) : null}
-          </div>
+          {demoProduct ? (
+            <ProductPurchasePanel product={demoProduct} locale={locale} />
+          ) : (
+            <div className="space-y-3">
+              <button
+                type="button"
+                disabled={!canPurchase}
+                className={
+                  canPurchase
+                    ? "w-full bg-white px-6 py-4 text-xs tracking-[0.28em] uppercase text-black"
+                    : "w-full border border-white/12 px-6 py-4 text-xs tracking-[0.28em] uppercase text-white/35"
+                }
+              >
+                {t.addToCart}
+              </button>
+              {!canPurchase ? (
+                <p className="text-xs leading-6 text-white/45">{t.gated}</p>
+              ) : null}
+            </div>
+          )}
 
           <div className="grid gap-px bg-white/8">
             <section className="bg-black p-5">

@@ -24,6 +24,12 @@ export function ProductMedia({
           background: `radial-gradient(circle at 50% 18%, ${product.tones.highlight}55, transparent 24%), linear-gradient(145deg, ${product.tones.base} 0%, #020202 58%, ${product.tones.highlight} 100%)`,
         }}
       />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={product.imageUrl}
+        alt={product.imageAlt}
+        className="absolute inset-0 h-full w-full object-contain p-6 transition duration-500 group-hover:scale-[1.025]"
+      />
       <div className="absolute inset-x-5 top-5 h-px bg-white/14" />
       <div className="absolute inset-y-5 left-5 w-px bg-white/10" />
       <div className="absolute right-5 top-5 h-12 w-px bg-white/10" />

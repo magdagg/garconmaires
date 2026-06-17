@@ -87,13 +87,14 @@ const polishProductContent: Record<string, LocalizedProductContent> = {
   "gm-001": {
     tagline: "Ciężka bluza z kapturem o prostej, mocnej linii.",
     description:
-      "Bluza typu kangurka z grubej, miękkiej bawełny. Ma luźny krój, dwuwarstwowy kaptur i dyskretny znak Garçonmaires na piersi.",
+      "Bluza z kapturem z grubej, miękkiej bawełny. Ma luźny krój, frontowy znak Garçonmaires i wspólny tylny nadruk DROP 01.",
     details: [
       "530 gsm, czesana bawełna fleece",
       "Luźny, prosty krój",
       "Przednia kieszeń kangurka",
       "Dwuwarstwowy kaptur",
-      "Tonalne oznaczenie Garçonmaires na piersi",
+      "Logo Garçonmaires z przodu",
+      "Wspólny motyw nadruku z tyłu",
     ],
     material: "100% bawełna",
   },
@@ -106,30 +107,22 @@ const polishProductContent: Record<string, LocalizedProductContent> = {
       "Pudełkowy krój z opuszczonym ramieniem",
       "Wzmocnione wykończenie dekoltu",
       "Miękkie pranie wykańczające",
+      "Logo Garçonmaires z przodu",
+      "Wspólny motyw nadruku z tyłu",
     ],
     material: "100% bawełna organiczna",
   },
   "gm-003": {
-    tagline: "Longsleeve o spokojnym kroju i wydłużonej linii rękawa.",
+    tagline: "Rozpinana bluza z kapturem na tej samej czarnej bazie.",
     description:
-      "Longsleeve z cięższej bawełny, zaprojektowany jako warstwa pod bluzę albo samodzielny element prostego zestawu.",
+      "Zip hoodie domyka odzieżowy zakres DROP 01: czarna baza, frontowe logo i wspólny graficzny nadruk z tyłu.",
     details: [
-      "Cięższa dzianina bawełniana",
-      "Prosty, luźny krój",
-      "Lekko wydłużony rękaw",
-      "Tonalny nadruk na piersi i karku",
-    ],
-    material: "100% bawełna",
-  },
-  "gm-004": {
-    tagline: "Ciężka bluza bez kaptura, z czystą linią ramion.",
-    description:
-      "Bluza crewneck z grubej bawełny loopback. Prosty krój, opuszczone ramię i minimalne oznaczenie marki.",
-    details: [
-      "480 gsm, bawełna loopback",
-      "Luźny korpus i opuszczone ramię",
-      "Ściągacz przy szyi, mankietach i dole",
-      "Minimalne tonalne oznaczenie Garçonmaires",
+      "Ciężka bawełna fleece",
+      "Luźne ramię",
+      "Pełny zamek z przodu",
+      "Ściągacze przy mankietach i dole",
+      "Logo Garçonmaires z przodu",
+      "Wspólny motyw nadruku z tyłu",
     ],
     material: "100% bawełna",
   },

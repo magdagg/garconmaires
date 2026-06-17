@@ -4,6 +4,7 @@ import {
   cartCheckoutNoindexMetadata,
   getCartCheckoutGate,
 } from "@/lib/store/cart-checkout-gate";
+import { isPreviewShopDemoEnabled } from "@/lib/preview-shop";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +14,11 @@ export const metadata: Metadata = cartCheckoutNoindexMetadata({
 });
 
 export default async function Page() {
-  return <CheckoutPage locale="en" gate={await getCartCheckoutGate()} />;
+  return (
+    <CheckoutPage
+      locale="en"
+      gate={await getCartCheckoutGate()}
+      previewDemo={isPreviewShopDemoEnabled()}
+    />
+  );
 }
