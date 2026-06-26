@@ -9,14 +9,18 @@ type FooterNewsletterProps = {
 
 const copyByLocale = {
   pl: {
-    eyebrow: "EARLY ACCESS",
-    title: "Dołącz przed pierwszym dropem.",
-    body: "Zapisz się, żeby dostać informację o premierze, próbkach i dostępności DROP 01.",
+    eyebrow: "PRIVATE LIST",
+    title: "Wejdź na prywatną listę DROP 01.",
+    body: "Dostaniesz pierwszy sygnał o dacie premiery, modelach i dostępności. Sprzedaż pozostaje zamknięta do publicznego launchu.",
+    submit: "Dołącz do listy",
+    success: "Jesteś na liście DROP 01.",
   },
   en: {
-    eyebrow: "EARLY ACCESS",
-    title: "Join before the first drop.",
-    body: "Sign up for launch notes, sample previews, and DROP 01 availability.",
+    eyebrow: "PRIVATE LIST",
+    title: "Enter the DROP 01 private list.",
+    body: "Get the first signal on the release date, pieces, and availability. Sales stay closed until the public launch.",
+    submit: "Join the list",
+    success: "You are on the DROP 01 list.",
   },
 } satisfies Record<
   Locale,
@@ -24,6 +28,8 @@ const copyByLocale = {
     title: string;
     eyebrow: string;
     body: string;
+    submit: string;
+    success: string;
   }
 >;
 
@@ -51,7 +57,8 @@ export function FooterNewsletter({ locale }: FooterNewsletterProps) {
               source="homepage-early-access"
               language={locale}
               variant="footer"
-              submitLabel={locale === "pl" ? "Zapisz się" : "Sign up"}
+              submitLabel={t.submit}
+              successMessage={t.success}
             />
           </div>
         </div>

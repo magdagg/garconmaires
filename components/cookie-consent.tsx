@@ -25,14 +25,15 @@ type CookieCopy = {
   marketingLabel: string;
   marketingBody: string;
   alwaysActive: string;
+  unavailable: string;
 };
 
 const copyByLocale: Record<Locale, CookieCopy> = {
   pl: {
     title: "ZGODA NA PLIKI COOKIE",
-    body: "Używamy niezbędnych plików cookie, aby strona działała poprawnie. Za Twoją zgodą możemy używać także plików analitycznych i marketingowych, aby mierzyć skuteczność oraz ulepszać doświadczenie.",
-    acceptAll: "Akceptuję wszystkie",
-    rejectAll: "Odrzucam wszystkie",
+    body: "Używamy tylko niezbędnych plików cookie, aby strona, koszyk i preferencje działały poprawnie. Narzędzia analityczne i marketingowe nie są teraz aktywne.",
+    acceptAll: "Akceptuję niezbędne",
+    rejectAll: "Zamknij",
     manage: "Ustawienia",
     preferencesTitle: "Ustawienia cookie",
     savePreferences: "Zapisz ustawienia",
@@ -40,16 +41,17 @@ const copyByLocale: Record<Locale, CookieCopy> = {
     necessaryLabel: "Niezbędne",
     necessaryBody: "Wymagane do prawidłowego działania strony. Zawsze aktywne.",
     analyticsLabel: "Analityczne",
-    analyticsBody: "Pomagają zrozumieć, jak odwiedzający korzystają ze strony.",
+    analyticsBody: "Nie są aktywne na tym etapie. Jeśli zostaną wdrożone, copy i mechanizm zgody zostaną zaktualizowane przed uruchomieniem.",
     marketingLabel: "Marketingowe",
-    marketingBody: "Służą do reklam i pomiaru skuteczności kampanii.",
+    marketingBody: "Nie są aktywne na tym etapie. Strona nie ładuje teraz reklamowych ani remarketingowych skryptów.",
     alwaysActive: "Zawsze aktywne",
+    unavailable: "Niewłączone",
   },
   en: {
     title: "COOKIE CONSENT",
-    body: "We use necessary cookies to make the site work. With your consent, we may also use analytics or marketing cookies to understand performance and improve the experience.",
-    acceptAll: "Accept all",
-    rejectAll: "Reject all",
+    body: "We only use necessary cookies to keep the site, cart, and preferences working. Analytics and marketing tools are not active at this stage.",
+    acceptAll: "Accept necessary",
+    rejectAll: "Close",
     manage: "Manage preferences",
     preferencesTitle: "Cookie preferences",
     savePreferences: "Save preferences",
@@ -57,10 +59,11 @@ const copyByLocale: Record<Locale, CookieCopy> = {
     necessaryLabel: "Necessary",
     necessaryBody: "Required for the website to function. Always active.",
     analyticsLabel: "Analytics",
-    analyticsBody: "Helps us understand how visitors use the website.",
+    analyticsBody: "Not active at this stage. If analytics are introduced, the copy and consent mechanism will be updated before activation.",
     marketingLabel: "Marketing",
-    marketingBody: "Used for advertising and campaign measurement.",
+    marketingBody: "Not active at this stage. The site does not currently load advertising or remarketing scripts.",
     alwaysActive: "Always active",
+    unavailable: "Not active",
   },
 };
 
@@ -169,7 +172,7 @@ function getCookieConsentScript() {
   };
 
   bindClick('[data-cookie-action="accept-all"]', () => {
-    applyConsent(createState(true, true));
+    applyConsent(createState(false, false));
   });
 
   bindClick('[data-cookie-action="reject-all"]', () => {
@@ -185,7 +188,7 @@ function getCookieConsentScript() {
   });
 
   bindClick('[data-cookie-action="save-preferences"]', () => {
-    applyConsent(createState(analyticsInput.checked, marketingInput.checked));
+    applyConsent(createState(false, false));
   });
 
   bindClick('[data-cookie-action="close-preferences"]', () => {
@@ -343,12 +346,16 @@ export function CookieConsent({ locale }: CookieConsentProps) {
               inputId="cookie-consent-analytics"
               label={t.analyticsLabel}
               body={t.analyticsBody}
+              disabled
+              badge={t.unavailable}
               toggleName="analytics"
             />
             <ToggleRow
               inputId="cookie-consent-marketing"
               label={t.marketingLabel}
               body={t.marketingBody}
+              disabled
+              badge={t.unavailable}
               toggleName="marketing"
             />
           </div>

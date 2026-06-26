@@ -118,19 +118,32 @@ Public customers cannot bypass `shopEnabled=false`.
 
 ## Legal/Seller Readiness
 
-Garçonmaires must remain pre-launch until the business form and seller details
-are confirmed. Current Preview readiness status is:
+Garçonmaires must remain pre-launch until seller details, legal pages,
+revenue-limit controls and product readiness are complete. Current Preview
+readiness status is:
 
 ```text
 sellerDataStatus=pending
 legalStatus=pending
-businessRegistrationStatus=pending
+businessRegistrationStatus=unregistered_activity_planned
 ```
 
 Do not invent or publish seller name, NIP, REGON, registered address, return
-address or tax details. Public checkout must stay blocked until the business
-form is chosen (`dzialalnosc nierejestrowana` or `JDG`) and final seller/legal
-details are completed and reviewed.
+address or tax details. The first drop is planned under Polish działalność
+nierejestrowana / unregistered activity, not JDG for now. Public checkout must
+stay blocked until final seller/legal details, return/contact data, sales limit
+controls and product readiness are completed and reviewed.
+
+Before launching under działalność nierejestrowana, prepare revenue-limit
+tracking, simplified sales register / ewidencja sprzedaży, invoice and cost
+document collection, PIT settlement reminder, and assume no VAT recovery unless
+a separate tax/VAT decision changes this later.
+
+The Preview-only Launch Readiness dashboard is available in `/admin` after
+opening the admin panel with `ORDER_ADMIN_TOKEN`. It reports the current
+ecommerce audit score of 56/100, groups blockers by priority, and blocks
+launch activation controls while Critical blockers exist. Public legal/help copy
+must stay draft/pending until confirmed seller data is available.
 
 ## Polish Payment Providers
 

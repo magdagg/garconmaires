@@ -76,11 +76,12 @@ type AdminWebhookEvent = {
 type LegalReadinessDiagnostics = {
   sellerDataStatus: "pending";
   legalStatus: "pending";
-  businessRegistrationStatus: "pending";
+  businessRegistrationStatus: "unregistered_activity_planned";
   readyForPublicCheckout: boolean;
   blocker: string;
   reason: string;
   requiredBusinessFormDecision: string[];
+  unregisteredActivityChecks: ReadinessCheck[];
   sellerFields: ReadinessCheck[];
   legalPages: ReadinessCheck[];
 };
@@ -183,12 +184,14 @@ function latestOrderEmailPayload(
 }
 
 function getLegalReadinessDiagnostics(database: StoreDatabase): LegalReadinessDiagnostics {
-  const sellerFields: Array<[string, string]> = [
+  const requiredSellerFields: Array<[string, string]> = [
     ["sellerName", database.settings.sellerName],
     ["sellerAddress", database.settings.sellerAddress],
+    ["returnAddress", database.settings.returnAddress],
+  ];
+  const optionalUnregisteredActivityFields: Array<[string, string]> = [
     ["nip", database.settings.nip],
     ["regon", database.settings.regon],
-    ["returnAddress", database.settings.returnAddress],
   ];
   const legalPages = [
     "terms/regulamin",
@@ -201,18 +204,54 @@ function getLegalReadinessDiagnostics(database: StoreDatabase): LegalReadinessDi
   return {
     sellerDataStatus: "pending",
     legalStatus: "pending",
-    businessRegistrationStatus: "pending",
+    businessRegistrationStatus: "unregistered_activity_planned",
     readyForPublicCheckout: false,
     blocker:
-      "Seller/legal data pending — do not launch checkout until business form and seller details are confirmed.",
-    reason: "Business registration is not complete yet; do not invent or publish seller, NIP, address, return address, or tax details.",
-    requiredBusinessFormDecision: [
-      "dzialalnosc nierejestrowana",
-      "JDG",
+      "Business model selected: działalność nierejestrowana planned. Launch remains blocked until seller identity, legal pages, return/contact data, sales limit controls and product readiness are completed.",
+    reason:
+      "First-drop model is planned as Polish działalność nierejestrowana. Do not invent or publish seller identity, address, return address, NIP, REGON, company name, or tax details.",
+    requiredBusinessFormDecision: ["dzialalnosc nierejestrowana planned"],
+    unregisteredActivityChecks: [
+      readinessCheck(
+        "quarterly revenue limit tracking",
+        "fail",
+        "required before launch; first drop must stay within the applicable działalność nierejestrowana revenue limit",
+      ),
+      readinessCheck(
+        "simplified sales register / ewidencja sprzedaży",
+        "fail",
+        "required before launch; prepare a daily simplified sales register process",
+      ),
+      readinessCheck(
+        "invoice and cost document collection",
+        "warn",
+        "prepare a folder/process for sales confirmations, invoices and cost documents",
+      ),
+      readinessCheck(
+        "PIT settlement reminder",
+        "warn",
+        "add an operational reminder for annual PIT settlement of this income",
+      ),
+      readinessCheck(
+        "VAT recovery",
+        "warn",
+        "assume no VAT recovery unless a different tax/VAT decision is made later",
+      ),
     ],
-    sellerFields: sellerFields.map(([label, value]) =>
-      readinessCheck(label, value.trim() ? "warn" : "fail", value.trim() ? "filled but must be verified before launch" : "pending"),
-    ),
+    sellerFields: [
+      ...requiredSellerFields.map(([label, value]) =>
+        readinessCheck(label, value.trim() ? "warn" : "fail", value.trim() ? "filled but must be verified before launch" : "pending"),
+      ),
+      ...optionalUnregisteredActivityFields.map(([label, value]) =>
+        readinessCheck(
+          label,
+          "warn",
+          value.trim()
+            ? "optional for unregistered activity; filled but must be verified before launch"
+            : "optional for unregistered activity unless provided or legally required",
+        ),
+      ),
+    ],
     legalPages: legalPages.map((label) =>
       readinessCheck(label, "warn", "draft/pending; not final legal copy"),
     ),

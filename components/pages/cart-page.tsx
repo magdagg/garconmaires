@@ -32,6 +32,7 @@ const copy = {
     continue: "Przejdź do checkoutu",
     collection: "Wróć do kolekcji",
     delivery: "Dostawa zostanie potwierdzona w checkout.",
+    locked: "Pre-launch / checkout locked",
     summary: {
       title: "Podsumowanie",
       subtotal: "Suma produktów",
@@ -58,6 +59,7 @@ const copy = {
     continue: "Continue checkout",
     collection: "Back to collection",
     delivery: "Delivery will be confirmed at checkout.",
+    locked: "Pre-launch / checkout locked",
     summary: {
       title: "Summary",
       subtotal: "Subtotal",
@@ -84,7 +86,7 @@ export function CartPage({ locale, gate, previewDemo = false }: CartPageProps) {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <section className="site-shell px-4 py-12 md:px-6 md:py-16">
+      <section className="site-shell px-4 py-14 md:px-6 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-8">
             <div className="space-y-4 border-b border-white/10 pb-8">
@@ -125,20 +127,23 @@ export function CartPage({ locale, gate, previewDemo = false }: CartPageProps) {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="grid gap-10 border-y border-white/10 py-8 md:grid-cols-[minmax(0,1fr)_280px]">
                 <div className="space-y-6">
+                  <p className="font-label text-[10px] uppercase tracking-[0.24em] text-white/30">
+                    {t.locked}
+                  </p>
                   <SizeSelector label={t.size} sizes={["S", "M", "L", "XL", "ONE SIZE"]} disabled />
                   <QuantitySelector label={t.quantity} disabled />
                   <AddToCartButton label={t.add} disabledLabel={t.disabledAdd} disabled />
                   <p className="text-xs leading-6 text-white/42">{t.delivery}</p>
                 </div>
-                <div className="border-l border-white/10 pl-6">
+                <div className="border-t border-white/10 pt-6 md:border-l md:border-t-0 md:pl-6 md:pt-0">
                   <p className="text-sm leading-7 text-white/58">
                     {gate.shopMode === "PRE_LAUNCH" ? "DROP 01 coming soon" : t.emptyBody}
                   </p>
                   <Link
                     href={collectionHref}
-                    className="mt-6 inline-flex border border-white/12 px-5 py-3 text-xs tracking-[0.22em] text-white/54 uppercase"
+                    className="mt-6 inline-flex border-b border-white/28 pb-2 text-xs tracking-[0.22em] text-white/60 uppercase transition-colors hover:border-white hover:text-white"
                   >
                     {t.collection}
                   </Link>

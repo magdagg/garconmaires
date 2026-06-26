@@ -19,96 +19,82 @@ type TeaserPiece = {
 
 const teaserCopy = {
   pl: {
-    eyebrow: "DROP 01 / PRIVATE LIST",
-    title: "Pierwsza odsłona odzieżowa.",
-    lead:
-      "DROP 01 pokazuje wyłącznie ubrania: hoodie, t-shirt i zip hoodie. Każdy element zaczyna się od przedniego logo Garçonmaires i wspólnego graficznego nadruku z tyłu.",
-    status: "COMING SOON",
-    city: "Warszawa / garments only / black base",
+    eyebrow: "GARÇONMAIRES / DROP 01",
+    title: "Czarna baza.",
+    lead: "Trzy formy. Jeden znak.",
+    status: "DROP 01",
+    city: "Warszawa / 01",
     heroAlt: "Trzy czarne produkty Garçonmaires DROP 01: hoodie, t-shirt i zip hoodie",
     lineupTitle: "Hoodie / T-shirt / Zip hoodie",
-    lineupNote:
-      "To zapowiedź zakresu dropu, nie katalog sprzedażowy. Sprzedaż pozostaje zamknięta do publicznego launchu.",
-    productEyebrow: "Showroom preview",
-    productTitle: "Trzy formy. Jeden czarny drop.",
-    productBody:
-      "Podejrzyj karty produktów, wybierz rozmiar i przejdź przez koszyk oraz checkout preview. Sprzedaż publiczna i realna płatność pozostają zablokowane.",
-    backPrintLabel: "Wspólny tylny nadruk",
-    backPrintTitle: "Jeden motyw łączy trzy formy.",
-    backPrintBody:
-      "Tylny nadruk jest wspólnym znakiem DROP 01. Na tym etapie pokazujemy go jako preview motywu, bez cen, wariantów i obietnicy konkretnej daty premiery.",
+    lineupNote: "Bez daty. Bez nadmiaru.",
+    productEyebrow: "Collection preview",
+    productTitle: "01 / 02 / 03",
+    productBody: "Rozmiar. Forma. Koszyk.",
+    previewNote: "Checkout testowy. Bez realnej płatności.",
+    backPrintLabel: "Back print",
+    backPrintTitle: "Jeden znak. Trzy formy.",
+    backPrintBody: "Nadruk jako ślad.",
     backPrintAlt: "Graficzny motyw tylnego nadruku Garçonmaires DROP 01",
-    privateList: "Prywatna lista",
-    privateTitle: "Wejdź wcześniej niż publiczny launch.",
-    privateBody:
-      "Zapisz się, jeśli chcesz dostać pierwszy sygnał o odzieżowym DROP 01. Bez publicznego checkoutu, bez otwartej sprzedaży, tylko wcześniejszy dostęp do informacji.",
+    privateList: "Private list",
+    privateTitle: "Pierwszy dostęp do DROP 01.",
+    privateBody: "Zostaw adres.",
     submit: "Dołącz do listy",
     success: "Jesteś na liście DROP 01.",
     pieces: [
       {
         name: "Hoodie",
-        label: "01 / volume",
-        body:
-          "Czarna bluza z kapturem jako najmocniejsza sylwetka dropu: ciężar, cień i frontowy znak Garçonmaires.",
+        label: "01 / heavy cotton",
+        body: "Front mark / back print",
       },
       {
         name: "T-shirt",
-        label: "02 / base layer",
-        body:
-          "Czarna baza pierwszej odsłony: prosta forma, wyraźny logotyp z przodu i ten sam tylny motyw co na bluzach.",
+        label: "02 / black jersey",
+        body: "Relaxed line / back print",
       },
       {
         name: "Zip hoodie",
         label: "03 / split front",
-        body:
-          "Rozpinana bluza domyka odzieżowy zakres dropu: ta sama czarna baza, frontowe logo i wspólny nadruk z tyłu.",
+        body: "Small mark / back print",
       },
     ],
   },
   en: {
-    eyebrow: "DROP 01 / PRIVATE LIST",
-    title: "The first garment-only release.",
-    lead:
-      "DROP 01 now focuses only on garments: hoodie, T-shirt, and zip hoodie. Each piece carries the Garçonmaires logo on the front and a shared graphic print on the back.",
-    status: "COMING SOON",
-    city: "Warsaw / garments only / black base",
+    eyebrow: "GARÇONMAIRES / DROP 01",
+    title: "Black base.",
+    lead: "Three forms. One mark.",
+    status: "DROP 01",
+    city: "Warsaw / 01",
     heroAlt: "Three black Garçonmaires DROP 01 garments: hoodie, T-shirt, and zip hoodie",
     lineupTitle: "Hoodie / T-shirt / Zip hoodie",
-    lineupNote:
-      "This is a pre-launch scope preview, not a sales catalogue. Sales stay closed until the public launch.",
-    productEyebrow: "Showroom preview",
-    productTitle: "Three forms. One black drop.",
-    productBody:
-      "Open the product cards, select a size, and move through cart and checkout preview. Public sales and real payment remain locked.",
-    backPrintLabel: "Shared back print",
-    backPrintTitle: "One graphic motif across the full drop.",
-    backPrintBody:
-      "The back print is the visual link between the three pieces. For now it is shown as a motif preview, without prices, variants, or a promised release date.",
+    lineupNote: "No date. No excess.",
+    productEyebrow: "Collection preview",
+    productTitle: "01 / 02 / 03",
+    productBody: "Size. Form. Cart.",
+    previewNote: "Test checkout. No real payment.",
+    backPrintLabel: "Back print",
+    backPrintTitle: "One mark. Three forms.",
+    backPrintBody: "The print as a trace.",
     backPrintAlt: "Garçonmaires DROP 01 shared back print graphic motif",
     privateList: "Private list",
-    privateTitle: "Enter before the public launch.",
-    privateBody:
-      "Join for the first signal on the garment-only DROP 01. No public checkout, no open sale, just early access to release information.",
+    privateTitle: "First access to DROP 01.",
+    privateBody: "Leave your address.",
     submit: "Join the list",
     success: "You are on the DROP 01 list.",
     pieces: [
       {
         name: "Hoodie",
-        label: "01 / volume",
-        body:
-          "The strongest silhouette in the drop: black volume, shadow, and the Garçonmaires logo placed on the front.",
+        label: "01 / heavy cotton",
+        body: "Front mark / back print",
       },
       {
         name: "T-shirt",
-        label: "02 / base layer",
-        body:
-          "The clean black base of the first release, carrying the front logo and the same back motif as the hoodies.",
+        label: "02 / black jersey",
+        body: "Relaxed line / back print",
       },
       {
         name: "Zip hoodie",
         label: "03 / split front",
-        body:
-          "A zip-front layer that completes the garment scope: black base, front logo, and shared back print.",
+        body: "Small mark / back print",
       },
     ],
   },
@@ -126,6 +112,7 @@ const teaserCopy = {
     productEyebrow: string;
     productTitle: string;
     productBody: string;
+    previewNote: string;
     backPrintLabel: string;
     backPrintTitle: string;
     backPrintBody: string;
@@ -257,21 +244,14 @@ export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
           </div>
           <p className="max-w-xl border-t border-white/10 pt-5 text-sm leading-8 text-white/58 md:justify-self-end">
             {t.productBody}
+            <span className="mt-4 block font-label text-[10px] leading-5 tracking-[0.22em] text-white/34 uppercase">
+              {t.previewNote}
+            </span>
           </p>
         </div>
         <div className="grid gap-8 md:grid-cols-3">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} locale={locale} />
-          ))}
-        </div>
-        <div className="mt-12 grid gap-px bg-white/8 md:grid-cols-3">
-          {t.pieces.map((piece) => (
-            <div key={piece.name} className="bg-black p-5">
-              <p className="font-label text-[10px] tracking-[0.24em] text-white/32 uppercase">
-                {piece.label}
-              </p>
-              <p className="mt-3 text-sm leading-7 text-white/58">{piece.body}</p>
-            </div>
           ))}
         </div>
       </section>

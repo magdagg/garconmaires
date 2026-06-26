@@ -70,7 +70,7 @@ export function CartPreviewDemo({ locale, delivery }: CartPreviewDemoProps) {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <section className="site-shell px-4 py-12 md:px-6 md:py-16">
+      <section className="site-shell px-4 py-14 md:px-6 md:py-20">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-8">
             <div className="space-y-4 border-b border-white/10 pb-8">
@@ -169,12 +169,17 @@ export function CartPreviewDemo({ locale, delivery }: CartPreviewDemoProps) {
                 </div>
               </div>
             ) : (
-              <Link
-                href={collectionHref}
-                className="inline-flex border border-white/12 px-6 py-4 text-xs tracking-[0.24em] text-white/62 uppercase hover:border-white/36"
-              >
-                {t.collection}
-              </Link>
+              <div className="border-y border-white/10 py-10">
+                <p className="font-label text-[10px] uppercase tracking-[0.24em] text-white/30">
+                  Preview / empty state
+                </p>
+                <Link
+                  href={collectionHref}
+                  className="mt-6 inline-flex border-b border-white/28 pb-2 text-xs tracking-[0.24em] text-white/64 uppercase transition-colors hover:border-white hover:text-white"
+                >
+                  {t.collection}
+                </Link>
+              </div>
             )}
           </div>
 

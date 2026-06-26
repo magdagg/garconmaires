@@ -41,9 +41,8 @@ export const products: Product[] = [
     price: 500,
     imageUrl: "/collection/drop-hoodie-01.png",
     imageAlt: "Black Garçonmaires hoodie with front logo",
-    tagline: "Heavy cotton fleece cut with a restrained street silhouette.",
-    description:
-      "A heavyweight hooded silhouette for DROP 01, built around black cotton, a front Garçonmaires logo and the shared back print motif.",
+    tagline: "Heavy cotton / front mark / back print.",
+    description: "Black hooded form. DROP 01.",
     details: [
       "530gsm brushed cotton fleece",
       "Relaxed straight fit",
@@ -69,9 +68,8 @@ export const products: Product[] = [
     price: 300,
     imageUrl: "/collection/drop-tee-01.png",
     imageAlt: "Black Garçonmaires t-shirt with front logo",
-    tagline: "Crisp jersey, dropped shoulder, clean line branding.",
-    description:
-      "A compact black jersey base layer for DROP 01, with a front Garçonmaires logo and the same graphic back motif as the hoodies.",
+    tagline: "Black jersey / relaxed line / back print.",
+    description: "Black base layer. DROP 01.",
     details: [
       "Compact cotton jersey",
       "Boxy fit with dropped shoulder",
@@ -97,9 +95,8 @@ export const products: Product[] = [
     price: 540,
     imageUrl: "/collection/drop-zip-hoodie-01.png",
     imageAlt: "Black Garçonmaires zip hoodie with front logo",
-    tagline: "A split-front hooded layer with the same quiet black base.",
-    description:
-      "A zip hoodie for the garment-only DROP 01 preview: black base, restrained front logo placement and the shared back print motif.",
+    tagline: "Split front / small mark / back print.",
+    description: "Black zip form. DROP 01.",
     details: [
       "Heavy cotton fleece",
       "Relaxed dropped shoulder",

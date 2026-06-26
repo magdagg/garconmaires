@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  getLaunchReadiness,
+  launchReadinessPriorities,
+  type LaunchBlocker,
+  type LaunchReadinessResult,
+} from "@/lib/launch-readiness";
 
 const sandboxProductId = "prod-tpay-sandbox-test";
 
@@ -239,11 +245,12 @@ type StoreSnapshot = {
     legalReadiness: {
       sellerDataStatus: "pending";
       legalStatus: "pending";
-      businessRegistrationStatus: "pending";
+      businessRegistrationStatus: "unregistered_activity_planned";
       readyForPublicCheckout: boolean;
       blocker: string;
       reason: string;
       requiredBusinessFormDecision: string[];
+      unregisteredActivityChecks: ReadinessCheck[];
       sellerFields: ReadinessCheck[];
       legalPages: ReadinessCheck[];
     };
@@ -369,6 +376,7 @@ type TpayOAuthDiagnosticResult = {
 
 const tabs = [
   "dashboard",
+  "launch-readiness",
   "products",
   "inventory",
   "drops",
@@ -616,6 +624,14 @@ export function AdminStorePage() {
       ["Newsletter", snapshot.newsletterSubscribers.length],
     ];
   }, [snapshot]);
+  const launchReadiness = useMemo(() => {
+    if (!snapshot) {
+      return null;
+    }
+
+    return getLaunchReadiness(snapshot);
+  }, [snapshot]);
+  const launchBlocked = Boolean(launchReadiness?.counts.critical);
   const filteredProducts = useMemo(() => {
     if (!snapshot) {
       return [];
@@ -726,6 +742,10 @@ export function AdminStorePage() {
               </section>
             ) : null}
 
+            {activeTab === "launch-readiness" && launchReadiness ? (
+              <LaunchReadinessDashboard readiness={launchReadiness} snapshot={snapshot} />
+            ) : null}
+
             {activeTab === "products" ? (
               <section className="mt-8 space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -811,6 +831,7 @@ export function AdminStorePage() {
                     categories={snapshot.categories}
                     drops={snapshot.drops}
                     snapshot={snapshot}
+                    launchBlocked={launchBlocked}
                     onAction={action}
                     onUploadImage={uploadProductImage}
                     onPreview={() => setPreviewProductId(product.id)}
@@ -862,8 +883,18 @@ export function AdminStorePage() {
                     <p>{drop.name} <span className="text-white/45">/ {drop.status}</span></p>
                     <div className="flex gap-2">
                       {["draft", "upcoming", "early_access", "live", "closed"].map((status) => (
-                        <button key={status} type="button" onClick={() => action("drop.upsert", { ...drop, status })} className="border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em]">
-                          {status}
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={status === "live" && launchBlocked}
+                          onClick={() => action("drop.upsert", { ...drop, status })}
+                          className={
+                            status === "live" && launchBlocked
+                              ? "cursor-not-allowed border border-red-300/30 px-3 py-2 text-xs uppercase tracking-[0.18em] text-red-100/60"
+                              : "border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em]"
+                          }
+                        >
+                          {status === "live" && launchBlocked ? "live blocked" : status}
                         </button>
                       ))}
                     </div>
@@ -1105,9 +1136,30 @@ export function AdminStorePage() {
 
             {activeTab === "settings" ? (
               <section className="mt-8 space-y-8">
+                {launchBlocked ? (
+                  <div className="border border-red-300/25 bg-red-950/20 p-5">
+                    <p className="text-xs uppercase tracking-[0.24em] text-red-100/70">
+                      Launch activation blocked
+                    </p>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-red-50/70">
+                      Critical Launch Readiness blockers are present. shopEnabled,
+                      PUBLIC_DROP and live drop activation are locked until legal,
+                      product, payment, email and fulfillment blockers are resolved.
+                    </p>
+                  </div>
+                ) : null}
                 <div className="grid gap-4 md:grid-cols-2">
-                  <button type="button" onClick={() => action("settings.update", { shopEnabled: !snapshot.settings.shopEnabled })} className="border border-white/15 p-5 text-left">
-                    shopEnabled: {String(snapshot.settings.shopEnabled)}
+                  <button
+                    type="button"
+                    disabled={launchBlocked}
+                    onClick={() => action("settings.update", { shopEnabled: !snapshot.settings.shopEnabled })}
+                    className={
+                      launchBlocked
+                        ? "cursor-not-allowed border border-red-300/25 p-5 text-left text-red-100/60"
+                        : "border border-white/15 p-5 text-left"
+                    }
+                  >
+                    shopEnabled: {launchBlocked ? "blocked" : String(snapshot.settings.shopEnabled)}
                   </button>
                   <button type="button" onClick={() => action("settings.update", { maintenanceMode: !snapshot.settings.maintenanceMode })} className="border border-white/15 p-5 text-left">
                     maintenanceMode: {String(snapshot.settings.maintenanceMode)}
@@ -1115,8 +1167,17 @@ export function AdminStorePage() {
                   <button type="button" onClick={() => action("settings.update", { shopMode: "PRE_LAUNCH" })} className="border border-white/15 p-5 text-left">
                     PRE_LAUNCH
                   </button>
-                  <button type="button" onClick={() => action("settings.update", { shopMode: "PUBLIC_DROP" })} className="border border-white/15 p-5 text-left">
-                    PUBLIC_DROP
+                  <button
+                    type="button"
+                    disabled={launchBlocked}
+                    onClick={() => action("settings.update", { shopMode: "PUBLIC_DROP" })}
+                    className={
+                      launchBlocked
+                        ? "cursor-not-allowed border border-red-300/25 p-5 text-left text-red-100/60"
+                        : "border border-white/15 p-5 text-left"
+                    }
+                  >
+                    {launchBlocked ? "PUBLIC_DROP blocked" : "PUBLIC_DROP"}
                   </button>
                 </div>
 
@@ -1233,6 +1294,139 @@ function DiagnosticField({ label, value }: { label: string; value: string }) {
       <span className="block uppercase tracking-[0.18em] text-white/30">{label}</span>
       <span className="mt-1 block break-words text-white/68">{value}</span>
     </p>
+  );
+}
+
+function LaunchReadinessDashboard({
+  readiness,
+  snapshot,
+}: {
+  readiness: LaunchReadinessResult;
+  snapshot: StoreSnapshot;
+}) {
+  const liveDrops = snapshot.drops.filter((drop) => drop.status === "live").length;
+
+  return (
+    <section className="mt-8 space-y-6">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="border border-white/10 p-6">
+          <p className="text-xs uppercase tracking-[0.24em] text-white/38">
+            Preview-only Launch Readiness
+          </p>
+          <div className="mt-5 flex flex-wrap items-end gap-6">
+            <div>
+              <p className="font-display text-6xl leading-none">{readiness.score}</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/35">
+                readiness score / 100
+              </p>
+            </div>
+            <div className="max-w-2xl text-sm leading-6 text-white/58">
+              Public launch remains blocked. This panel is preview/staging only
+              and does not enable sales, production checkout, production Tpay,
+              production email, or production delivery.
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {launchReadinessPriorities.map((priority) => (
+            <div key={priority} className="border border-white/10 p-5">
+              <p className="text-xs uppercase tracking-[0.22em] text-white/35">
+                {priority}
+              </p>
+              <p className="mt-3 text-3xl">{readiness.counts[priority]}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <DiagnosticField label="checkout gated" value={readiness.checkoutGated ? "yes" : "no"} />
+        <DiagnosticField label="shopEnabled" value={String(snapshot.settings.shopEnabled)} />
+        <DiagnosticField label="shopMode" value={snapshot.settings.shopMode} />
+        <DiagnosticField label="live drops" value={String(liveDrops)} />
+        <DiagnosticField label="visible real products" value={String(readiness.visibleProductCount)} />
+        <DiagnosticField label="real product records" value={String(readiness.realProductCount)} />
+        <DiagnosticField label="legal unsafe copy" value={String(readiness.legalCopy.unsafeCount)} />
+        <DiagnosticField label="legal draft markers" value={String(readiness.legalCopy.pendingMarkerCount)} />
+      </div>
+
+      <div className="border border-red-300/25 bg-red-950/20 p-5">
+        <p className="text-xs uppercase tracking-[0.24em] text-red-100/70">
+          Activation controls locked
+        </p>
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-red-50/70">
+          While Critical blockers exist, admin controls for shopEnabled,
+          PUBLIC_DROP, live drop status and public product visibility are blocked
+          from this interface. Resolve blockers first; then run a separate launch
+          rehearsal before any production action.
+        </p>
+      </div>
+
+      <div className="border border-yellow-200/25 bg-yellow-950/10 p-5">
+        <p className="text-xs uppercase tracking-[0.24em] text-yellow-100/70">
+          Działalność nierejestrowana planned
+        </p>
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-yellow-50/70">
+          Business model selected for the first drop: działalność
+          nierejestrowana. Launch still requires seller identity, draft legal
+          pages completion, return/contact data, product readiness and explicit
+          revenue-limit tracking. The first drop must remain within the
+          applicable revenue limit, with simplified sales register, document
+          collection, PIT reminder and no VAT recovery unless a later tax
+          decision changes that.
+        </p>
+      </div>
+
+      {launchReadinessPriorities.map((priority) => {
+        const blockers = readiness.blockers.filter(
+          (blocker) => blocker.priority === priority,
+        );
+
+        return (
+          <ReadinessBlockerGroup key={priority} priority={priority} blockers={blockers} />
+        );
+      })}
+    </section>
+  );
+}
+
+function ReadinessBlockerGroup({
+  priority,
+  blockers,
+}: {
+  priority: string;
+  blockers: LaunchBlocker[];
+}) {
+  return (
+    <div className="border border-white/10">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+        <p className="text-xs uppercase tracking-[0.24em] text-white/42">
+          {priority} blockers
+        </p>
+        <span className="text-sm text-white/45">{blockers.length}</span>
+      </div>
+      <div className="grid gap-0">
+        {blockers.length === 0 ? (
+          <p className="p-5 text-sm text-emerald-200/75">No blockers in this group.</p>
+        ) : null}
+        {blockers.map((blocker, index) => (
+          <div
+            key={`${blocker.priority}-${blocker.area}-${blocker.title}-${index}`}
+            className="grid gap-3 border-t border-white/10 p-5 first:border-t-0 lg:grid-cols-[0.35fr_0.65fr_1fr]"
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-white/35">
+              {blocker.area}
+            </p>
+            <div>
+              <p className="text-sm text-white">{blocker.title}</p>
+              <p className="mt-2 text-xs leading-5 text-white/45">{blocker.detail}</p>
+            </div>
+            <p className="text-sm leading-6 text-white/62">{blocker.action}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1506,6 +1700,7 @@ function ProductEditor({
   categories,
   drops,
   snapshot,
+  launchBlocked,
   onAction,
   onUploadImage,
   onPreview,
@@ -1516,12 +1711,15 @@ function ProductEditor({
   categories: CategorySnapshot[];
   drops: DropSnapshot[];
   snapshot: StoreSnapshot;
+  launchBlocked: boolean;
   onAction: (actionName: string, payload: Record<string, unknown>) => void;
   onUploadImage: (productId: string, file: File, alt: string, isPrimary: boolean) => void;
   onPreview: () => void;
 }) {
   const warnings = productWarnings(product, variants, images, snapshot);
   const sortedImages = [...images].sort((left, right) => left.sortOrder - right.sortOrder);
+  const visibilityBlocked =
+    launchBlocked && !product.isVisible && product.id !== sandboxProductId;
 
   return (
     <div className="space-y-5 border border-white/10 p-4">
@@ -1592,8 +1790,17 @@ function ProductEditor({
             {status}
           </button>
         ))}
-        <button type="button" onClick={() => onAction("product.status", { id: product.id, status: product.status, isVisible: !product.isVisible })} className="bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black">
-          {product.isVisible ? "Hide public" : "Set visible"}
+        <button
+          type="button"
+          disabled={visibilityBlocked}
+          onClick={() => onAction("product.status", { id: product.id, status: product.status, isVisible: !product.isVisible })}
+          className={
+            visibilityBlocked
+              ? "cursor-not-allowed border border-red-300/30 px-4 py-2 text-xs uppercase tracking-[0.2em] text-red-100/60"
+              : "bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
+          }
+        >
+          {visibilityBlocked ? "Visibility blocked" : product.isVisible ? "Hide public" : "Set visible"}
         </button>
         <button type="button" onClick={() => onAction("product.upsert", { ...product, isFeatured: !product.isFeatured })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
           {product.isFeatured ? "Unfeature" : "Feature"}
@@ -2301,10 +2508,14 @@ function LegalReadinessPanel({
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <ReadinessGroup title="Seller data" checks={diagnostics.sellerFields} />
         <ReadinessGroup title="Draft legal pages" checks={diagnostics.legalPages} />
+        <ReadinessGroup
+          title="Działalność nierejestrowana controls"
+          checks={diagnostics.unregisteredActivityChecks}
+        />
       </div>
 
       <div className="mt-4 text-xs text-white/45">
-        Business form decision required:{" "}
+        Business model status:{" "}
         {diagnostics.requiredBusinessFormDecision.join(" or ")}.
       </div>
     </section>

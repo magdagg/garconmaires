@@ -1,54 +1,46 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { FooterNewsletter } from "@/components/layout/footer-newsletter";
-import { NewsletterForm } from "@/components/newsletter/newsletter-form";
 import { type Locale } from "@/lib/i18n";
 
-const HERO_NEWSLETTER_DISMISS_KEY = "garconmaires-newsletter-dismissed";
-const HERO_NEWSLETTER_EVENT = "garconmaires-newsletter-dismissed-change";
-const manifestCopy = {
-  label: "MANIFEST",
-  headline: (
-    <>
-      Born in Warsaw.
-      <br />
-      Dressed in noir.
-    </>
-  ),
-  body: [
-    "Garçonmaires to polska marka odzieżowa, łącząca streetwear z elegancją. Stworzona w Warszawie, czerpie inspirację z polskiej kultury.",
-    "Przepełniona symboliką marka, łączy elementy karciane w swojej estetyce.",
-    "Buduje własny język - chłodny, wyrazisty, zakorzeniony w miejscu, z którego pochodzi.",
-    "Warszawa pozostaje dla marki punktem odniesienia. Nie jako pocztówkowy obraz miasta, ale jako atmosfera: szkło, beton, metal, cień, ruch, surowość i kontrast.",
-    "Garçonmaires przenosi ten kontekst na formę, znak i sposób obecności.",
-    "Powstaje wokół czerni i wyrazistej symboliki.",
-  ],
-};
-
-function subscribeToHeroNewsletterDismiss(callback: () => void) {
-  if (typeof window === "undefined") {
-    return () => undefined;
+const manifestCopyByLocale = {
+  pl: {
+    label: "MANIFEST",
+    headlineTop: "Born in Warsaw.",
+    headlineBottom: "Dressed in noir.",
+    body: [
+      "Garçonmaires to polska marka odzieżowa, łącząca streetwear z elegancją. Stworzona w Warszawie, czerpie inspirację z polskiej kultury.",
+      "Przepełniona symboliką marka łączy elementy karciane z czystą, czarną garderobą.",
+      "Buduje własny język: chłodny, wyrazisty i zakorzeniony w miejscu, z którego pochodzi.",
+      "Warszawa pozostaje punktem odniesienia. Nie jako pocztówkowy obraz miasta, ale jako atmosfera: szkło, beton, metal, cień, ruch, surowość i kontrast.",
+      "Garçonmaires przenosi ten kontekst na formę, znak i sposób obecności.",
+      "DROP 01 powstaje wokół czerni, krótkiej serii i rozpoznawalnego symbolu.",
+    ],
+  },
+  en: {
+    label: "MANIFESTO",
+    headlineTop: "Born in Warsaw.",
+    headlineBottom: "Dressed in noir.",
+    body: [
+      "Garçonmaires is a Polish clothing label shaped by streetwear, elegance, and a disciplined black wardrobe.",
+      "The brand draws from card symbolism and turns it into a restrained visual language.",
+      "Its tone is cool, graphic, and rooted in the city it comes from.",
+      "Warsaw remains the reference point: glass, concrete, metal, shadow, movement, rawness, and contrast.",
+      "Garçonmaires translates that atmosphere into silhouette, mark, and presence.",
+      "DROP 01 begins with black, limited quantities, and a symbol built to stay.",
+    ],
+  },
+} satisfies Record<
+  Locale,
+  {
+    label: string;
+    headlineTop: string;
+    headlineBottom: string;
+    body: string[];
   }
-
-  const handler = () => callback();
-  window.addEventListener("storage", handler);
-  window.addEventListener(HERO_NEWSLETTER_EVENT, handler);
-
-  return () => {
-    window.removeEventListener("storage", handler);
-    window.removeEventListener(HERO_NEWSLETTER_EVENT, handler);
-  };
-}
-
-function getHeroNewsletterDismissSnapshot() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return window.sessionStorage.getItem(HERO_NEWSLETTER_DISMISS_KEY) === "true";
-}
+>;
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -71,11 +63,7 @@ function usePrefersReducedMotion() {
 }
 
 export function HomePage({ locale = "pl" }: { locale?: Locale }) {
-  const isHeroNewsletterDismissed = useSyncExternalStore(
-    subscribeToHeroNewsletterDismiss,
-    getHeroNewsletterDismissSnapshot,
-    () => false,
-  );
+  const manifestCopy = manifestCopyByLocale[locale];
   const prefersReducedMotion = usePrefersReducedMotion();
   const manifestSectionRef = useRef<HTMLElement | null>(null);
   const manifestParagraphRefs = useRef<Array<HTMLParagraphElement | null>>([]);
@@ -86,31 +74,6 @@ export function HomePage({ locale = "pl" }: { locale?: Locale }) {
   const manifestParagraphVisibility = prefersReducedMotion
     ? manifestCopy.body.map((_, index) => index)
     : visibleManifestParagraphs;
-  const heroNewsletterCopy =
-    locale === "pl"
-      ? {
-          eyebrow: "DROP 01 WKRÓTCE",
-          title: "Dołącz przed premierą.",
-          description: "Otrzymaj wcześniejszy dostęp do pierwszej kolekcji.",
-          button: "DOŁĄCZ",
-          success: "Dziękujemy. Jesteś na liście.",
-          closeLabel: "Zamknij panel newslettera",
-        }
-      : {
-          eyebrow: "DROP 01 SOON",
-          title: "Join before the launch.",
-          description: "Get early access to the first collection.",
-          button: "JOIN",
-          success: "Thank you. You're on the list.",
-          closeLabel: "Close newsletter panel",
-        };
-
-  function dismissHeroNewsletter() {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(HERO_NEWSLETTER_DISMISS_KEY, "true");
-      window.dispatchEvent(new Event(HERO_NEWSLETTER_EVENT));
-    }
-  }
 
   useEffect(() => {
     if (prefersReducedMotion) {
@@ -300,14 +263,14 @@ export function HomePage({ locale = "pl" }: { locale?: Locale }) {
               <span
                 className={`manifest-headline-line ${manifestVisible ? "manifest-headline-line--visible" : ""}`}
               >
-                Born in Warsaw.
+                {manifestCopy.headlineTop}
               </span>
             </span>
             <span className="manifest-headline-line-wrap">
               <span
                 className={`manifest-headline-line manifest-headline-line--delayed ${manifestVisible ? "manifest-headline-line--visible" : ""}`}
               >
-                Dressed in noir.
+                {manifestCopy.headlineBottom}
               </span>
             </span>
           </h2>
@@ -328,86 +291,6 @@ export function HomePage({ locale = "pl" }: { locale?: Locale }) {
           </div>
         </div>
       </section>
-
-      {!isHeroNewsletterDismissed ? (
-        <>
-          <div className="pointer-events-none fixed right-6 bottom-6 z-50 hidden md:block">
-            <div className="pointer-events-auto w-full max-w-[25rem]">
-              <div className="relative w-[25rem] max-w-[calc(100vw-3rem)] border border-white/10 bg-black/72 p-4 shadow-[0_16px_36px_rgba(0,0,0,0.28)] backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={dismissHeroNewsletter}
-                  aria-label={heroNewsletterCopy.closeLabel}
-                  className="absolute top-3 right-3 inline-flex h-7 w-7 items-center justify-center text-sm text-white/46 transition hover:text-white/78"
-                >
-                  ×
-                </button>
-                <div className="space-y-3">
-                  <p className="font-label pr-8 text-[9px] tracking-[0.26em] text-white/42 uppercase">
-                    {heroNewsletterCopy.eyebrow}
-                  </p>
-                  <div className="space-y-1.5">
-                    <h2 className="font-display max-w-[15rem] text-[1.4rem] leading-[1.02] text-white">
-                      {heroNewsletterCopy.title}
-                    </h2>
-                    <p className="max-w-[16rem] text-[12px] leading-5 text-white/58">
-                      {heroNewsletterCopy.description}
-                    </p>
-                  </div>
-                  <NewsletterForm
-                    source="hero"
-                    language={locale}
-                    variant="hero"
-                    submitLabel={heroNewsletterCopy.button}
-                    successMessage={heroNewsletterCopy.success}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* NEWSLETTER SECTION STARTS OUTSIDE HERO */}
-          <section
-            id="newsletter-after-hero"
-            className="newsletter-after-hero border-t border-white/10 bg-black px-4 py-6 md:hidden"
-          >
-            <div className="mx-auto flex max-w-7xl justify-end">
-              <div className="w-full max-w-[420px]">
-                <div className="relative border border-white/10 bg-black/72 p-4 shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={dismissHeroNewsletter}
-                    aria-label={heroNewsletterCopy.closeLabel}
-                    className="absolute top-3 right-3 inline-flex h-7 w-7 items-center justify-center text-sm text-white/46 transition hover:text-white/78"
-                  >
-                    ×
-                  </button>
-                  <div className="space-y-3">
-                    <p className="font-label pr-8 text-[9px] tracking-[0.26em] text-white/42 uppercase">
-                      {heroNewsletterCopy.eyebrow}
-                    </p>
-                    <div className="space-y-1.5">
-                      <h2 className="font-display max-w-[15rem] text-[1.4rem] leading-[1.02] text-white">
-                        {heroNewsletterCopy.title}
-                      </h2>
-                      <p className="max-w-[16rem] text-[12px] leading-5 text-white/58">
-                        {heroNewsletterCopy.description}
-                      </p>
-                    </div>
-                    <NewsletterForm
-                      source="hero"
-                      language={locale}
-                      variant="hero"
-                      submitLabel={heroNewsletterCopy.button}
-                      successMessage={heroNewsletterCopy.success}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </>
-      ) : null}
 
       <FooterNewsletter locale={locale} />
     </div>

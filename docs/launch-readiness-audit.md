@@ -9,6 +9,44 @@ Supporting notes:
 - Tpay sandbox record: [docs/tpay-sandbox-test.md](/Users/magdalenagrabowska/garconmaires/docs/tpay-sandbox-test.md)
 - Resend transactional testing: [docs/resend-transactional-email-testing.md](/Users/magdalenagrabowska/garconmaires/docs/resend-transactional-email-testing.md)
 
+## 2026-06-25 ecommerce audit update
+
+The full clothing ecommerce audit is complete. The current public launch
+readiness score for a real clothing store launch is **56/100**.
+
+Key blockers remain:
+
+- Business model is now selected for first drop: działalność nierejestrowana /
+  unregistered activity planned. Legal/seller data is still pending: seller
+  identity, legal address, tax identifiers if applicable, return address,
+  complaint contact and final document version are not confirmed.
+- Product readiness is pending: real product photos, complete specs,
+  measurements, material/composition/care, available variants and confirmed
+  stock are not launch-ready.
+- Delivery operations are pending: InPost/manual fulfillment, shipment labels,
+  tracking and final delivery prices/times need launch rehearsal.
+- Production payment/email/delivery rehearsal is pending and must not happen
+  until legal, product, stock and fulfillment blockers are resolved.
+
+Implementation follow-up completed on 2026-06-25:
+
+- Added a Preview-only admin **Launch Readiness** dashboard in `/admin`.
+- The dashboard groups blockers by Critical, High, Medium and Low priority.
+- Launch activation controls are blocked in the admin UI while Critical blockers
+  exist: `shopEnabled`, `PUBLIC_DROP`, live drop status and public product
+  visibility cannot be toggled from the dashboard flow.
+- Public legal/help copy in `lib/store-pages.ts` was neutralized where it used
+  hardcoded seller/address/payment placeholders. Public pages now stay visible
+  but are clearly marked draft/pending until confirmed seller/legal data exists.
+- 2026-06-25 update: business model is now
+  `unregistered_activity_planned`; admin readiness also tracks revenue-limit
+  controls, simplified sales register, document collection, PIT reminder and no
+  VAT recovery unless a separate tax/VAT decision is made later.
+- No fake seller, NIP, REGON, address, return address or tax data was added.
+- Safety baseline remains: `shopEnabled=false`, `shopMode=PRE_LAUNCH`, visible
+  products `0`, real products hidden/draft, checkout gated, no production
+  deployment required for this update.
+
 ## Executive summary
 
 Garconmaires has completed the controlled Tpay sandbox staging payment flow, but it is not ready for real sales yet.
@@ -17,7 +55,7 @@ The backend foundation is in place: Postgres storage, Prisma migrations, hidden/
 
 Tpay sandbox is now staging-ready: OAuth, checkout transaction creation, payment completion, classic form webhook delivery, webhook verification, paid order update and stock commit have all passed on Preview/Staging. Tpay production credentials and one controlled low-value live payment test remain pending for the launch rehearsal.
 
-The second launch blocker is commercial content/legal readiness. Product images are missing, real products have zero stock, specs and size guides still contain placeholders, and legal pages still require final seller, tax, address, delivery, payment, return, complaint, privacy, and GDPR details. Seller/legal data is explicitly pending because the business/JDG is not registered yet.
+The second launch blocker is commercial content/legal readiness. Product images are missing, real products have zero stock, specs and size guides still contain placeholders, and legal pages still require final seller, tax, address, delivery, payment, return, complaint, privacy, and GDPR details. The first drop is now planned under działalność nierejestrowana, but seller/legal data and revenue-limit controls remain pending.
 
 ## Readiness score
 
@@ -85,8 +123,9 @@ Area scores:
    - Specs, materials, dimensions, care, model sizing, and size guides still contain placeholders.
 
 2. Legal documents are draft only.
-   - Business registration status is pending because the business/JDG is not registered yet.
-   - Launch is blocked until the business form is chosen: działalność nierejestrowana or JDG.
+   - Business registration status is `unregistered_activity_planned` for the first drop.
+   - Launch remains blocked until seller identity, legal pages, return/contact data, sales limit controls and product readiness are completed.
+   - Działalność nierejestrowana launch requires revenue limit tracking, simplified sales register / ewidencja sprzedaży, invoice/cost document collection, PIT settlement reminder and no VAT recovery unless a separate tax/VAT decision changes that later.
    - Seller legal name, NIP, REGON, registered address, return address, complaint contact, payment operator details, delivery operator details, privacy/GDPR legal bases, retention periods, and final return/complaint rules must be completed and reviewed.
 
 3. Delivery is operationally incomplete.
@@ -541,10 +580,10 @@ Readiness status:
 
 - `sellerDataStatus=pending`
 - `legalStatus=pending`
-- `businessRegistrationStatus=pending`
-- Seller/legal data is not ready because the business/JDG is not registered yet.
-- Public checkout must not launch until the business form and seller details are confirmed.
-- Business form decision required before launch: działalność nierejestrowana or JDG.
+- `businessRegistrationStatus=unregistered_activity_planned`
+- First drop is planned under działalność nierejestrowana / unregistered activity.
+- Seller/legal data is not ready because seller identity, address, return/contact data and final legal pages are still pending.
+- Public checkout must not launch until seller details, legal pages, revenue-limit controls and product readiness are completed.
 
 Checked pages:
 
@@ -838,7 +877,7 @@ Keep the current safe state until then:
 - `shopMode=PRE_LAUNCH`
 - `sellerDataStatus=pending`
 - `legalStatus=pending`
-- `businessRegistrationStatus=pending`
+- `businessRegistrationStatus=unregistered_activity_planned`
 - real products hidden/draft
 - visible products `0`
 - no production payment tests

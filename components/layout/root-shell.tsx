@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CookieConsent } from "@/components/cookie-consent";
+import { CartDrawer } from "@/components/layout/cart-drawer";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeaderShell } from "@/components/layout/site-header-shell";
 import { CartProvider } from "@/components/providers/cart-provider";
@@ -19,6 +20,7 @@ export function RootShell({ children, locale, className }: RootShellProps) {
             <SiteHeaderShell locale={locale} />
             <main className="flex-1">{children}</main>
             <SiteFooter locale={locale} />
+            <CartDrawer />
             <CookieConsent locale={locale} />
           </div>
         </CartProvider>

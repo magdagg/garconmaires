@@ -20,8 +20,15 @@ type SiteFooterProps = {
 
 export function SiteFooter({ locale }: SiteFooterProps) {
   const pathname = usePathname();
+  const currentPathname = pathname || "/";
   const resolvedLocale = locale ?? getLocaleFromPathname(pathname) ?? defaultLocale;
   const footer = footerGroups[resolvedLocale];
+  const hideNewsletter =
+    currentPathname === "/" ||
+    currentPathname === "/en" ||
+    currentPathname === "/kolekcja" ||
+    currentPathname === "/collection" ||
+    currentPathname === "/en/collection";
   const footerCopy =
     resolvedLocale === "pl"
       ? {
@@ -44,7 +51,7 @@ export function SiteFooter({ locale }: SiteFooterProps) {
           <BrandIcon className="h-16 w-14 opacity-90 sm:h-24 sm:w-20" />
           <BrandWordmark className="h-10 w-[14rem] sm:h-16 sm:w-[34rem]" />
         </div>
-        <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr]">
+        <div className={cn("grid gap-10", !hideNewsletter && "lg:grid-cols-[1fr_0.95fr]")}>
           <div className="grid gap-8 sm:grid-cols-3">
             <div className="space-y-3">
               <p className="font-label text-[11px] tracking-[0.24em] text-white/40 uppercase">
@@ -95,22 +102,24 @@ export function SiteFooter({ locale }: SiteFooterProps) {
               </div>
             </div>
           </div>
-          <div className="space-y-3">
-            <p className="font-label text-[11px] tracking-[0.24em] text-white/40 uppercase">
-              {footerCopy.newsletter}
-            </p>
-            <p className="max-w-sm text-sm leading-7 text-white/58">
-              {footerCopy.newsletterText}
-            </p>
-            <div className="max-w-md">
-              <NewsletterForm
-                source="footer"
-                language={resolvedLocale}
-                variant="minimal"
-                submitLabel={footerCopy.submit}
-              />
+          {!hideNewsletter ? (
+            <div className="space-y-3">
+              <p className="font-label text-[11px] tracking-[0.24em] text-white/40 uppercase">
+                {footerCopy.newsletter}
+              </p>
+              <p className="max-w-sm text-sm leading-7 text-white/58">
+                {footerCopy.newsletterText}
+              </p>
+              <div className="max-w-md">
+                <NewsletterForm
+                  source="footer"
+                  language={resolvedLocale}
+                  variant="minimal"
+                  submitLabel={footerCopy.submit}
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
       <div className="border-t border-white/10">
