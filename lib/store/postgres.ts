@@ -1033,6 +1033,9 @@ export async function writePostgresStore(database: StoreDatabase): Promise<Store
         },
       });
     }
+  }, {
+    maxWait: 10000,
+    timeout: 30000,
   });
 
   return readPostgresStore();
