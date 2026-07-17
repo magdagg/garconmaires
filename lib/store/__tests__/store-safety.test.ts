@@ -617,6 +617,43 @@ describe("transactional email readiness", () => {
     expect(rendered.text).toContain("Polityka prywatności");
     expect(rendered.html).toContain("https://garconmaires.com/zwroty-i-reklamacje");
     expect(rendered.html).toContain("https://garconmaires.com/dostawa");
+    expect(rendered.html).toContain('href="mailto:studio@garconmaires.com"');
+    expect(rendered.html).toContain("color:#ffffff !important");
+  });
+
+  it("renders account reset and verification URLs as white links with CTA fallbacks", () => {
+    const reset = renderStoreEmail("password_reset", {
+      account: {
+        email: "customer@example.com",
+        firstName: "Customer",
+        actionUrl: "https://garconmaires.com/konto/nowe-haslo?token=test-token",
+      },
+    });
+    const verification = renderStoreEmail("account_verification", {
+      account: {
+        email: "customer@example.com",
+        firstName: "Customer",
+        actionUrl: "https://garconmaires.com/konto/weryfikacja?token=test-token",
+      },
+    });
+
+    for (const rendered of [reset, verification]) {
+      expect(rendered.html).toContain("x-apple-disable-message-reformatting");
+      expect(rendered.html).toContain('href="mailto:customer@example.com"');
+      expect(rendered.html).toContain('href="mailto:studio@garconmaires.com"');
+      expect(rendered.html).toContain("color:#ffffff !important");
+      const anchors = rendered.html.match(/<a\b[^>]*>/g) ?? [];
+
+      expect(anchors.length).toBeGreaterThan(0);
+      for (const anchor of anchors) {
+        expect(anchor).toContain("color:#ffffff !important");
+      }
+    }
+
+    expect(reset.html).toContain("Ustaw nowe hasło");
+    expect(reset.html).toContain('href="https://garconmaires.com/konto/nowe-haslo?token=test-token"');
+    expect(verification.html).toContain("Potwierdź adres e-mail");
+    expect(verification.html).toContain('href="https://garconmaires.com/konto/weryfikacja?token=test-token"');
   });
 
   it("blocks arbitrary Preview test recipients when EMAIL_TEST_RECIPIENT is missing", async () => {

@@ -181,6 +181,48 @@ function textLine(label: string, value: unknown) {
   return text ? `${label}: ${text}` : null;
 }
 
+const emailLinkStyle = "color:#ffffff !important;text-decoration:underline;text-decoration-color:#ffffff;";
+const emailButtonStyle =
+  "display:inline-block;border:1px solid #ffffff;color:#ffffff !important;text-decoration:none;padding:12px 18px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;";
+
+function emailLink(href: string, label: string, style = emailLinkStyle) {
+  return `<a href="${escapeHtml(href)}" style="${style}">${escapeHtml(label)}</a>`;
+}
+
+function hrefForDetectedLink(value: string) {
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  if (/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value)) {
+    return `mailto:${value}`;
+  }
+
+  return null;
+}
+
+function linkedHtml(value: string) {
+  const pattern = /(https?:\/\/[^\s<>"']+|[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+)/g;
+  let result = "";
+  let cursor = 0;
+
+  for (const match of value.matchAll(pattern)) {
+    const detected = match[0];
+    const index = match.index ?? 0;
+    const href = hrefForDetectedLink(detected);
+
+    result += escapeHtml(value.slice(cursor, index));
+    result += href ? emailLink(href, detected) : escapeHtml(detected);
+    cursor = index + detected.length;
+  }
+
+  return result + escapeHtml(value.slice(cursor));
+}
+
+function rowHtml(row: string) {
+  return linkedHtml(row);
+}
+
 function addressLines(order: Order) {
   const address = order.shippingAddress;
 
@@ -222,10 +264,12 @@ function frameHtml({
   title,
   intro,
   sections,
+  action,
 }: {
   title: string;
   intro: string;
   sections: { heading: string; rows: string[] }[];
+  action?: { label: string; url: string; fallbackLabel: string };
 }) {
   const support = getSupportEmail();
   const sectionHtml = sections
@@ -236,26 +280,48 @@ function frameHtml({
           ${section.rows
             .map(
               (row) =>
-                `<tr><td style="font-size:14px;line-height:1.7;color:#ddd;padding:3px 0;">${escapeHtml(row)}</td></tr>`,
+                `<tr><td style="font-size:14px;line-height:1.7;color:#ddd;padding:3px 0;">${rowHtml(row)}</td></tr>`,
             )
             .join("")}
         </table>
       `,
     )
     .join("");
+  const actionHtml = action
+    ? `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-top:1px solid #222;margin-top:28px;padding-top:22px;">
+          <tr><td style="padding:0 0 16px;">${emailLink(action.url, action.label, emailButtonStyle)}</td></tr>
+          <tr><td style="font-size:12px;line-height:1.7;color:#888;">${escapeHtml(action.fallbackLabel)} ${emailLink(action.url, action.url)}</td></tr>
+        </table>
+      `
+    : "";
 
   return `
 <!doctype html>
 <html>
+  <head>
+    <meta name="x-apple-disable-message-reformatting">
+    <style>
+      a[x-apple-data-detectors],
+      .unstyle-auto-detected-links a,
+      .aBn {
+        color:#ffffff !important;
+        text-decoration:underline !important;
+        border-bottom:0 !important;
+        cursor:default !important;
+      }
+    </style>
+  </head>
   <body style="margin:0;background:#000;color:#fff;">
-    <div style="background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;padding:36px 18px;">
+    <div class="unstyle-auto-detected-links" style="background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;padding:36px 18px;">
       <div style="margin:0 auto;max-width:600px;">
         <p style="margin:0 0 28px;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#888;">Garçonmaires / Warsaw</p>
         <h1 style="margin:0 0 18px;font-size:28px;line-height:1.15;font-weight:500;color:#fff;">${escapeHtml(title)}</h1>
         <p style="margin:0;font-size:15px;line-height:1.8;color:#ddd;">${escapeHtml(intro)}</p>
+        ${actionHtml}
         ${sectionHtml}
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-top:1px solid #222;margin-top:32px;padding-top:20px;">
-          <tr><td style="font-size:12px;line-height:1.7;color:#888;">Garçonmaires Studio<br><a href="mailto:${escapeHtml(support)}" style="color:#fff;text-decoration:none;">${escapeHtml(support)}</a><br>Ta wiadomość dotyczy obsługi zamówienia lub zgłoszenia. Zachowaj ją dla własnych zapisów.<br><br><a href="https://garconmaires.com/regulamin" style="color:#fff;text-decoration:none;">Regulamin</a> · <a href="https://garconmaires.com/polityka-prywatnosci" style="color:#fff;text-decoration:none;">Polityka prywatności</a> · <a href="https://garconmaires.com/zwroty-i-reklamacje" style="color:#fff;text-decoration:none;">Zwroty i reklamacje</a> · <a href="https://garconmaires.com/dostawa" style="color:#fff;text-decoration:none;">Dostawa</a></td></tr>
+          <tr><td style="font-size:12px;line-height:1.7;color:#888;">Garçonmaires Studio<br>${emailLink(`mailto:${support}`, support)}<br>Ta wiadomość dotyczy obsługi zamówienia lub zgłoszenia. Zachowaj ją dla własnych zapisów.<br><br>${emailLink("https://garconmaires.com/regulamin", "Regulamin")} · ${emailLink("https://garconmaires.com/polityka-prywatnosci", "Polityka prywatności")} · ${emailLink("https://garconmaires.com/zwroty-i-reklamacje", "Zwroty i reklamacje")} · ${emailLink("https://garconmaires.com/dostawa", "Dostawa")}</td></tr>
         </table>
       </div>
     </div>
@@ -299,6 +365,7 @@ function renderFramedEmail(input: {
   title: string;
   intro: string;
   sections: { heading: string; rows: string[] }[];
+  action?: { label: string; url: string; fallbackLabel: string };
 }): EmailRenderResult {
   return {
     template: input.template,
@@ -333,12 +400,21 @@ export function renderStoreEmail(
     }
 
     if (template === "account_verification") {
+      const actionUrl = account.actionUrl ?? null;
+
       return renderFramedEmail({
         template,
         subject: "Garçonmaires — potwierdź adres e-mail",
         title: "Potwierdź adres e-mail",
         intro:
           "Dokończ konfigurację konta Garçonmaires, potwierdzając adres e-mail. Link jest czasowy i może zostać wysłany ponownie z panelu konta.",
+        action: actionUrl
+          ? {
+              label: "Potwierdź adres e-mail",
+              url: actionUrl,
+              fallbackLabel: "Link awaryjny:",
+            }
+          : undefined,
         sections: [
           {
             heading: "Konto",
@@ -353,12 +429,21 @@ export function renderStoreEmail(
     }
 
     if (template === "password_reset") {
+      const actionUrl = account.actionUrl ?? null;
+
       return renderFramedEmail({
         template,
         subject: "Garçonmaires — reset hasła",
         title: "Reset hasła",
         intro:
           "Otrzymaliśmy prośbę o reset hasła do konta Garçonmaires. Jeśli to nie była Twoja prośba, zignoruj tę wiadomość.",
+        action: actionUrl
+          ? {
+              label: "Ustaw nowe hasło",
+              url: actionUrl,
+              fallbackLabel: "Link awaryjny:",
+            }
+          : undefined,
         sections: [
           {
             heading: "Reset",
