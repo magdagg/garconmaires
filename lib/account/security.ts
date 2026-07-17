@@ -54,11 +54,16 @@ function env(name: string) {
 }
 
 function durableRateLimitEnv() {
-  const restUrl = env("ACCOUNT_RATE_LIMIT_REDIS_REST_URL") || env("KV_REST_API_URL") || env("UPSTASH_REDIS_REST_URL");
+  const restUrl =
+    env("ACCOUNT_RATE_LIMIT_REDIS_REST_URL") ||
+    env("KV_REST_API_URL") ||
+    env("UPSTASH_REDIS_REST_URL") ||
+    env("UPSTASH_REDIS_REST_KV_REST_API_URL");
   const restToken =
     env("ACCOUNT_RATE_LIMIT_REDIS_REST_TOKEN") ||
     env("KV_REST_API_TOKEN") ||
-    env("UPSTASH_REDIS_REST_TOKEN");
+    env("UPSTASH_REDIS_REST_TOKEN") ||
+    env("UPSTASH_REDIS_REST_KV_REST_API_TOKEN");
 
   return restUrl && restToken ? { restUrl: restUrl.replace(/\/$/, ""), restToken } : null;
 }
@@ -125,8 +130,8 @@ export function getAccountRateLimitDiagnostics() {
     durableConfigured,
     productionReady: durableConfigured,
     requiredEnv: [
-      "ACCOUNT_RATE_LIMIT_REDIS_REST_URL or KV_REST_API_URL or UPSTASH_REDIS_REST_URL",
-      "ACCOUNT_RATE_LIMIT_REDIS_REST_TOKEN or KV_REST_API_TOKEN or UPSTASH_REDIS_REST_TOKEN",
+      "ACCOUNT_RATE_LIMIT_REDIS_REST_URL or KV_REST_API_URL or UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_KV_REST_API_URL",
+      "ACCOUNT_RATE_LIMIT_REDIS_REST_TOKEN or KV_REST_API_TOKEN or UPSTASH_REDIS_REST_TOKEN or UPSTASH_REDIS_REST_KV_REST_API_TOKEN",
     ],
     warnings: durableConfigured
       ? []
