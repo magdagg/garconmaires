@@ -391,14 +391,24 @@ export async function resetCustomerPassword(input: {
     throw new Error("Reset token has expired.");
   }
 
+  const now = new Date();
+  const accountUpdateData = {
+    passwordHash: await hashPassword(password),
+    ...(record.customer.emailVerifiedAt ? {} : { emailVerifiedAt: now }),
+  };
+
   await getPrisma().$transaction([
     getPrisma().customerAccount.update({
       where: { id: record.customerId },
-      data: { passwordHash: await hashPassword(password) },
+      data: accountUpdateData,
     }),
-    getPrisma().customerAccountToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
+    getPrisma().customerAccountToken.updateMany({
+      where: {
+        customerId: record.customerId,
+        type: { in: ["password_reset", "email_verification"] },
+        usedAt: null,
+      },
+      data: { usedAt: now },
     }),
     getPrisma().customerSession.deleteMany({ where: { customerId: record.customerId } }),
   ]);

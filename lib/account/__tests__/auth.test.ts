@@ -46,6 +46,7 @@ import {
   changeCustomerPassword,
   hashPassword,
   registerCustomer,
+  requestPasswordReset,
   resetCustomerPassword,
   verifyCustomerEmail,
   verifyPassword,
@@ -161,14 +162,60 @@ describe("customer account auth", () => {
     await expect(verifyCustomerEmail("used")).rejects.toThrow("Verification token has already been used.");
   });
 
-  it("resets a password once and invalidates existing sessions", async () => {
+  it("resets an unverified account password, verifies the email and invalidates account tokens", async () => {
     prisma.customerAccountToken.findUnique.mockResolvedValueOnce({
       id: "reset_1",
       customerId: "cust_1",
       type: "password_reset",
       usedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
-      customer: { status: "active", email: "client@example.com", firstName: "Client" },
+      customer: {
+        status: "active",
+        email: "client@example.com",
+        firstName: "Client",
+        emailVerifiedAt: null,
+      },
+    });
+
+    await resetCustomerPassword({
+      token: "reset-token",
+      password: "GarconmairesNew2026!",
+      passwordConfirmation: "GarconmairesNew2026!",
+    });
+
+    expect(prisma.customerAccount.update).toHaveBeenCalledWith({
+      where: { id: "cust_1" },
+      data: {
+        passwordHash: expect.stringMatching(/^scrypt:/),
+        emailVerifiedAt: expect.any(Date),
+      },
+    });
+    expect(prisma.customerAccountToken.updateMany).toHaveBeenCalledWith({
+      where: {
+        customerId: "cust_1",
+        type: { in: ["password_reset", "email_verification"] },
+        usedAt: null,
+      },
+      data: { usedAt: expect.any(Date) },
+    });
+    expect(prisma.customerSession.deleteMany).toHaveBeenCalledWith({ where: { customerId: "cust_1" } });
+    expect(sendStoreEmailMock).toHaveBeenCalledWith("password_changed", expect.any(Object));
+  });
+
+  it("resets an already verified account password without changing the existing verification date", async () => {
+    const verifiedAt = new Date("2026-07-01T12:00:00.000Z");
+    prisma.customerAccountToken.findUnique.mockResolvedValueOnce({
+      id: "reset_1",
+      customerId: "cust_1",
+      type: "password_reset",
+      usedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+      customer: {
+        status: "active",
+        email: "client@example.com",
+        firstName: "Client",
+        emailVerifiedAt: verifiedAt,
+      },
     });
 
     await resetCustomerPassword({
@@ -181,8 +228,74 @@ describe("customer account auth", () => {
       where: { id: "cust_1" },
       data: { passwordHash: expect.stringMatching(/^scrypt:/) },
     });
-    expect(prisma.customerSession.deleteMany).toHaveBeenCalledWith({ where: { customerId: "cust_1" } });
-    expect(sendStoreEmailMock).toHaveBeenCalledWith("password_changed", expect.any(Object));
+    expect(prisma.customerAccount.update.mock.calls[0][0].data).not.toHaveProperty("emailVerifiedAt");
+  });
+
+  it("does not verify an account when only requesting a password reset", async () => {
+    prisma.customerAccount.findUnique.mockResolvedValueOnce({
+      id: "cust_1",
+      status: "active",
+      email: "client@example.com",
+      firstName: "Client",
+      emailVerifiedAt: null,
+    });
+
+    await requestPasswordReset({
+      email: "client@example.com",
+      baseUrl: "https://garconmaires.test",
+      locale: "pl",
+    });
+
+    expect(prisma.customerAccount.update).not.toHaveBeenCalled();
+    expect(prisma.customerAccountToken.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        customerId: "cust_1",
+        type: "password_reset",
+      }),
+    });
+  });
+
+  it("does not mutate account data for invalid or expired reset tokens", async () => {
+    prisma.customerAccountToken.findUnique.mockResolvedValueOnce(null);
+
+    await expect(
+      resetCustomerPassword({
+        token: "invalid-token",
+        password: "GarconmairesNew2026!",
+        passwordConfirmation: "GarconmairesNew2026!",
+      }),
+    ).rejects.toThrow("Invalid reset token.");
+
+    expect(prisma.customerAccount.update).not.toHaveBeenCalled();
+    expect(prisma.customerAccountToken.updateMany).not.toHaveBeenCalled();
+    expect(prisma.customerSession.deleteMany).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    prisma.customerAccountToken.findUnique.mockResolvedValueOnce({
+      id: "reset_1",
+      customerId: "cust_1",
+      type: "password_reset",
+      usedAt: null,
+      expiresAt: new Date(Date.now() - 60_000),
+      customer: {
+        status: "active",
+        email: "client@example.com",
+        firstName: "Client",
+        emailVerifiedAt: null,
+      },
+    });
+
+    await expect(
+      resetCustomerPassword({
+        token: "expired-token",
+        password: "GarconmairesNew2026!",
+        passwordConfirmation: "GarconmairesNew2026!",
+      }),
+    ).rejects.toThrow("Reset token has expired.");
+
+    expect(prisma.customerAccount.update).not.toHaveBeenCalled();
+    expect(prisma.customerAccountToken.updateMany).not.toHaveBeenCalled();
+    expect(prisma.customerSession.deleteMany).not.toHaveBeenCalled();
   });
 
   it("changes password only when the current password is valid", async () => {
