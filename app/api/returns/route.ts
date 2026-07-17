@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sessionCookieName } from "@/lib/account/auth";
+import { csrfErrorResponse, validateCsrfRequest } from "@/lib/account/security";
 import { sendStoreEmail } from "@/lib/store/email";
 import { createReturnRequest, validateReturnItemsForOrder } from "@/lib/store/operations";
 import { findOrderForCustomerRequest } from "@/lib/store/orders";
@@ -7,6 +9,14 @@ import { updateStoreDatabase } from "@/lib/store/storage";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  if (
+    request.headers.get("x-account-session") === "true" &&
+    request.cookies.get(sessionCookieName)?.value &&
+    !validateCsrfRequest(request)
+  ) {
+    return csrfErrorResponse();
+  }
+
   const body = (await request.json()) as {
     orderId?: string;
     orderNumber?: string;

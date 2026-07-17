@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AccountPlaceholderPage } from "@/components/pages/account-placeholder-page";
+import { CustomerAccountClient } from "@/components/pages/customer-account-client";
 
 export const metadata: Metadata = {
   title: "Adresy dostawy | Garçonmaires",
@@ -10,13 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return (
-    <AccountPlaceholderPage
-      eyebrow="Konto"
-      title="Adresy dostawy"
-      description="Ta funkcja zostanie udostępniona przy uruchomieniu sklepu Garçonmaires."
-      accountHref="/konto"
-      accountLabel="Wróć do konta"
-    />
-  );
+  return <CustomerAccountClient locale="pl" mode="addresses" />;
 }

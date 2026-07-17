@@ -138,15 +138,17 @@ export function SiteHeader({ locale }: SiteHeaderProps) {
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
-                className="h-[17px] w-[17px]"
+                className="h-[18px] w-[18px]"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.6"
+                strokeWidth="1.45"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M7 8h10l-.9 10H7.9L7 8Z" />
-                <path d="M9 8a3 3 0 0 1 6 0" />
+                <path d="M4.75 5.75h2.1l1.35 8.3h8.15l1.55-5.65H8.05" />
+                <path d="M9.15 17.85h7.15" />
+                <path d="M10.15 20.1a1.05 1.05 0 1 0 0-2.1 1.05 1.05 0 0 0 0 2.1Z" />
+                <path d="M16.2 20.1a1.05 1.05 0 1 0 0-2.1 1.05 1.05 0 0 0 0 2.1Z" />
               </svg>
               {itemCount > 0 ? (
                 <span className="font-label absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center border border-black bg-white px-1 text-[9px] leading-none text-black">

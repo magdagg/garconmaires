@@ -661,6 +661,35 @@ describe("transactional email readiness", () => {
     );
   });
 
+  it("routes account flow emails to EMAIL_TEST_RECIPIENT in non-production test mode", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("EMAIL_TEST_MODE", "true");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "Garçonmaires <studio@garconmaires.com>");
+    vi.stubEnv("EMAIL_TEST_RECIPIENT", "safe-admin@example.test");
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    await expect(
+      sendStoreEmail("account_verification", {
+        account: {
+          email: "customer@example.com",
+          firstName: "Customer",
+          actionUrl: "https://preview.example.com/en/account/verification?token=test",
+        },
+      }),
+    ).resolves.toMatchObject({
+      status: "skipped",
+      reason: "RESEND_API_KEY is not configured.",
+    });
+    expect(info).toHaveBeenCalledWith(
+      "[store-email] skipped; provider is not configured",
+      expect.objectContaining({
+        template: "account_verification",
+        to: "safe-admin@example.test",
+      }),
+    );
+  });
+
   it("renders shipped email with tracking URL", () => {
     const payload = createSyntheticEmailPayload("order_shipped");
     const rendered = renderStoreEmail("order_shipped", payload);

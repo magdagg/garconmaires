@@ -40,9 +40,17 @@ export type StoreEmailTemplate =
   | "payment_failed"
   | "order_shipped"
   | "return_requested"
+  | "return_approved"
+  | "return_rejected"
+  | "refund_processed"
   | "complaint_submitted"
+  | "complaint_resolved"
   | "newsletter_confirmation"
-  | "early_access_invitation";
+  | "early_access_invitation"
+  | "account_verification"
+  | "password_reset"
+  | "password_changed"
+  | "account_deletion_requested";
 export type AnalyticsEventName =
   | "view_product"
   | "add_to_cart"

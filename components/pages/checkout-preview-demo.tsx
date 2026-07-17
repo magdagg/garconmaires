@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckoutSummary } from "@/components/commerce/checkout-summary";
 import { useCart } from "@/components/providers/cart-provider";
 
@@ -9,6 +9,52 @@ type CheckoutPreviewDemoProps = {
   locale: "pl" | "en";
   delivery: number;
   freeShippingThreshold: number;
+};
+
+type AccountSessionPayload =
+  | {
+      accountEnabled: false;
+      authenticated: false;
+      customer: null;
+    }
+  | {
+      accountEnabled: true;
+      authenticated: false;
+      customer: null;
+    }
+  | {
+      accountEnabled: true;
+      authenticated: true;
+      customer: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        phone: string;
+        addresses: Array<{
+          firstName: string;
+          lastName: string;
+          addressLine1: string;
+          addressLine2: string;
+          postalCode: string;
+          city: string;
+          country: string;
+          phone: string;
+          isDefault: boolean;
+        }>;
+      };
+    };
+
+type ContactForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
+
+type ShippingForm = {
+  address: string;
+  postalCode: string;
+  city: string;
 };
 
 const copy = {
@@ -33,6 +79,7 @@ const copy = {
     terms: "Akceptuję regulamin dla podglądu.",
     privacy: "Akceptuję politykę prywatności dla podglądu.",
     newsletter: "Chcę otrzymywać informacje o premierach.",
+    accountAutofill: "Dane uzupełnione z konta. Możesz je zmienić dla tego zamówienia.",
     submit: "Potwierdź preview checkout",
     success: "Checkout preview potwierdzony. Nie utworzono zamówienia ani płatności.",
     cart: "Wróć do koszyka",
@@ -69,6 +116,7 @@ const copy = {
     terms: "I accept the terms for preview.",
     privacy: "I accept the privacy policy for preview.",
     newsletter: "Send me launch updates.",
+    accountAutofill: "Details filled from your account. You can edit them for this order.",
     submit: "Confirm checkout preview",
     success: "Checkout preview confirmed. No order or payment was created.",
     cart: "Back to cart",
@@ -90,10 +138,14 @@ function TextField({
   label,
   type = "text",
   required = true,
+  value,
+  onChange,
 }: {
   label: string;
   type?: string;
   required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <label className="block space-y-2 text-xs tracking-[0.14em] text-white/42 uppercase">
@@ -101,6 +153,8 @@ function TextField({
       <input
         type={type}
         required={required}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         className="h-12 w-full border border-white/12 bg-transparent px-3 text-sm tracking-normal text-white outline-none focus:border-white/42"
       />
     </label>
@@ -115,9 +169,67 @@ export function CheckoutPreviewDemo({
   const t = copy[locale];
   const { items, subtotal } = useCart();
   const [message, setMessage] = useState("");
+  const [autofillNote, setAutofillNote] = useState("");
+  const [contact, setContact] = useState<ContactForm>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
+  const [shipping, setShipping] = useState<ShippingForm>({
+    address: "",
+    postalCode: "",
+    city: "",
+  });
   const hasItems = items.length > 0;
   const cartHref = locale === "pl" ? "/koszyk" : "/en/cart";
   const collectionHref = locale === "pl" ? "/kolekcja" : "/en/collection";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccountDefaults() {
+      try {
+        const response = await fetch("/api/account/session", { cache: "no-store" });
+        const payload = (await response.json()) as AccountSessionPayload;
+
+        if (cancelled || !payload.accountEnabled || !payload.authenticated) {
+          return;
+        }
+
+        const defaultAddress =
+          payload.customer.addresses.find((address) => address.isDefault) ??
+          payload.customer.addresses[0];
+
+        setContact({
+          firstName: payload.customer.firstName,
+          lastName: payload.customer.lastName,
+          email: payload.customer.email,
+          phone: payload.customer.phone || defaultAddress?.phone || "",
+        });
+
+        if (defaultAddress) {
+          setShipping({
+            address: [defaultAddress.addressLine1, defaultAddress.addressLine2]
+              .filter(Boolean)
+              .join(", "),
+            postalCode: defaultAddress.postalCode,
+            city: defaultAddress.city,
+          });
+        }
+
+        setAutofillNote(t.accountAutofill);
+      } catch {
+        // Guest checkout must remain independent from account availability.
+      }
+    }
+
+    void loadAccountDefaults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [t.accountAutofill]);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -150,11 +262,32 @@ export function CheckoutPreviewDemo({
                 </h2>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <TextField label={t.firstName} />
-                <TextField label={t.lastName} />
-                <TextField label={t.email} type="email" />
-                <TextField label={t.phone} type="tel" />
+                <TextField
+                  label={t.firstName}
+                  value={contact.firstName}
+                  onChange={(value) => setContact((current) => ({ ...current, firstName: value }))}
+                />
+                <TextField
+                  label={t.lastName}
+                  value={contact.lastName}
+                  onChange={(value) => setContact((current) => ({ ...current, lastName: value }))}
+                />
+                <TextField
+                  label={t.email}
+                  type="email"
+                  value={contact.email}
+                  onChange={(value) => setContact((current) => ({ ...current, email: value }))}
+                />
+                <TextField
+                  label={t.phone}
+                  type="tel"
+                  value={contact.phone}
+                  onChange={(value) => setContact((current) => ({ ...current, phone: value }))}
+                />
               </div>
+              {autofillNote ? (
+                <p className="text-xs leading-6 text-white/36">{autofillNote}</p>
+              ) : null}
             </section>
 
             <section className="space-y-4">
@@ -167,9 +300,21 @@ export function CheckoutPreviewDemo({
                 </h2>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <TextField label={t.address} />
-                <TextField label={t.postalCode} />
-                <TextField label={t.city} />
+                <TextField
+                  label={t.address}
+                  value={shipping.address}
+                  onChange={(value) => setShipping((current) => ({ ...current, address: value }))}
+                />
+                <TextField
+                  label={t.postalCode}
+                  value={shipping.postalCode}
+                  onChange={(value) => setShipping((current) => ({ ...current, postalCode: value }))}
+                />
+                <TextField
+                  label={t.city}
+                  value={shipping.city}
+                  onChange={(value) => setShipping((current) => ({ ...current, city: value }))}
+                />
               </div>
             </section>
 

@@ -1,3 +1,4 @@
+import { clientType } from "@/components/pages/client-area-typography";
 import { formatPrice } from "@/lib/utils";
 
 type CheckoutSummaryProps = {
@@ -11,6 +12,7 @@ type CheckoutSummaryProps = {
   };
   subtotal?: number;
   delivery?: number;
+  tone?: "dark" | "light";
 };
 
 export function CheckoutSummary({
@@ -18,28 +20,33 @@ export function CheckoutSummary({
   labels,
   subtotal = 0,
   delivery = 0,
+  tone = "dark",
 }: CheckoutSummaryProps) {
   const total = subtotal + delivery;
 
   return (
-    <aside className="space-y-6 border-t border-white/10 pt-6 lg:sticky lg:top-24 lg:border-t-0 lg:border-l lg:pl-8">
-      <div className="border-b border-white/10 pb-5">
-        <h2 className="font-label text-[10px] tracking-[0.3em] text-white/42 uppercase">
+    <aside
+      className={`space-y-6 border-y px-5 py-7 sm:px-7 lg:sticky lg:top-24 ${
+        tone === "light" ? "border-black/12 bg-[#f8f6f1]" : "border-white/10"
+      }`}
+    >
+      <div className={`border-b pb-5 ${tone === "light" ? "border-black/10" : "border-white/10"}`}>
+        <h2 className={tone === "light" ? clientType.sectionLabelLight : clientType.sectionLabelDark}>
           {labels.title}
         </h2>
       </div>
-      <div className="space-y-4 text-sm text-white/62">
-        <div className="flex items-center justify-between gap-4">
+      <div className={`space-y-5 text-[15px] font-normal leading-7 ${tone === "light" ? "text-black/76" : "text-white/70"}`}>
+        <div className={`flex items-center justify-between gap-4 border-b pb-4 ${tone === "light" ? "border-black/10" : "border-white/8"}`}>
           <span>{labels.subtotal}</span>
           <span>{formatPrice(subtotal / 100, locale)}</span>
         </div>
-        <div className="flex items-center justify-between gap-4">
+        <div className={`flex items-center justify-between gap-4 border-b pb-4 ${tone === "light" ? "border-black/10" : "border-white/8"}`}>
           <span>{labels.delivery}</span>
           <span>{delivery > 0 ? formatPrice(delivery / 100, locale) : labels.placeholder}</span>
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-5 text-white">
+        <div className={`flex items-center justify-between gap-4 pt-1 font-medium ${tone === "light" ? "text-black" : "text-white"}`}>
           <span>{labels.total}</span>
-          <span className="text-lg tracking-[0.08em]">
+          <span className="text-lg tracking-normal">
             {formatPrice(total / 100, locale)}
           </span>
         </div>

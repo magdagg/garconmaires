@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAccountRateLimitDiagnostics } from "@/lib/account/security";
 import { getPrisma } from "@/lib/prisma";
 import { isAuthorizedStoreAdmin } from "@/lib/store/admin";
 import { createId, nowIso } from "@/lib/store/ids";
@@ -787,6 +788,9 @@ export async function GET(request: NextRequest) {
       email: {
         config: getEmailConfigDiagnostics(),
         templates: getAvailableEmailTemplates(),
+      },
+      accountSecurity: {
+        rateLimit: getAccountRateLimitDiagnostics(),
       },
       shipping: {
         providers: getShippingProviderDiagnostics(),

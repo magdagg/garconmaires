@@ -987,6 +987,96 @@ export function AdminStorePage() {
                           </div>
                         </div>
                       ) : null}
+
+                      <div className="mt-4 border-t border-white/10 pt-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/38">
+                          Customer service
+                        </p>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                          <div className="border border-white/10 p-4">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/32">
+                              Related returns
+                            </p>
+                            <div className="mt-3 space-y-3">
+                              {snapshot.returns.filter((item) => item.orderId === order.id).length ? (
+                                snapshot.returns
+                                  .filter((item) => item.orderId === order.id)
+                                  .map((item) => (
+                                    <div key={item.id} className="space-y-2 text-xs text-white/55">
+                                      <p>{item.id} / {item.status}</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {["approved", "received", "refunded", "rejected"].map((status) => (
+                                          <button
+                                            key={status}
+                                            type="button"
+                                            onClick={() => action("return.status", { id: item.id, status })}
+                                            className="border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-white/60"
+                                          >
+                                            {status}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))
+                              ) : (
+                                <p className="text-xs text-white/38">No return requests.</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="border border-white/10 p-4">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/32">
+                              Related complaints
+                            </p>
+                            <div className="mt-3 space-y-3">
+                              {snapshot.complaints.filter((item) => item.orderId === order.id).length ? (
+                                snapshot.complaints
+                                  .filter((item) => item.orderId === order.id)
+                                  .map((item) => (
+                                    <div key={item.id} className="space-y-2 text-xs text-white/55">
+                                      <p>{item.id} / {item.status}</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {["under_review", "accepted", "rejected", "resolved"].map((status) => (
+                                          <button
+                                            key={status}
+                                            type="button"
+                                            onClick={() => action("complaint.status", { id: item.id, status })}
+                                            className="border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-white/60"
+                                          >
+                                            {status}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))
+                              ) : (
+                                <p className="text-xs text-white/38">No complaints.</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="border border-white/10 p-4">
+                            <p className="text-[10px] uppercase tracking-[0.2em] text-white/32">
+                              Email log
+                            </p>
+                            <div className="mt-3 space-y-2">
+                              {snapshot.emailEvents.filter((item) => item.orderId === order.id).length ? (
+                                snapshot.emailEvents
+                                  .filter((item) => item.orderId === order.id)
+                                  .slice(0, 5)
+                                  .map((item) => (
+                                    <div key={item.id} className="text-xs leading-5 text-white/55">
+                                      <p>{item.template} / {item.status}</p>
+                                      <p className="text-white/32">{item.sentAt ?? item.createdAt}</p>
+                                    </div>
+                                  ))
+                              ) : (
+                                <p className="text-xs text-white/38">No logged emails.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2 lg:flex-col">
                       <button
@@ -1045,8 +1135,11 @@ export function AdminStorePage() {
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "new", fulfillmentStatus: "unfulfilled", deliveryStatus: "pending" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
                         Pending
                       </button>
+                      <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "processing", fulfillmentStatus: "unfulfilled" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
+                        Processing
+                      </button>
                       <button type="button" onClick={() => action("order.status", { id: order.id, orderStatus: "processing", fulfillmentStatus: "packing" })} className="border border-white/15 px-4 py-2 text-xs uppercase tracking-[0.2em]">
-                        Packing
+                        Packed
                       </button>
                       <button
                         type="button"

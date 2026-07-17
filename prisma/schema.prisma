@@ -105,6 +105,17 @@ enum ComplaintSolution {
   price_reduction
 }
 
+enum CustomerAccountStatus {
+  active
+  disabled
+  pending_deletion
+}
+
+enum CustomerAccountTokenType {
+  email_verification
+  password_reset
+}
+
 enum NewsletterStatus {
   pending
   confirmed
@@ -461,6 +472,71 @@ model Complaint {
   product           Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
+}
+
+model CustomerAccount {
+  id                   String                @id
+  email                String                @unique
+  passwordHash         String
+  firstName            String
+  lastName             String
+  phone                String?
+  marketingConsent     Boolean               @default(false)
+  status               CustomerAccountStatus @default(active)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  lastLoginAt          DateTime?
+  emailVerifiedAt      DateTime?
+  deletionRequestedAt  DateTime?
+  deletionRequestNote  String?
+  addresses            CustomerAddress[]
+  sessions             CustomerSession[]
+  tokens               CustomerAccountToken[]
+}
+
+model CustomerAccountToken {
+  id        String                   @id
+  customerId String
+  type      CustomerAccountTokenType
+  tokenHash String                   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime                 @default(now())
+  customer  CustomerAccount          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, type])
+  @@index([expiresAt])
+}
+
+model CustomerAddress {
+  id             String          @id
+  customerId     String
+  firstName      String
+  lastName       String
+  addressLine1   String
+  addressLine2   String?
+  postalCode     String
+  city           String
+  country        String          @default("PL")
+  phone          String?
+  isDefault      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  customer       CustomerAccount @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model CustomerSession {
+  id         String          @id
+  customerId String
+  tokenHash  String          @unique
+  expiresAt  DateTime
+  createdAt  DateTime        @default(now())
+  customer   CustomerAccount @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
 }
 
 model NewsletterSubscriber {

@@ -121,6 +121,15 @@ export type LaunchReadinessInput = {
         warnings: string[];
       };
     };
+    accountSecurity?: {
+      rateLimit?: {
+        storage: "memory" | "upstash";
+        durableConfigured: boolean;
+        productionReady: boolean;
+        requiredEnv: string[];
+        warnings: string[];
+      };
+    };
     shipping?: {
       providers: {
         provider: string;
@@ -544,6 +553,19 @@ export function getLaunchReadiness(snapshot: LaunchReadinessInput): LaunchReadin
       title: "No successful email test event",
       detail: "EmailEvent logging exists, but no successful sent event is recorded in the current store data.",
       action: "Run safe admin test-send after Resend preview settings are configured.",
+    });
+  }
+
+  const accountRateLimit = snapshot.diagnostics?.accountSecurity?.rateLimit;
+  if (!accountRateLimit?.productionReady) {
+    add(blockers, {
+      priority: "high",
+      area: "Customer account",
+      title: "Durable account rate limit is not configured",
+      detail: accountRateLimit
+        ? `Current account rate limit storage: ${accountRateLimit.storage}. Required env: ${accountRateLimit.requiredEnv.join("; ")}.`
+        : "Account rate-limit diagnostics are unavailable.",
+      action: "Configure durable Redis/KV rate limiting before enabling public customer accounts in production.",
     });
   }
 

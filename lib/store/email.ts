@@ -45,6 +45,11 @@ type EmailPayload = {
   returnRequest?: ReturnRequest;
   complaint?: Complaint;
   subscriber?: NewsletterSubscriber;
+  account?: {
+    email: string;
+    firstName?: string | null;
+    actionUrl?: string | null;
+  };
   to?: string;
   paymentUrl?: string | null;
 };
@@ -56,9 +61,17 @@ const templateLabels: Record<EmailTemplate, string> = {
   payment_failed: "Payment failed",
   order_shipped: "Order shipped",
   return_requested: "Return request received",
+  return_approved: "Return approved",
+  return_rejected: "Return rejected",
+  refund_processed: "Refund processed",
   complaint_submitted: "Complaint request received",
+  complaint_resolved: "Complaint resolved",
   newsletter_confirmation: "Newsletter confirmation",
   early_access_invitation: "Early access invitation",
+  account_verification: "Account verification",
+  password_reset: "Password reset",
+  password_changed: "Password changed",
+  account_deletion_requested: "Account deletion requested",
 };
 
 function env(name: string) {
@@ -80,7 +93,7 @@ function getSupportEmail() {
 }
 
 function getReplyTo() {
-  return env("RESEND_REPLY_TO") || undefined;
+  return env("RESEND_REPLY_TO") || "studio@garconmaires.com";
 }
 
 function isProductionDeployment() {
@@ -307,6 +320,93 @@ export function renderStoreEmail(
   template: EmailTemplate,
   payload: EmailPayload,
 ): EmailRenderResult {
+  if (
+    template === "account_verification" ||
+    template === "password_reset" ||
+    template === "password_changed" ||
+    template === "account_deletion_requested"
+  ) {
+    const account = payload.account;
+
+    if (!account) {
+      throw new Error(`Template ${template} requires an account payload.`);
+    }
+
+    if (template === "account_verification") {
+      return renderFramedEmail({
+        template,
+        subject: "Garçonmaires — potwierdź adres e-mail",
+        title: "Potwierdź adres e-mail",
+        intro:
+          "Dokończ konfigurację konta Garçonmaires, potwierdzając adres e-mail. Link jest czasowy i może zostać wysłany ponownie z panelu konta.",
+        sections: [
+          {
+            heading: "Konto",
+            rows: [
+              `Adres: ${account.email}`,
+              `Link: ${account.actionUrl ?? "link niedostępny w tym środowisku"}`,
+              `Kontakt: ${getSupportEmail()}`,
+            ],
+          },
+        ],
+      });
+    }
+
+    if (template === "password_reset") {
+      return renderFramedEmail({
+        template,
+        subject: "Garçonmaires — reset hasła",
+        title: "Reset hasła",
+        intro:
+          "Otrzymaliśmy prośbę o reset hasła do konta Garçonmaires. Jeśli to nie była Twoja prośba, zignoruj tę wiadomość.",
+        sections: [
+          {
+            heading: "Reset",
+            rows: [
+              `Adres: ${account.email}`,
+              `Link: ${account.actionUrl ?? "link niedostępny w tym środowisku"}`,
+              `Kontakt: ${getSupportEmail()}`,
+            ],
+          },
+        ],
+      });
+    }
+
+    if (template === "password_changed") {
+      return renderFramedEmail({
+        template,
+        subject: "Garçonmaires — hasło zostało zmienione",
+        title: "Hasło zostało zmienione",
+        intro:
+          "Hasło do konta Garçonmaires zostało zmienione. Jeśli to nie była Twoja zmiana, skontaktuj się ze studiem.",
+        sections: [
+          {
+            heading: "Konto",
+            rows: [`Adres: ${account.email}`, `Kontakt: ${getSupportEmail()}`],
+          },
+        ],
+      });
+    }
+
+    return renderFramedEmail({
+      template,
+      subject: "Garçonmaires — prośba o usunięcie konta",
+      title: "Prośba o usunięcie konta została zapisana",
+      intro:
+        "Zapisaliśmy prośbę o usunięcie konta. Dane zamówień mogą pozostać przechowywane w zakresie wymaganym do rozliczeń, obsługi roszczeń i obowiązków prawnych.",
+      sections: [
+        {
+          heading: "Konto",
+          rows: [
+            `Adres: ${account.email}`,
+            "Status: pending deletion",
+            `Kontakt: ${getSupportEmail()}`,
+          ],
+        },
+      ],
+    });
+  }
+
   if (template === "newsletter_confirmation" || template === "early_access_invitation") {
     const subscriber = payload.subscriber;
 
@@ -365,6 +465,55 @@ export function renderStoreEmail(
     });
   }
 
+  if (
+    template === "return_approved" ||
+    template === "return_rejected" ||
+    template === "refund_processed"
+  ) {
+    if (!payload.returnRequest) {
+      throw new Error(`Template ${template} requires a return request.`);
+    }
+
+    const copy = {
+      return_approved: {
+        subject: "Garçonmaires — zwrot zaakceptowany",
+        title: "Zwrot zaakceptowany",
+        intro:
+          "Zgłoszenie zwrotu zostało zaakceptowane. Dalsze instrukcje zostaną przekazane przez obsługę klienta.",
+      },
+      return_rejected: {
+        subject: "Garçonmaires — decyzja w sprawie zwrotu",
+        title: "Zwrot nie został zaakceptowany",
+        intro:
+          "Zgłoszenie zwrotu zostało zweryfikowane. Szczegóły decyzji przekaże obsługa klienta.",
+      },
+      refund_processed: {
+        subject: "Garçonmaires — zwrot środków",
+        title: "Zwrot środków został oznaczony",
+        intro:
+          "Zwrot środków został oznaczony jako przetworzony po stronie obsługi. Finalny czas księgowania zależy od operatora płatności.",
+      },
+    }[template];
+
+    return renderFramedEmail({
+      template,
+      subject: `${copy.subject} ${payload.returnRequest.orderId}`,
+      title: copy.title,
+      intro: copy.intro,
+      sections: [
+        {
+          heading: "Zgłoszenie",
+          rows: [
+            `Numer zgłoszenia: ${payload.returnRequest.id}`,
+            `Zamówienie: ${payload.returnRequest.orderId}`,
+            `Status: ${payload.returnRequest.status}`,
+            `Kontakt: ${getSupportEmail()}`,
+          ],
+        },
+      ],
+    });
+  }
+
   if (template === "complaint_submitted") {
     if (!payload.complaint) {
       throw new Error("Template complaint_submitted requires a complaint.");
@@ -375,6 +524,32 @@ export function renderStoreEmail(
       subject: `Garçonmaires — przyjęliśmy reklamację ${payload.complaint.orderId}`,
       title: "Przyjęliśmy reklamację",
       intro: "Zgłoszenie zostało zapisane i zostanie rozpatrzone zgodnie z zasadami sklepu.",
+      sections: [
+        {
+          heading: "Zgłoszenie",
+          rows: [
+            `Numer zgłoszenia: ${payload.complaint.id}`,
+            `Zamówienie: ${payload.complaint.orderId}`,
+            `Status: ${payload.complaint.status}`,
+            `Preferowane rozwiązanie: ${payload.complaint.preferredSolution}`,
+            `Kontakt: ${getSupportEmail()}`,
+          ],
+        },
+      ],
+    });
+  }
+
+  if (template === "complaint_resolved") {
+    if (!payload.complaint) {
+      throw new Error("Template complaint_resolved requires a complaint.");
+    }
+
+    return renderFramedEmail({
+      template,
+      subject: `Garçonmaires — reklamacja rozpatrzona ${payload.complaint.orderId}`,
+      title: "Reklamacja rozpatrzona",
+      intro:
+        "Zgłoszenie reklamacyjne zostało oznaczone jako rozpatrzone. Szczegóły decyzji przekaże obsługa klienta.",
       sections: [
         {
           heading: "Zgłoszenie",
@@ -592,6 +767,11 @@ export function createSyntheticEmailPayload(template: EmailTemplate): EmailPaylo
       createdAt: nowIso(),
       updatedAt: nowIso(),
     },
+    account: {
+      email: "customer@example.com",
+      firstName: "Customer",
+      actionUrl: "https://garconmaires.com/konto",
+    },
   };
 }
 
@@ -679,6 +859,15 @@ async function hasSentEmailForOrder(orderId: string | null | undefined, template
 }
 
 function recipientForPayload(template: EmailTemplate, payload: EmailPayload) {
+  if (
+    template === "account_verification" ||
+    template === "password_reset" ||
+    template === "password_changed" ||
+    template === "account_deletion_requested"
+  ) {
+    return (payload.to ?? payload.account?.email ?? "").trim();
+  }
+
   return (
     payload.to ??
     payload.order?.customer.email ??
@@ -719,6 +908,9 @@ async function sendRenderedEmail({
   const from = getFrom();
   const resend = getResendClient();
   const orderId = payload.order?.id ?? null;
+  const configuredTestRecipient = env("EMAIL_TEST_RECIPIENT");
+  const shouldRouteToTestRecipient = !isProductionDeployment() && emailTestMode();
+  const deliveryRecipient = shouldRouteToTestRecipient ? configuredTestRecipient : recipient;
 
   if (!recipient) {
     await recordEmailEvent({
@@ -733,10 +925,23 @@ async function sendRenderedEmail({
     return { status: "skipped" as const, reason: "missing_recipient" };
   }
 
-  if (!forceTestSend && await hasSentEmailForOrder(orderId, template)) {
+  if (shouldRouteToTestRecipient && !configuredTestRecipient) {
     await recordEmailEvent({
       orderId,
       recipientEmail: recipient,
+      template,
+      provider: "resend",
+      status: "skipped",
+      errorSummary: "EMAIL_TEST_MODE is enabled but EMAIL_TEST_RECIPIENT is not configured.",
+      sentAt: null,
+    });
+    return { status: "skipped" as const, reason: "missing_test_recipient" };
+  }
+
+  if (!forceTestSend && await hasSentEmailForOrder(orderId, template)) {
+    await recordEmailEvent({
+      orderId,
+      recipientEmail: deliveryRecipient,
       template,
       provider: "resend",
       status: "skipped",
@@ -752,12 +957,12 @@ async function sendRenderedEmail({
       : "RESEND_FROM_EMAIL is not configured.";
     console.info("[store-email] skipped; provider is not configured", {
       template,
-      to: recipient,
+      to: deliveryRecipient,
       reason,
     });
     await recordEmailEvent({
       orderId,
-      recipientEmail: recipient,
+      recipientEmail: deliveryRecipient,
       template,
       provider: "resend",
       status: "skipped",
@@ -770,7 +975,7 @@ async function sendRenderedEmail({
   if (isProductionDeployment() && forceTestSend && (!config.emailTestMode || !env("EMAIL_TEST_RECIPIENT"))) {
     await recordEmailEvent({
       orderId,
-      recipientEmail: recipient,
+      recipientEmail: deliveryRecipient,
       template,
       provider: "resend",
       status: "skipped",
@@ -783,7 +988,7 @@ async function sendRenderedEmail({
   try {
     const result = await resend.emails.send({
       from,
-      to: recipient,
+      to: deliveryRecipient,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
@@ -794,7 +999,7 @@ async function sendRenderedEmail({
 
     await recordEmailEvent({
       orderId,
-      recipientEmail: recipient,
+      recipientEmail: deliveryRecipient,
       template,
       provider: "resend",
       status,
@@ -809,7 +1014,7 @@ async function sendRenderedEmail({
 
     await recordEmailEvent({
       orderId,
-      recipientEmail: recipient,
+      recipientEmail: deliveryRecipient,
       template,
       provider: "resend",
       status: "failed",
@@ -817,7 +1022,7 @@ async function sendRenderedEmail({
       sentAt: null,
     });
 
-    console.warn("[store-email] failed", { template, to: recipient, error: errorSummary });
+    console.warn("[store-email] failed", { template, to: deliveryRecipient, error: errorSummary });
     return { status: "failed" as const, error: errorSummary };
   }
 }

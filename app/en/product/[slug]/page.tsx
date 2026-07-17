@@ -19,21 +19,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getPublicProductBySlug(slug);
   const previewProduct = isPreviewShopDemoEnabled()
     ? getPreviewProductBySlug(slug)
     : null;
-
-  if (!product && !previewProduct) {
-    return {
-      title: "Garçonmaires",
-      description: "Product pages will be available once the first drop is released.",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
 
   if (previewProduct) {
     return {
@@ -45,6 +33,8 @@ export async function generateMetadata({
       },
     };
   }
+
+  const product = await getPublicProductBySlug(slug);
 
   if (!product) {
     return {

@@ -12,7 +12,7 @@ const sans = Inter({
 const label = IBM_Plex_Mono({
   variable: "--font-label",
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {

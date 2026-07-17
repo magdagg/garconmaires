@@ -1,19 +1,27 @@
+import { clientType } from "@/components/pages/client-area-typography";
+
 type AddToCartButtonProps = {
   label: string;
   disabledLabel: string;
   disabled?: boolean;
+  tone?: "dark" | "light";
 };
 
 export function AddToCartButton({
   label,
   disabledLabel,
   disabled = true,
+  tone = "dark",
 }: AddToCartButtonProps) {
   return (
     <button
       type="button"
       disabled={disabled}
-      className="w-full border border-white/12 px-6 py-4 text-xs tracking-[0.28em] text-white/35 uppercase disabled:cursor-not-allowed"
+      className={`w-full ${clientType.ctaBase} disabled:cursor-not-allowed ${
+        tone === "light"
+          ? "border-black/20 text-black/68"
+          : "border-white/14 text-white/48"
+      }`}
     >
       {disabled ? disabledLabel : label}
     </button>

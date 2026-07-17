@@ -2,8 +2,13 @@ import Image from "next/image";
 import { Space_Grotesk } from "next/font/google";
 import { NewsletterForm } from "@/components/newsletter/newsletter-form";
 import { ProductCard } from "@/components/ui/product-card";
+import type { Product } from "@/lib/data/products";
 import { type Locale } from "@/lib/i18n";
 import { getPreviewProducts } from "@/lib/preview-shop";
+import {
+  getPublicCatalogState,
+  type PublicProduct,
+} from "@/lib/store/public-catalog";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -156,9 +161,61 @@ function CategoryTeaser({
   );
 }
 
-export function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
+function mapPublicProductToCardProduct(product: PublicProduct): Product {
+  const primaryImage = product.images.find((image) => image.isPrimary) ?? product.images[0];
+  const category = product.categoryName?.toLowerCase().includes("shirt")
+    ? "T-Shirts"
+    : product.categoryName?.toLowerCase().includes("hood")
+      ? "Hoodies"
+      : product.categoryName?.toLowerCase().includes("sweat")
+        ? "Sweatshirts"
+        : "T-Shirts";
+
+  return {
+    id: product.id,
+    slug: product.slug,
+    name: product.name,
+    category,
+    price: product.price / 100,
+    imageUrl: primaryImage?.url ?? "/collection/drop-01-garments-preview.png",
+    imageAlt: primaryImage?.alt ?? product.name,
+    tagline: product.shortDescription,
+    description: product.editorialDescription,
+    details: product.technicalDescription
+      ? product.technicalDescription.split("\n").filter(Boolean)
+      : Object.entries(product.specifications).map(([key, value]) => `${key}: ${value}`),
+    sizes: product.variants.map((variant) => variant.size),
+    material: product.specifications.Material ?? "",
+    featured: true,
+    tones: {
+      base: "#000000",
+      highlight: "#3f3f46",
+      edge: "#a1a1aa",
+    },
+  };
+}
+
+function shouldRethrowCatalogError() {
+  return (
+    process.env.VERCEL_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build"
+  );
+}
+
+export async function CollectionPage({ locale = "pl" }: { locale?: Locale }) {
   const t = teaserCopy[locale];
-  const products = getPreviewProducts();
+  const catalog = await getPublicCatalogState().catch((error) => {
+    console.warn("[collection] public catalog unavailable", error);
+
+    if (shouldRethrowCatalogError()) {
+      throw error;
+    }
+
+    return { storefrontLive: false, products: [] };
+  });
+  const products = catalog.storefrontLive
+    ? catalog.products.map(mapPublicProductToCardProduct)
+    : getPreviewProducts();
 
   return (
     <div className="bg-black text-white">

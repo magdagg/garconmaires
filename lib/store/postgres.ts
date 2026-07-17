@@ -198,67 +198,51 @@ export async function readPostgresStore(): Promise<StoreDatabase> {
   const hasEmailEvents = await emailEventTableExists(prisma);
   const hasShipments = await shipmentTableExists(prisma);
 
-  const [
-    settings,
-    categories,
-    drops,
-    products,
-    variants,
-    images,
-    carts,
-    cartItems,
-    reservations,
-    orders,
-    payments,
-    deliveries,
-    shippingAddresses,
-    invoices,
-    legalConsents,
-    orderItems,
-    returns,
-    returnItems,
-    complaints,
-    newsletterSubscribers,
-    discounts,
-    discountProducts,
-    legalSubmissions,
-    analyticsEvents,
-    emailEvents,
-    shipments,
-    webhookEvents,
-  ] = await Promise.all([
-    prisma.storeSettings.findUnique({ where: { id: "default" } }),
-    prisma.productCategory.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.drop.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.product.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.productVariant.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.productImage.findMany({ orderBy: [{ productId: "asc" }, { sortOrder: "asc" }] }),
-    prisma.cart.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.cartItem.findMany(),
-    prisma.inventoryReservation.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.order.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.payment.findMany(),
-    prisma.delivery.findMany(),
-    prisma.shippingAddress.findMany(),
-    prisma.invoice.findMany(),
-    prisma.legalConsent.findMany(),
-    prisma.orderItem.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.returnRequest.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.returnItem.findMany(),
-    prisma.complaint.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.newsletterSubscriber.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.discountCode.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.discountProduct.findMany(),
-    prisma.legalSubmission.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.analyticsEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 }),
-    hasEmailEvents
-      ? prisma.emailEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
-      : Promise.resolve([]),
-    hasShipments
-      ? prisma.shipment.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
-      : Promise.resolve([]),
-    prisma.paymentWebhookEvent.findMany({ orderBy: { createdAt: "desc" }, take: 5000 }),
-  ]);
+  const settings = await prisma.storeSettings.findUnique({ where: { id: "default" } });
+  const categories = await prisma.productCategory.findMany({ orderBy: { createdAt: "asc" } });
+  const drops = await prisma.drop.findMany({ orderBy: { createdAt: "asc" } });
+  const products = await prisma.product.findMany({ orderBy: { createdAt: "asc" } });
+  const variants = await prisma.productVariant.findMany({ orderBy: { createdAt: "asc" } });
+  const images = await prisma.productImage.findMany({
+    orderBy: [{ productId: "asc" }, { sortOrder: "asc" }],
+  });
+  const carts = await prisma.cart.findMany({ orderBy: { createdAt: "desc" } });
+  const cartItems = await prisma.cartItem.findMany();
+  const reservations = await prisma.inventoryReservation.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  const orders = await prisma.order.findMany({ orderBy: { createdAt: "desc" } });
+  const payments = await prisma.payment.findMany();
+  const deliveries = await prisma.delivery.findMany();
+  const shippingAddresses = await prisma.shippingAddress.findMany();
+  const invoices = await prisma.invoice.findMany();
+  const legalConsents = await prisma.legalConsent.findMany();
+  const orderItems = await prisma.orderItem.findMany({ orderBy: { createdAt: "asc" } });
+  const returns = await prisma.returnRequest.findMany({ orderBy: { createdAt: "desc" } });
+  const returnItems = await prisma.returnItem.findMany();
+  const complaints = await prisma.complaint.findMany({ orderBy: { createdAt: "desc" } });
+  const newsletterSubscribers = await prisma.newsletterSubscriber.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  const discounts = await prisma.discountCode.findMany({ orderBy: { createdAt: "desc" } });
+  const discountProducts = await prisma.discountProduct.findMany();
+  const legalSubmissions = await prisma.legalSubmission.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+  const analyticsEvents = await prisma.analyticsEvent.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 1000,
+  });
+  const emailEvents = hasEmailEvents
+    ? await prisma.emailEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
+    : [];
+  const shipments = hasShipments
+    ? await prisma.shipment.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
+    : [];
+  const webhookEvents = await prisma.paymentWebhookEvent.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 5000,
+  });
 
   return {
     products: products.map((item): Product => ({
@@ -1042,6 +1026,21 @@ export async function writePostgresStore(database: StoreDatabase): Promise<Store
 }
 
 async function upsertNestedOrderRows(tx: Db, order: Order) {
+  const deliveryData = {
+    deliveryMethod: order.delivery.deliveryMethod,
+    shipmentProvider: order.delivery.shipmentProvider,
+    parcelLockerId: order.delivery.parcelLockerId,
+    parcelLockerName: order.delivery.parcelLockerName,
+    parcelLockerAddress: order.delivery.parcelLockerAddress,
+    deliveryPrice: order.delivery.deliveryPrice,
+    trackingNumber: order.delivery.trackingNumber,
+    trackingUrl: order.delivery.trackingUrl,
+    labelUrl: order.delivery.labelUrl,
+    shippedAt: asDate(order.delivery.shippedAt),
+    adminNote: order.delivery.adminNote,
+    deliveryStatus: order.delivery.deliveryStatus,
+  };
+
   await tx.shippingAddress.upsert({
     where: { orderId: order.id },
     update: {
@@ -1068,15 +1067,11 @@ async function upsertNestedOrderRows(tx: Db, order: Order) {
 
   await tx.delivery.upsert({
     where: { orderId: order.id },
-    update: {
-      ...order.delivery,
-      shippedAt: asDate(order.delivery.shippedAt),
-    },
+    update: deliveryData,
     create: {
       id: createId("del"),
       orderId: order.id,
-      ...order.delivery,
-      shippedAt: asDate(order.delivery.shippedAt),
+      ...deliveryData,
     },
   });
 

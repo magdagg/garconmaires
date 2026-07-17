@@ -60,6 +60,10 @@ verification is required for outbound transactional email.
    - `payment_confirmed`
    - `order_shipped`
    - `newsletter_confirmation`
+   - `account_verification`
+   - `password_reset`
+   - `password_changed`
+   - `account_deletion_requested`
    - `payment_pending`
    - `payment_failed`
    - `return_requested`
@@ -112,4 +116,9 @@ relevant, support contact copy and legal footer links:
   is explicitly approved.
 - Do not send test emails to real customers.
 - Missing Resend config should continue to skip safely and record/log the skip.
+- Account e-mail flows must show `email skipped / missing env` when
+  `RESEND_API_KEY` or `RESEND_FROM_EMAIL` is absent; do not treat skipped
+  Preview sends as production-ready delivery.
+- Use `studio@garconmaires.com` as support/reply-to unless a separate support
+  mailbox is approved later.
 - Do not print `RESEND_API_KEY`, raw provider responses, tokens or headers.

@@ -4,8 +4,26 @@ import { getPublicCatalogState } from "@/lib/store/public-catalog";
 const baseUrl = "https://garconmaires.com";
 const lastModified = new Date();
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function shouldRethrowCatalogError() {
+  return (
+    process.env.VERCEL_ENV === "production" &&
+    process.env.NEXT_PHASE !== "phase-production-build"
+  );
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const catalog = await getPublicCatalogState();
+  const catalog = await getPublicCatalogState().catch((error) => {
+    console.warn("[sitemap] public catalog unavailable", error);
+
+    if (shouldRethrowCatalogError()) {
+      throw error;
+    }
+
+    return { products: [] };
+  });
   const productEntries: MetadataRoute.Sitemap = catalog.products.map((product) => ({
     url: `${baseUrl}/produkt/${product.slug}`,
     lastModified,

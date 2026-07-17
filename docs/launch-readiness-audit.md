@@ -9,6 +9,211 @@ Supporting notes:
 - Tpay sandbox record: [docs/tpay-sandbox-test.md](/Users/magdalenagrabowska/garconmaires/docs/tpay-sandbox-test.md)
 - Resend transactional testing: [docs/resend-transactional-email-testing.md](/Users/magdalenagrabowska/garconmaires/docs/resend-transactional-email-testing.md)
 
+## 2026-06-29 legal/checkout readiness update
+
+Scope reviewed:
+
+- `lib/store-pages.ts` legal/help content for terms/regulamin, privacy, cookies,
+  returns and complaints, delivery/shipping, payments and FAQ.
+- Checkout UI in `components/pages/checkout-page.tsx` and
+  `components/pages/checkout-preview-demo.tsx`.
+- Checkout order creation and consent logging in `app/api/checkout/route.ts`,
+  `lib/store/orders.ts`, `lib/store/postgres.ts` and `prisma/schema.prisma`.
+- Admin legal readiness diagnostics in `app/api/admin/store/route.ts`.
+- Existing legal launch checklist in `docs/legal-launch-checklist.md`.
+
+Current status:
+
+- Legal pages remain draft/pending and do not publish final seller identity,
+  address, return address, NIP, REGON or final tax/VAT claims.
+- Official brand contact/support/returns e-mail is
+  `studio@garconmaires.com`.
+- Admin readiness must continue to treat seller/legal data as launch blockers
+  while legal pages are draft/pending.
+- Checkout has two required consents: terms/regulamin and privacy policy.
+- Checkout has one optional newsletter/marketing consent.
+- Consent timestamps and `legalDocumentVersion` are stored when an order is
+  created.
+- Checkout links point to terms/privacy/returns/delivery pages in PL and EN, but
+  final checkbox wording still requires legal/accounting review.
+
+Legal/checkout blockers before `shopEnabled=true`:
+
+- Seller identity for działalność nierejestrowana: TO CONFIRM.
+- Contact/correspondence address and return address/process: TO CONFIRM.
+- Customer support and returns/complaints e-mail is
+  `studio@garconmaires.com`; final legal document placement and mailbox
+  ownership/process: TO CONFIRM.
+- Consumer-facing statement for działalność nierejestrowana: TO CONFIRM.
+- VAT/no-VAT wording and sales confirmation/faktura-on-request process:
+  TO CONFIRM.
+- Revenue limit tracking and simplified sales register process: pending.
+- Final terms, privacy, returns/complaints, delivery and cookies documents:
+  pending legal review.
+- Final required/optional checkout consent wording in PL/EN: TO CONFIRM.
+- Decision whether a separate withdrawal/consumer-rights checkbox is required:
+  TO CONFIRM.
+
+## 2026-06-26 DROP 01 launch readiness checklist
+
+Current safe state:
+
+- Header account/cart icons are ready.
+- Customer account is functional in local/Preview behind `ACCOUNT_ENABLED` /
+  `CUSTOMER_ACCOUNT_MODE`.
+- Customer account is intended to become a public storefront feature after the
+  production auth blockers are resolved.
+- Guest checkout remains mandatory and must not be removed or hidden when the
+  public account is enabled.
+- Logged-in checkout can use the customer profile and default address as
+  editable autofill, while guest checkout remains independent.
+- Order history currently uses the account e-mail to show matching orders,
+  including earlier guest orders made with the same e-mail. This is acceptable
+  for first public account launch; a dedicated order-to-account relation can be
+  added later.
+- Production auth remains pending until durable/edge-backed rate limiting,
+  final CSRF review, login/abuse monitoring, production e-mail rehearsal,
+  account deletion/privacy process and a dedicated security review are complete.
+- Password reset, e-mail verification, password-changed notification,
+  logout-from-all-devices and account deletion request flows are implemented for
+  local/Preview. Production e-mail sending must be rehearsed before enabling
+  public accounts.
+- Guest order status lookup is ready.
+- Returns/complaints UX is ready.
+- Admin customer-service section for orders, returns, complaints and email logs is ready.
+- Checkout failed/cancelled/expired states are ready.
+- Supabase/Postgres `EMAXCONNSESSION` during build/prerender was fixed locally/preview by moving collection/sitemap to dynamic rendering and reducing parallel Postgres reads.
+- Store remains blocked for real sales: `shopEnabled=false`, `shopMode=PRE_LAUNCH`, visible products `0`.
+
+### MUST HAVE before public sales
+
+- Final DROP 01 products approved: Hoodie, T-shirt, Zip hoodie.
+- Real product photos uploaded, including primary image and gallery for each product.
+- Product variants finalized: sizes, SKUs, availability and size naming.
+- Real stock quantities entered and checked against physical inventory.
+- Gross PLN prices approved for each product and delivery option.
+- Product copy completed: short description, editorial description, technical description, material/composition, fit, measurements and care instructions.
+- Guest checkout verified end-to-end without requiring customer account login.
+- If public account is enabled for the drop, logged-in checkout autofill verified
+  for profile and default delivery address.
+- Tpay production credentials configured only during launch rehearsal.
+- Tpay production low-value live payment test completed and documented.
+- Transactional emails configured in production: order created, payment confirmed, payment failed, shipped, return requested, complaint submitted.
+- Delivery method finalized: manual fulfillment and/or InPost. Delivery prices, delivery times, parcel locker/courier behavior and tracking process must be visible before payment.
+- Terms and conditions finalized and reviewed.
+- Privacy policy/GDPR information finalized and reviewed.
+- Returns and complaints policy finalized, including contact and return address.
+- Seller data for działalność nierejestrowana completed where legally required: seller identity, contact, return address and business/tax wording appropriate to the chosen model.
+- Checkout legal checkboxes finalized: terms, privacy, withdrawal/consumer info and optional marketing consent.
+- Admin order fulfillment tested: processing, packing, shipped, tracking number, status emails and customer-service visibility.
+- Production envs configured and reviewed.
+- Production smoke test completed before `shopEnabled=true`.
+
+### SHOULD HAVE
+
+- Mobile QA pass on homepage, collection, product, cart, checkout, order status, returns/complaints and account placeholder.
+- Tracking shipment URL tested with final delivery provider.
+- Full status-email set polished and previewed: return approved/rejected, refund processed, complaint resolved.
+- Analytics events prepared for view product, add to cart, begin checkout, payment success/failure, purchase and newsletter signup.
+- Error monitoring configured for production runtime and API routes.
+- Database backup/export runbook prepared and tested.
+- End-to-end return and complaint rehearsal from order lookup to admin resolution.
+- Production account abuse monitoring and durable rate limiting rehearsed.
+
+### NICE TO HAVE
+
+- Dedicated `customerAccountId` relation on orders in addition to the current
+  e-mail matching model.
+- Social login.
+- Saved payment preferences, if ever introduced through a compliant provider.
+- Automated returns from account panel beyond the current request flow.
+- Wishlist.
+- Product recommendations/related products.
+
+### Launch blockers
+
+These still block `shopEnabled=true`:
+
+- Seller/legal identity and return/contact data are pending.
+- Final legal pages are not approved for public sale.
+- Działalność nierejestrowana revenue-limit tracking and simplified sales register process are not launch-rehearsed.
+- Real product photos are not final.
+- Product specs, measurements, material/composition and care content are not final.
+- Real product stock and variant availability are not ready for launch.
+- Prices and delivery costs require final review.
+- Production Tpay credentials and live low-value payment test are pending.
+- Production Resend setup and final transactional email rehearsal are pending.
+- Delivery/fulfillment SOP, tracking process and return shipping process are pending.
+- Public customer account production blockers are pending if account launch is
+  included in the first public drop: durable rate limit, production verification
+  e-mails, production password reset e-mails, abuse monitoring and final privacy
+  review.
+- Production env review and production smoke test are pending.
+
+### Placeholders allowed for first drop
+
+- Customer account can remain a polished frontend placeholder if guest checkout and guest order status work.
+- If production auth blockers are not resolved in time, login/register can
+  remain unavailable while guest checkout and guest order status stay live.
+- Wishlist and product recommendations can remain unavailable.
+- Automated refund workflow can remain manual/admin-only if policy and communication are clear.
+- Advanced analytics dashboards can wait if basic operational logs and order records work.
+
+### Placeholders not allowed before public sales
+
+- Seller identity, return address/contact and legal status cannot be placeholder.
+- Terms, privacy policy, returns/complaints and payment/delivery information cannot be draft/pending.
+- Product photos, names, prices, sizes, stock and product descriptions cannot be placeholder.
+- Payment provider settings cannot be sandbox/test placeholders.
+- Delivery methods, delivery price/time and tracking/fulfillment ownership cannot be placeholder.
+- Checkout legal checkboxes cannot be placeholder.
+- Transactional order/payment confirmation emails cannot be placeholder.
+
+### Production env checklist
+
+- `DATABASE_URL`: runtime pooled Supabase/Postgres connection string suitable for Vercel serverless/runtime.
+- `DIRECT_URL`: direct/session connection string for Prisma migrations and one-off maintenance, not normal runtime traffic.
+- Tpay production: environment flag, client ID, client secret, merchant/account identifiers, security/webhook credentials and production callback URLs.
+- Resend: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`, production sender domain verified, production test mode disabled after rehearsal.
+- InPost if used: API token, organization/sender details, sandbox/live mode decision, label/tracking configuration.
+- Admin: strong `ADMIN_STORE_TOKEN`, rotation plan and no leaked preview token in production.
+- Site URL: canonical production URL and payment/email callback base URL.
+- Analytics/monitoring if used: GA/GTM/Meta Pixel/Sentry or equivalent, with consent mode and privacy policy alignment.
+
+### Final test plan before launch
+
+- Product to cart: select product, size, quantity and add to cart.
+- Cart to checkout: update quantity, remove item, validate totals and delivery cost.
+- Checkout to Tpay: submit guest checkout with valid customer/delivery/legal data.
+- Tpay success: payment returns to success page, order becomes paid, stock commits.
+- Tpay failure/cancelled/expired: customer sees correct state, order/payment status remains safe, stock/reservation behavior is correct.
+- Order created: order row, order items, customer data, consents and delivery data are stored correctly.
+- Payment confirmed: webhook verification passes and duplicate webhooks are idempotent.
+- Order status lookup: correct number/email returns safe summary; wrong number/email does not leak data.
+- Return request: customer verifies order, selects item, submits reason, admin sees request, confirmation email/log is created.
+- Complaint request: customer verifies order, selects item, submits description, admin sees complaint, confirmation email/log is created.
+- Admin fulfillment: mark processing/packing/shipped, add tracking number, verify customer-visible status.
+- Shipped email: preview/send final template and verify tracking details.
+- Mobile flow: PL and EN product/cart/checkout/order-status/returns pages usable on mobile.
+- PL/EN routes: homepage, collection, product, cart, checkout, order status, returns/complaints, legal pages and sitemap return expected statuses.
+
+Recommended order from now to launch:
+
+1. Complete legal/seller data for działalność nierejestrowana, including return/contact data and revenue-limit process.
+2. Finalize products: images, variants, stock, prices, descriptions, size guide, material and care.
+3. Finalize delivery decision and fulfillment runbook.
+4. Configure production provider envs in a controlled rehearsal window.
+5. Run full staging rehearsal, then controlled production smoke test.
+6. Only after pass: expose products and intentionally switch launch settings.
+
+Preview deployment safety:
+
+- Current state is safe to deploy as Preview/Staging.
+- Do not promote to production.
+- Do not set `shopEnabled=true`.
+- Do not change `shopMode` from `PRE_LAUNCH`.
+- Do not expose visible products before legal/product/payment/delivery blockers are cleared.
+
 ## 2026-06-25 ecommerce audit update
 
 The full clothing ecommerce audit is complete. The current public launch
@@ -638,6 +843,11 @@ Do not add fake seller data or publish final legal/seller claims before business
 Ready:
 
 - Admin token auth exists.
+- Customer account local/Preview auth exists with server-side password hashing,
+  HttpOnly session cookie, account route rate limiting, CSRF token checks on
+  state-changing account endpoints and a Production-safe account feature flag.
+- Customer dev seed/test account is isolated outside the core auth module and
+  guarded from Production by the account mode/runtime checks.
 - Admin token comparison uses `timingSafeEqual` with length check.
 - Admin noindex exists.
 - Admin API is guarded.
@@ -659,6 +869,11 @@ Risks/recommendations:
 - Verify all admin diagnostics from Preview after env changes.
 - Complete privacy/cookie policy if analytics or marketing tags are enabled.
 - Confirm no Vercel Preview deployment protection conflicts with admin testing.
+- Account route rate limiting is currently in-memory and suitable for
+  local/Preview only; replace or back it with edge/Redis rate limiting before
+  public production auth.
+- Customer account Production launch still needs production email rehearsal,
+  abuse monitoring and final CSRF/rate-limit/privacy review.
 - Consider rate limiting checkout/newsletter/returns/complaints endpoints at the edge before launch.
 
 ## Part 10: Launch sequence proposal
@@ -739,6 +954,7 @@ Do not execute these phases until blockers are resolved.
 | Frontend | Good pre-launch | Medium | Product launch UI not visually validated with real images/content. | QA product/detail/cart/checkout once content exists. | Design/engineering |
 | SEO | Safe pre-launch | Medium | Robots allows all public pages; product visibility gating currently protects hidden products. | Re-check noindex/indexing at launch transition. | Engineering |
 | Security | Good baseline | Medium | Public form rate limiting and admin hardening can improve. | Add/confirm edge rate limits and stronger admin plan. | Engineering |
+| Customer account | Preview functional | Medium | Local/Preview account has auth, sessions, CSRF and in-memory rate limits; production password reset and email verification are still missing. | Keep Production account in placeholder mode until production auth checklist is complete. | Engineering |
 | Operations | Partial | High | No documented live incident/refund/export/backup runbook. | Create first-drop operations runbook. | Ops/engineering |
 
 ## Part 12: Provider checklist
@@ -844,6 +1060,42 @@ For each real product:
 8. Run full staging order lifecycle test: checkout, payment, packing, shipped, delivered, return, complaint.
 9. Prepare production env checklist and backup/export runbook, including Production Resend envs.
 10. Only after staging success, plan controlled production launch.
+
+## 2026-06-29 public account e-mail and rate-limit readiness update
+
+Customer account remains intended as a public storefront feature, but guest
+checkout must remain available. The current account flow is safe for
+local/Preview testing and closer to production readiness, with these explicit
+conditions:
+
+- Account e-mail templates exist for `account_verification`, `password_reset`,
+  `password_changed` and `account_deletion_requested`.
+- Account e-mails use the shared Resend sender pipeline and record `EmailEvent`
+  rows for sent, queued, skipped or failed outcomes.
+- Missing Resend configuration must continue to skip safely; no account e-mail
+  flow may pretend delivery succeeded without provider config.
+- Official support/reply-to contact: `studio@garconmaires.com`.
+- Do not change the production sender until the Garconmaires sending domain is
+  verified in Resend.
+- Preview/staging e-mail rehearsal requires:
+  `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `RESEND_REPLY_TO`,
+  `EMAIL_TEST_MODE=true` and `EMAIL_TEST_RECIPIENT`.
+- Public production account e-mail rehearsal must cover verification, password
+  reset, password changed and account deletion request messages before
+  `CUSTOMER_ACCOUNT_MODE=enabled` is allowed on production.
+- Account rate limiting now has a durable-storage adapter path. Local/Preview
+  can use in-memory storage, but production public auth requires Redis/KV REST
+  envs before launch.
+- Durable rate-limit envs accepted by the app:
+  `ACCOUNT_RATE_LIMIT_REDIS_REST_URL` and
+  `ACCOUNT_RATE_LIMIT_REDIS_REST_TOKEN`, or Vercel/Upstash-compatible
+  `KV_REST_API_URL` and `KV_REST_API_TOKEN`, or
+  `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+- If durable rate-limit storage fails in production, account endpoints fail
+  closed with `503` instead of silently falling back to memory.
+- Production auth remains blocked until durable rate limiting, staging e-mail
+  rehearsal, final CSRF/security review, login abuse monitoring and privacy
+  review are complete.
 
 ## Verification commands
 
